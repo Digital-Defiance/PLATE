@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="280" viewBox="0 0 400 280">
+  <rect id="background" width="400" height="280" fill="#ffffff"/>
+  <rect id="swatch-1" x="40" y="60" width="40" height="160" fill="#285ad2"/>
+  <rect id="swatch-2" x="80" y="60" width="40" height="160" fill="#4054bb"/>
+  <rect id="swatch-3" x="120" y="60" width="40" height="160" fill="#594fa4"/>
+  <rect id="swatch-4" x="160" y="60" width="40" height="160" fill="#71498d"/>
+  <rect id="swatch-5" x="200" y="60" width="40" height="160" fill="#894376"/>
+  <rect id="swatch-6" x="240" y="60" width="40" height="160" fill="#a13d5f"/>
+  <rect id="swatch-7" x="280" y="60" width="40" height="160" fill="#ba3848"/>
+  <rect id="swatch-8" x="320" y="60" width="40" height="160" fill="#d23232"/>
+</svg>

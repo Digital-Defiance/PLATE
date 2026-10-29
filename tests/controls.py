@@ -214,4 +214,29 @@ CONTROLS: dict[str, Control] = {
         ],
         ssim_floor=0.95,
     ),
+
+    # ---- shape behind text: PINS CURRENT (pre-feature) BEHAVIOUR ---------
+    "t5_text_on_shape": Control(
+        tier="T5", completed=0,
+        # A flat 'ice cube' (cyan rounded rect) with the word "ICE" drawn across it.
+        # CURRENT behaviour pinned here, NOT a desired end state (ROADMAP: "Shape
+        # behind text"). Today PLATE has no text awareness: the block survives as a
+        # clean rect (the letters sit in its interior and do not breach its outer
+        # silhouette, so there is nothing to amodally complete -> completed==0), and
+        # the letters are each traced as their OWN dark shapes (paths/rect/polygon)
+        # nested under the block -> several extra "Dark gray ..." objects. There is
+        # NO "Text: ICE" layer and no gradient anywhere.
+        #
+        # The exact per-letter decomposition (how many paths vs rect vs polygon, and
+        # their anchor counts) depends on the bundled font and the tracer, so it is
+        # fragile; the assertions below are deliberately STRUCTURAL and loose. The
+        # count-sensitive checks (shape count, per-object kinds) live in the bespoke
+        # t5_text_on_shape branch of test_controls.py so they can be range-based.
+        # When text detection + edge-crossing completion land, update this on purpose
+        # (expected then: the block completes if text breaches its edge, and the word
+        # becomes a single "Text: ICE" layer rather than per-letter shapes).
+        objects=[],          # object-by-object list intentionally empty; see test branch
+        ssim_floor=0.90,
+        note="pins the no-text-awareness failure mode; flips when 'shape behind text' is built",
+    ),
 }

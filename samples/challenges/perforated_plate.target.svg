@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <path id="plate-with-three-holes" fill="#286ec8" fill-rule="evenodd" d="M40 40H440V280H40Z M92 160a38 38 0 1 0 76 0a38 38 0 1 0 -76 0Z M202 160a38 38 0 1 0 76 0a38 38 0 1 0 -76 0Z M312 160a38 38 0 1 0 76 0a38 38 0 1 0 -76 0Z"/>
+  <circle id="island-inside-middle-hole" cx="240" cy="160" r="16" fill="#e6a014"/>
+</svg>

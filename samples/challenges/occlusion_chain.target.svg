@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="320" viewBox="0 0 520 320">
+  <rect id="background" width="520" height="320" fill="#ffffff"/>
+  <circle id="back-disc" cx="145" cy="160" r="95" fill="#d63232"/>
+  <circle id="middle-disc" cx="230" cy="160" r="95" fill="#e6a014"/>
+  <circle id="front-disc" cx="315" cy="160" r="95" fill="#289646"/>
+  <rect id="front-panel" x="360" y="40" width="110" height="240" fill="#1e3c78"/>
+</svg>

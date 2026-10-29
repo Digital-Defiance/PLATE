@@ -1,6 +1,35 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 3) · Version 0.0.1 · Tests: 39 passing (`pytest -q`)
+Last updated: 2026-10-29 (session 4) · Version 0.0.1 · Tests: 62 passing, 5 expected feature gaps (`pytest -q`)
+
+## Independent desired-output challenges (session 4)
+
+- Added **8 authored SVG targets paired with supersampled PNG inputs** in
+  `samples/challenges/`; regenerate with `scripts/make_challenges.py`. These are
+  independent desired artwork, not copies of PLATE's current SVG output. Existing
+  uncommitted text-control/README work was preserved; pipeline and VTracer untouched.
+- `tests/challenges.py` / `tests/test_challenges.py` compare full per-object silhouettes
+  (including occluded geometry), primitive types, hole/component topology, gradient
+  kinds, open strokes, and overlapping paint order. IDs/formatting/disjoint ordering
+  are allowed to vary. All eight have always-active SVG integrity and dual-background
+  fidelity checks (SSIM ≥0.95), even when their desired structure is a known gap.
+- **3 structural targets pass:** nested dial (8 objects / SSIM 0.9916), independent
+  twin gradients (5 / 0.9882), discrete palette (9 rects, zero gradients / 0.9963).
+- **5 strict expected gaps:** perforated plate has a stray connected component;
+  occlusion-chain back circle drifts ≈3.5px (full silhouette IoU ≈0.946);
+  gradient badge duplicates its shaded disc (6 objects / 2 gradients vs target 5 / 1);
+  edge-crossing lettering fragments its disc (7 vs 5 objects); route remains a filled
+  outline rather than an open 16px stroke. Targets remain unchanged until features
+  meet them. Expected failures catch only structural `TargetMismatch`; crashes and
+  fidelity regressions are not suppressed. Full target success is a strict XPASS.
+- Verified `plate bench samples` and `plate bench samples/challenges` against the
+  plain-VTracer baseline. Original sample numbers match the prior session. Rendered
+  and visually inspected input / authored target / PLATE comparisons for all 8.
+- Full suite requires localhost permission for the existing mock VLM HTTP server;
+  the initial sandbox-only run failed there (39 passed). Baseline with that access:
+  **40 passed**. Final suite with renderer: **62 passed, 5 xfailed**.
+- Reproduction commands, exact targets, measured metrics, and future scene ideas:
+  `docs/challenges.md`. Illustrator import remains unverified.
 
 ## Gradients (new this session — feat/gradients worktree)
 Smooth colour ramps inside one region are now detected and emitted as real SVG

@@ -26,7 +26,7 @@ import math
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 SS = 4  # supersampling for anti-aliasing (match make_samples.py)
 
@@ -231,6 +231,51 @@ def t4_grad_behind_circle():
     return _finish(im, w, h)
 
 
+# ---------------------------------------------------------------------------
+# "Shape behind text" — PINS CURRENT (pre-feature) BEHAVIOUR.
+#
+# This is NOT something PLATE handles well yet; the fixture exists so the test
+# flips when we later build text detection + edge-crossing completion (ROADMAP:
+# "Shape behind text"). Today: text occludes the shape as many thin strokes that
+# cross its EDGES (not clean corners), so the T-junction completion test does not
+# fire — the shape stays a traced path with letter-shaped notches, and the letters
+# are traced as their own outline paths. Recognition here is geometric, not
+# semantic: PLATE does not "know" the shape is an ice cube.
+#
+# The ground-truth contract for this one (in controls.py) is intentionally LOOSE:
+# we assert the *current* failure mode (no completion, shape is a path, letters
+# present as extra shapes), not a desired end state. When the feature lands, these
+# expectations change on purpose.
+# ---------------------------------------------------------------------------
+
+def _font(size: int):
+    """A large, scalable font with no external dependency (Pillow >= 10)."""
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:                       # very old Pillow: unscalable bitmap default
+        return ImageFont.load_default()
+
+
+def t5_text_on_shape():
+    """A flat rounded-rect 'ice cube' with dark text drawn across it. The letters cut
+    into the block's interior and edges. Pins the current behaviour: the block does
+    NOT amodally complete (letters are edge-crossing occluders), so it stays a path,
+    and the text is traced as separate letter-shaped paths."""
+    w, h = 400, 240
+    im, d = _canvas(w, h)
+    # the 'cube': a flat cyan rounded rectangle, roughly centred
+    d.rounded_rectangle(S([70, 60, 330, 180]), radius=22 * SS, fill=(90, 190, 210, 255))
+    # dark text across it (default font; a short word so the letter count is stable)
+    font = _font(96 * SS)
+    text = "ICE"
+    bb = d.textbbox((0, 0), text, font=font)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    tx = (w * SS - tw) // 2 - bb[0]
+    ty = (h * SS - th) // 2 - bb[1]
+    d.text((tx, ty), text, font=font, fill=(25, 35, 55, 255))
+    return _finish(im, w, h)
+
+
 CONTROLS = {
     # T1
     "t1_circle": t1_circle,
@@ -252,6 +297,8 @@ CONTROLS = {
     "t3_linear_grad": t3_linear_grad,
     "t3_radial_grad": t3_radial_grad,
     "t4_grad_behind_circle": t4_grad_behind_circle,
+    # shape behind text (pins current behaviour; see note above)
+    "t5_text_on_shape": t5_text_on_shape,
 }
 
 

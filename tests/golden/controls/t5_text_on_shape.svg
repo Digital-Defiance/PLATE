@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="400" height="240" viewBox="0 0 400 240">
+  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="400" height="240" fill="#ffffff"/>
+  <g id="Cyan_rectangle" data-name="Cyan rectangle" inkscape:label="Cyan rectangle" inkscape:groupmode="layer">
+    <rect id="Cyan_rectangle_2" data-name="Cyan rectangle" inkscape:label="Cyan rectangle" x="70" y="60" width="261" height="121" fill="#5abed2"/>
+    <path id="Dark_gray_shape" data-name="Dark gray shape" inkscape:label="Dark gray shape" d="M181.04 88.79C178.53 95.09 171.45 97.41 168.04 103.9C163.16 113.21 162.72 130.55 169.72 139.17C173.26 143.52 177.58 145.88 180.45 150.57C177.75 152.23 180.49 151.86 178.5 152.78C173.25 155.2 162.56 144.86 160.35 140.68C150.88 122.84 156.63 84.74 181.04 88.79Z" fill="#192337"/>
+    <path id="Dark_gray_shape_2" data-name="Dark gray shape 2" inkscape:label="Dark gray shape 2" d="M228 86.34C233.54 87.01 236.96 86.8 241.32 90.21C240.18 91.38 236.75 94.1 236.17 95.77C235.62 97.32 235.83 114.98 236.5 115.68C237.84 117.09 240.29 118.54 241.76 119.9C240.45 121.22 237.17 123.67 236.31 125.37C235.51 126.95 235.49 142.58 236.19 144.35C236.89 146.11 240.4 148.57 241.76 149.79C238.96 152.28 231.58 157.63 228.37 151.72C226.81 148.83 228 137.51 228 133.75L228 86.34Z" fill="#192337"/>
+    <rect id="Dark_gray_rectangle" data-name="Dark gray rectangle" inkscape:label="Dark gray rectangle" x="135" y="87" width="9" height="66.5" fill="#192337"/>
+    <polygon id="Dark_gray_polygon" data-name="Dark gray polygon" inkscape:label="Dark gray polygon" points="211.5,109 207.5,109 202,98.5 191,89.5 193.5,87 204.5,90 209,94.5 213,103.5" fill="#192337"/>
+    <path id="Dark_gray_shape_3" data-name="Dark gray shape 3" inkscape:label="Dark gray shape 3" d="M191.89 151.1C194.86 145.49 198.08 145.75 201.5 140.9C203.3 138.35 204.19 134.78 205.65 132.19C207.72 132.09 209.52 132.18 211.54 132.38C212.28 144.47 204.03 153.46 191.89 151.1Z" fill="#192337"/>
+  </g>
+</svg>

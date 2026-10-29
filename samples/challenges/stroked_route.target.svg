@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <rect id="background" width="480" height="320" fill="#ffffff"/>
+  <path id="editable-route" d="M70 240V110Q70 70 110 70H230Q270 70 270 110V210Q270 250 310 250H410" fill="none" stroke="#1e3c78" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle id="start-stop" cx="70" cy="240" r="22" fill="#d63232"/>
+  <circle id="end-stop" cx="410" cy="250" r="22" fill="#289646"/>
+</svg>

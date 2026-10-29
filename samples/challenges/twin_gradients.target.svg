@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300">
+  <defs>
+    <linearGradient id="left-ramp" gradientUnits="userSpaceOnUse" x1="35" y1="0" x2="215" y2="0">
+      <stop offset="0" stop-color="#285ad2"/><stop offset="1" stop-color="#d23232"/>
+    </linearGradient>
+    <linearGradient id="right-ramp" gradientUnits="userSpaceOnUse" x1="265" y1="0" x2="445" y2="0">
+      <stop offset="0" stop-color="#d23232"/><stop offset="1" stop-color="#285ad2"/>
+    </linearGradient>
+  </defs>
+  <rect id="background" width="480" height="300" fill="#ffffff"/>
+  <rect id="left-tile" x="35" y="55" width="180" height="190" fill="url(#left-ramp)"/>
+  <rect id="right-tile" x="265" y="55" width="180" height="190" fill="url(#right-ramp)"/>
+  <circle id="left-dot" cx="125" cy="150" r="34" fill="#e6a014"/>
+  <circle id="right-dot" cx="355" cy="150" r="34" fill="#e6a014"/>
+</svg>

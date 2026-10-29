@@ -77,12 +77,15 @@ def test_control(cname, controls_dir):
         assert r.stats["anchors"] <= ctrl.max_total_anchors, (
             f"{cname}: anchors {r.stats['anchors']} > {ctrl.max_total_anchors}")
 
-    # 2) object-by-object in paint order
+    # 2) object-by-object in paint order (skipped when the contract uses a bespoke
+    #    branch instead of a fixed object list, e.g. fixtures whose exact object
+    #    decomposition is font/tracer-dependent)
     flat = _flatten(r.nodes)
-    assert len(flat) == len(ctrl.objects), (
-        f"{cname}: got {len(flat)} objects {[n.kind for n, _ in flat]}, "
-        f"expected {len(ctrl.objects)} {[o.kind for o in ctrl.objects]}"
-    )
+    if ctrl.objects:
+        assert len(flat) == len(ctrl.objects), (
+            f"{cname}: got {len(flat)} objects {[n.kind for n, _ in flat]}, "
+            f"expected {len(ctrl.objects)} {[o.kind for o in ctrl.objects]}"
+        )
 
     for i, (obj, (node, depth)) in enumerate(zip(ctrl.objects, flat)):
         where = f"{cname}[{i}]"
@@ -127,6 +130,28 @@ def test_control(cname, controls_dir):
         assert abs(major - 100) <= TOL, f"ellipse major axis {major:.1f} != ~100"
         assert abs(minor - 55) <= TOL, f"ellipse minor axis {minor:.1f} != ~55"
         assert major > minor + 10, "rotated ellipse should be clearly non-circular"
+    if cname == "t5_text_on_shape":
+        # Pins CURRENT behaviour: no text awareness, no amodal completion.
+        # Structural, range-based asserts (exact per-letter decomposition is
+        # font/tracer-dependent). When "shape behind text" is built, revisit.
+        nodes = [n for n, _ in flat]
+        assert r.stats["completed"] == 0, "block should not amodally complete (text is interior)"
+        assert r.stats["gradients"] == 0, "no gradient anywhere in this fixture"
+        # exactly one background rect at top level
+        assert nodes[0].kind == "rect" and nodes[0].name == "Background"
+        # the 'cube' survives as a single rect (clean body, not cut into pieces)
+        cubes = [n for n in nodes if n.kind in {"rect", "rrect"} and n.name == "Cyan rectangle"]
+        assert len(cubes) == 1, f"expected one cyan block rect, got {len(cubes)}"
+        # the letters are traced as their OWN dark shapes (NOT recognised as text):
+        # several extra dark objects, and NO 'Text:' layer exists today.
+        dark = [n for n in nodes if n.name and n.name.startswith("Dark")]
+        assert len(dark) >= 3, (
+            f"expected the letters to trace as >=3 separate dark shapes, got {len(dark)} "
+            f"({[n.name for n in dark]})")
+        assert not any("Text" in (n.name or "") for n in nodes), (
+            "no text detection yet: there must be no 'Text:' layer")
+        # total object count is modest but clearly more than just background+block
+        assert 5 <= len(nodes) <= 12, f"unexpected object count {len(nodes)}"
 
     # 4) fidelity floor (only when a renderer is available)
     from plate.raster import have_renderer

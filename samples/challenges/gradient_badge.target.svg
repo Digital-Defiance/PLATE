@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="360" viewBox="0 0 400 360">
+  <defs>
+    <radialGradient id="disc-ramp" gradientUnits="userSpaceOnUse" cx="200" cy="180" r="135">
+      <stop offset="0" stop-color="#f0d796"/><stop offset="1" stop-color="#785f9b"/>
+    </radialGradient>
+  </defs>
+  <rect id="background" width="400" height="360" fill="#ffffff"/>
+  <circle id="shaded-disc" cx="200" cy="180" r="135" fill="url(#disc-ramp)"/>
+  <rect id="crossing-ribbon" x="35" y="155" width="330" height="50" fill="#1e3c78"/>
+  <circle id="left-rivet" cx="100" cy="180" r="12" fill="#e6a014"/>
+  <circle id="right-rivet" cx="300" cy="180" r="12" fill="#e6a014"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="280" viewBox="0 0 420 280">
+  <rect id="background" width="420" height="280" fill="#ffffff"/>
+  <circle id="disc-behind-type" cx="210" cy="140" r="85" fill="#5abed2"/>
+  <rect id="letter-I" x="115" y="80" width="20" height="120" fill="#192337"/>
+  <path id="letter-C" d="M230 80H155V200H230V180H175V100H230Z" fill="#192337"/>
+  <path id="letter-E" d="M250 80H325V100H270V130H315V150H270V180H325V200H250Z" fill="#192337"/>
+</svg>
