@@ -26,11 +26,11 @@ def _path_anchors(d: str) -> int:
 
 def analyze_svg(svg: str) -> dict:
     root = ET.fromstring(svg)
-    shapes = prims = anchors = unnamed = groups = gradients = 0
+    shapes = prims = anchors = unnamed = groups = gradients = strokes = 0
     depth = [0]
 
     def walk(el, d):
-        nonlocal shapes, prims, anchors, unnamed, groups, gradients
+        nonlocal shapes, prims, anchors, unnamed, groups, gradients, strokes
         t = _local(el.tag)
         if t in ("linearGradient", "radialGradient"):
             gradients += 1
@@ -45,6 +45,10 @@ def analyze_svg(svg: str) -> dict:
                 unnamed += 1
             if t == "path":
                 anchors += _path_anchors(el.get("d", ""))
+                if el.get("stroke") not in (None, "none") and el.get("fill") == "none":
+                    strokes += 1
+                    if not re.search("[Zz]", el.get("d", "")):
+                        anchors += 1  # the start anchor of an open centreline
             elif t in ("circle", "ellipse"):
                 anchors += 4; prims += 1
             elif t == "rect":
@@ -57,6 +61,7 @@ def analyze_svg(svg: str) -> dict:
     walk(root, 0)
     return dict(shapes=shapes, groups=groups, layer_depth=depth[0], anchors=anchors,
                 gradients=gradients,
+                strokes=strokes,
                 anchors_per_shape=round(anchors / max(shapes, 1), 2),
                 primitive_ratio=round(prims / max(shapes, 1), 3),
                 unnamed_ratio=round(unnamed / max(shapes + groups, 1), 3), bytes=len(svg.encode()))

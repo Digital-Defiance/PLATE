@@ -1,7 +1,7 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-29. Current verification: **81 passed, 9 expected structural gaps**.
-`STATUS.md` records measurements and all nine remaining challenge failures;
+Updated: 2026-10-29. Current verification: **114 passed, 8 expected structural gaps**.
+`STATUS.md` records measurements and all eight remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
@@ -14,23 +14,26 @@ Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality w
 - [x] Fixture infrastructure: 15 current-behaviour controls and 12 PNG/desired-SVG challenges, including four compositions with 44–64 target objects. Generators: `scripts/make_controls.py`, `scripts/make_challenges.py`, `scripts/make_complex_scenes.py`.
 - [x] Interior-text control (`t5_text_on_shape`) and actual edge-crossing lettering challenge (`edge_crossing_type`). Fixture creation is done; text awareness/completion are not.
 - [x] Geometry safety: score the full primitive footprint and validate completion containment before restoring observed pixels. Six regression cases in `tests/test_geometry_validation.py`; poster footer and storefront pavement stay rectangular. All eight original sample SVGs unchanged.
+- [x] Thin details and continuous branches: all 18 gauge ticks survive, both panel signal routes are continuous, and 3/5/7px curves remain attached to seeded heads. Repeated stable colours can seed a narrow line even when edge dilation removed every flat pixel; gradient ramps and explicit palettes are protected.
+- [x] First editable-stroke implementation: unbranched near-constant-width curves emit open paths with source-scaled width and round caps/joins. Endpoint continuation is restricted to supported later-painted circles. `stroked_route` now passes its independent target (15.5px fit within 16±1px, 4 objects, 25 total anchors). Disable with `--set strokes=false`.
 
 ## P1 — quality work, in implementation order
 
 Each change needs a focused regression, before/after tests, and rendered `plate bench`
 results. Retain VTracer as the control and keep target SVGs independent of PLATE output.
 
-1. [ ] **Preserve thin details during segmentation — next change.** In `stages/segment.py`, retain reliable colour seeds/components when edge detection consumes an entire narrow feature. All 18 gauge ticks currently disappear before tracing; denoising off does not help. Add isolated ticks/slots at several widths and orientations; verify all 18 survive in `complex_instrument_panel`. Protect speckle filtering and antialiased edges.
-2. [ ] **Emit editable strokes.** After preserving pixels, fit centrelines and constant width; extend `scene.py`, `pipeline.py` and `stages/emit.py` for stroke width/caps/joins. Verify `stroked_route` becomes an open 16px stroked path with its endpoint circles; recover panel routes/needles/ticks and patch orbits/panel details. Filled outlines do not meet this target.
-3. [ ] **Fit shared gradients across occlusion.** In `stages/gradient.py` and completion/order integration, fit compatible fragments separated by supported occluders as one model/full silhouette. `gradient_badge` needs one radial disc, not two; `complex_mission_patch` needs two gradients, currently zero. Keep `twin_gradients` separate and `discrete_palette` at zero gradients. Patch palette caps 16/32/64 gave identical results. Conic/mesh gradients and focal-point fitting remain later work.
+1. [x] **Preserve isolated thin details during segmentation.** `stages/segment.py` now restores near-palette cores only in components without flat seeds, vetoing explained antialias blends. All 18 gauge ticks survive, with ≥80% coverage both in segmentation and emitted SVG. `tests/test_segment.py` protects several widths/orientations, speckles, transparency and false outlines. Existing circle-stack regression remains green.
+2. [ ] **Complete stroke coverage.** Open curved paths and continuous panel routes are implemented. Remaining: straight marks currently retained as live rects/polygons, closed strokes/rings, branched networks, and automatic inference of butt/square caps or other joins. The panel has 2 editable route strokes; its full target requires 27. Keep round-fit rejection for square-ended lettering and variable-width shapes, and verify Illustrator stroke editability.
+3. [ ] **Fit shared gradients across occlusion.** In `stages/gradient.py` and completion/order integration, fit compatible fragments separated by supported occluders as one model/full silhouette. `gradient_badge` needs one radial disc, not two. The patch now emits two radial fragments of the planet, rather than the target's one radial planet plus one linear hull. Keep `twin_gradients` separate and `discrete_palette` at zero gradients. Before thin-detail recovery, palette caps 16/32/64 all left the patch at zero gradients. Conic/mesh gradients and focal-point fitting remain later work.
 4. [ ] **Complete behind multiple edge-crossing occluders.** In `stages/complete.py` / `order.py`, pool supported free-boundary fragments for letters, bars and ribbons. Verify `edge_crossing_type` recovers one full disc (5 total objects, currently 7), then the badge/poster/patch. Preserve the relative T-junction test and containment/occlusion safeguards. Geometric completion can improve independently of OCR.
 5. [ ] **Reduce chained-completion drift.** `occlusion_chain` has the right count but its back circle drifts ≈3.5px (full-silhouette IoU ≈0.946). Recover all authored circles within the contract while retaining `overlap` centre/radius error <1px and `stack3` ordering/primitive tests.
 6. [ ] **Preserve compound-path topology.** Remove the stray second component from the blue path in `perforated_plate`, retaining its three transparent holes and separate gold island. Check segmentation, silhouette filling, completion, bleed and tracing; do not erase intended small objects to hide the artifact. Extend to overlapping rings and soft alpha edges.
-7. [ ] **Improve primitive/curve decisions and corners.** Full-footprint validation is fixed; rounded corners, sharp stars, outlined letters and polygon cleanup remain. Evaluate candidate ranking/corner constraints; merge bevel vertices <3px apart and investigate optional angle/symmetry cleanup. Validate `complex_storefront` and `complex_event_poster`. Poster SSIM is 0.9493; reach ≥0.95 while retaining useful editable structure.
+7. [ ] **Improve primitive/curve decisions and corners.** Full-footprint validation is fixed; rounded corners, sharp stars, outlined letters and polygon cleanup remain. Evaluate candidate ranking/corner constraints; merge bevel vertices <3px apart and investigate optional angle/symmetry cleanup. Validate `complex_storefront` and `complex_event_poster`. Poster SSIM is now 0.9715, but object structure still fails its target.
 8. [ ] **Expose partial structural progress.** Extend challenge diagnostics beyond the first count mismatch: report missing/extra/split objects, per-object silhouette error, holes, primitive/fill types and paint order. Keep integrity/fidelity checks active for expected gaps. Promote a strict expected failure only when its independent target is met; do not refresh targets from output or loosen contracts to conceal failures.
 
-All four complex structural targets remain unmet: patch **45 target / 55 actual**,
-storefront **64 / 68**, panel **59 / 37**, poster **44 / 57**. Better SSIM alone does
+All four complex structural targets remain unmet: patch **45 target / 72 actual**,
+storefront **64 / 73**, panel **59 / 60**, poster **44 / 83**. Restoring details can
+expose additional visible fragments; their completion/merging remains open. Better SSIM alone does
 not complete these tasks. See the current-gap table in `STATUS.md`.
 
 ## P0 — hardware and real-artwork validation (alongside P1)
@@ -41,6 +44,7 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 
 ## P1 — further robustness
 
+- [ ] Extend thin-colour discovery to hairlines/fully antialiased features with no stable pre-dilation colour core; retain palette budgets and the gradient-band veto. Continuous panel routes and seeded-head branches are now covered by regressions.
 - [ ] Ring/compound-path semantic naming (e.g. "Red ring"); validate `t3_ring` without changing its even-odd topology.
 - [ ] Palette pressure: exercise >64 distinct flat colours and k-means in `stages/segment.py`; add a labelled mosaic.
 - [ ] Soft alpha edges/shadows: check light/dark backgrounds and preserve opacity rather than baking in a background colour.

@@ -12,12 +12,12 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | --- | --- | --- | --- |
 | [Nested dial](../samples/challenges/nested_dial.png) | [Target](../samples/challenges/nested_dial.target.svg): background + seven full circles; nested housing, bezel, face, hub and three repeated markers | Pass; 8 objects | 0.9916 |
 | [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Gap: plate path has a stray second component, despite correct holes and 2 objects | 0.9902 |
-| [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Gap: back circle centre drifts ≈3.5px; full silhouette IoU ≈0.946 | 0.9853 |
+| [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Gap: back circle centre drifts ≈3.5px; full silhouette IoU ≈0.946 | 0.9852 |
 | [Twin gradients](../samples/challenges/twin_gradients.png) | [Target](../samples/challenges/twin_gradients.target.svg): two separate rectangles with opposite linear gradients, two overlaid circles, background | Pass; 5 objects, 2 gradients | 0.9882 |
 | [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Gap: 6 objects / 2 gradient discs instead of 5 objects / 1 disc | 0.9936 |
-| [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Gap: disc fragments; 7 objects instead of 5 | 0.9851 |
+| [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Gap: disc fragments; 7 objects instead of 5 | 0.9914 |
 | [Discrete palette](../samples/challenges/discrete_palette.png) | [Target](../samples/challenges/discrete_palette.target.svg): eight hard-edged, flat rectangles + background; zero gradients | Pass; 9 rectangles | 0.9963 |
-| [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Gap: route becomes a filled outline | 0.9917 |
+| [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Pass: one 15.5px open stroke (16±1px contract), full hidden endpoints, 4 objects | 0.9913 |
 
 All eight currently clear an SSIM floor of 0.95 on **both white and dark backgrounds**.
 That does not imply that the editable structure is correct: the badge's duplicate
@@ -53,10 +53,10 @@ The table below records the initial baseline, before the geometry validation fix
   rotated ellipse, diagonal ribbon, six crossing lines, repeated dots, and footer.
 
 All four structural contracts are strict expected feature gaps. Appearance checks
-remain active. After fixing geometry validation, the regression floors are 0.95
-for the patch, panel and storefront, and 0.94 for the poster. **The desired fidelity
-remains ≥0.95**; the poster floor records current behaviour, not success against
-the goal. The original eight fixtures retain their 0.95 floors.
+remain active. After geometry validation and isolated thin-detail recovery,
+regression floors are 0.97 for the patch/panel and 0.96 for the storefront/poster.
+All four now clear the ≥0.95 appearance goal on both backgrounds; their editable
+structures still fail. The original eight fixtures retain their 0.95 floors.
 
 [`scripts/make_complex_scenes.py`](../scripts/make_complex_scenes.py) authors both
 targets and PNGs. `scripts/make_challenges.py` can also rerasterize the checked-in
@@ -73,16 +73,20 @@ self-contained vector artwork, and all nine transparent cutouts.
    despite its source rectangle spanning x=60…900. It now emits a live rectangle
    with half-width 420 and half-height 50. Model ranking and additional corner
    constraints remain possible future improvements.
-2. **Preserve thin features during segmentation.** All eighteen 5px gauge ticks
-   have zero cream-colour coverage immediately after `segment()`, before fitting
-   or SVG output. Whole thin regions can be classified as edges, leaving no local
-   flat seeds for their colour. Add reliable palette-colour seeds/fallbacks for
-   these regions and protect narrow components. A focused tick/slot fixture should
-   pin both the visible detail and topology.
-3. **Recover editable strokes.** Surviving constant-width regions need a centreline
-   and width model, followed by stroke-cap/join support in the scene model/emitter.
-   Recover raster detail first; an SVG stroke feature cannot reconstruct regions
-   that segmentation has already erased.
+2. **Preserve isolated thin features—implemented for known palette colours.**
+   All eighteen ticks previously disappeared in `segment()`. The fallback now
+   recovers near-palette cores in isolated components with no flat seed, vetoing
+   locally explained blends and leaving supported contours unchanged. Tests cover
+   3/5/7px marks at three angles, false outlines, transparency and speckles. Every
+   tick now has ≥80% coverage in segmentation and emitted SVG. Distant seeded-head
+   branches and stable colours lost by edge dilation are now recovered too; both
+   panel routes are continuous. Fully antialiased colours without stable cores
+   remain open.
+3. **Recover editable strokes—implemented for open curved paths.** Unbranched,
+   near-constant-width paths get subpixel centrelines, source-scaled width and round
+   caps/joins after visible-mask validation. The route target now passes. Existing
+   live primitives stay primitives; closed/branched strokes and automatic inference
+   of other cap/join styles remain open. `--set strokes=false` disables detection.
 4. **Fit gradients jointly across occlusion.** Gradient candidates currently require
    connected visible bands and are fitted before occlusion analysis. Test linking
    compatible fragments separated by an established occluder, fitting one model,
@@ -99,7 +103,7 @@ SSIM 0.9628. Panel `denoise=0` still produces 37 objects and SSIM 0.9665; disabl
 primitive snapping gives 37 objects and SSIM 0.9660. These are evidence against a
 simple palette-size or denoising preset fix. Detailed causal work remains; the
 gradient/occlusion changes above are proposed approaches rather than implemented
-solutions. Segmentation has not been changed.
+solutions. These sweeps predate the segmentation fallback described above.
 
 ### Geometry validation results (2026-10-29)
 
@@ -115,6 +119,49 @@ plain-VTracer baseline is unchanged. Six regression cases in
 `tests/test_geometry_validation.py` cover long rectangles at several aspect ratios,
 valid versus observation-discarding completion candidates, and the real poster
 footer. All structural target SVGs and expected-gap markers are unchanged.
+
+### Isolated thin-detail results (2026-10-29)
+
+| Scene | SSIM before → after | Objects after / desired |
+| --- | --- | --- |
+| Instrument panel | 0.9666 → **0.9788** | 61 / 59; all 18 ticks visible, strokes/routes still unmet |
+| Mission patch | 0.9628 → **0.9809** | 78 / 45; two radial fragments, missing target linear hull |
+| Storefront | 0.9623 → **0.9699** | 76 / 64 |
+| Event poster | 0.9493 → **0.9685** | 85 / 44 |
+
+Restoring small regions can split the surrounding regions into more components;
+counts can rise while appearance improves. Completion, merging and stroke models
+remain necessary. No desired SVGs or object-count contracts were relaxed.
+`tests/test_segment.py` includes the panel check against each authored tick mask;
+rendered coverage is 82.6–84.5% per tick. Seven original sample outputs are unchanged;
+badge SSIM improves from 0.9435 to 0.9441. The single changed control golden was
+visually reviewed and refreshed; its plaque width and dot radii move closer to
+the authored geometry. Full suite: **93 passed, 9 expected structural gaps**.
+
+### Continuous curves / open strokes (2026-10-29)
+
+`stroked_route` now passes the independent full-silhouette/paint-order contract:
+one open stroke under both endpoint circles, width 15.5px within 16±1px, and 25
+total anchors instead of 36. SSIM is 0.9913 versus 0.9917 for the old filled outline.
+Both panel signal routes are continuous editable strokes. C/E fragments in the
+interior-text control also reconnect; OCR and semantic text grouping remain absent.
+
+| Scene | Current objects / target | Strokes | White / dark SSIM |
+| --- | --- | --- | --- |
+| Mission patch | 72 / 45 | 1 | 0.9815 / 0.9830 |
+| Storefront | 73 / 64 | 0 | 0.9738 / 0.9752 |
+| Instrument panel | 60 / 59 | 2 (target 27) | 0.9854 / 0.9854 |
+| Event poster | 83 / 44 | 0 | 0.9715 / 0.9715 |
+
+The patch still has two radial fragments instead of the authored radial planet and
+linear hull; the poster retains one gradient. A new direct regression protects that
+gradient from branch-recovery heuristics. Solid-core confidence gates prevent
+smooth ramps from being treated as missing flat linework. Explicit palettes and
+palette budgets remain authoritative. Original flat structural tests remain green;
+small fidelity changes (including face 0.9929→0.9919) are recorded in `STATUS.md`.
+Full suite: **114 passed, 8 expected structural gaps**. All desired SVGs remain
+unchanged; only the now-met route gap marker was removed. Two soft control goldens
+were reviewed/refreshed for subpixel circle fits and reconnected lettering.
 
 ## What is enforced
 
@@ -132,7 +179,7 @@ footer. All structural target SVGs and expected-gap markers are unchanged.
 - Valid unique IDs, resolved gradient references, no embedded raster fallback.
 - Appearance against the PNG on two backgrounds, regardless of structural gap status.
 
-Nine demonstrated structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
+Eight remaining structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
 crashes and fidelity regressions still fail normally. A fully met target produces
 XPASS and fails the suite until its gap marker is removed. Do not replace the target
 SVG with today's output to make a test pass.

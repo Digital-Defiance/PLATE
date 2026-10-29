@@ -56,3 +56,6 @@ class Node:
     anchors: int = 0
     shape_id: int | None = None
     grad: GradientFill | None = None  # SVG-space gradient fill (set by _leaf), None = flat
+    stroke_width: float | None = None
+    stroke_linecap: str = "round"
+    stroke_linejoin: str = "round"

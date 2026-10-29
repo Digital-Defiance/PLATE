@@ -40,21 +40,23 @@ CHALLENGES = {
         gap="Edge-crossing letters fragment the underlying disc (7 objects vs 5)."),
     "discrete_palette": Challenge("Keep eight hard-edged flat swatches; emit zero gradients."),
     "stroked_route": Challenge(
-        "Keep the route as one open stroked path with two endpoint discs.",
-        gap="Stroke detection is unimplemented; the route becomes a filled outline."),
+        "Keep the route as one open stroked path with two endpoint discs."),
     "complex_mission_patch": Challenge(
         "45 objects: transparent perforated rim, two gradients, orbits, spacecraft and type.",
-        gap="The mission patch fragments gradients and occluded objects; target structure is unmet."),
+        gap="The patch duplicates radial planet fragments instead of recovering radial planet + linear hull.",
+        ssim_floor=0.97),
     "complex_storefront": Challenge(
         "64 objects: repeated windows, fourteen awning panels, outlined sign and plants.",
-        gap="The storefront merges and fragments author objects; target structure is unmet."),
+        gap="The storefront merges and fragments author objects; target structure is unmet.",
+        ssim_floor=0.96),
     "complex_instrument_panel": Challenge(
         "59 objects: three nested gauges, 27 strokes, title and connected status lights.",
-        gap="The panel loses thin strokes and merges touching objects; target structure is unmet."),
+        gap="Panel ticks survive, but strokes remain filled silhouettes and routes are fragmented.",
+        ssim_floor=0.97),
     "complex_event_poster": Challenge(
         "44 objects: gradient disc behind type, ring, ribbon, strokes and repeated dots.",
         gap="Crossing lettering, ribbon and lines fragment the poster's shapes.",
-        ssim_floor=0.94),  # Geometry validation improved SSIM to 0.9493; desired >=0.95.
+        ssim_floor=0.96),  # Thin-detail recovery improved SSIM to 0.9685.
 }
 
 DRAWABLE = {"rect", "circle", "ellipse", "path", "polygon", "polyline", "line"}

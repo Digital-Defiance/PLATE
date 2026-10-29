@@ -3,9 +3,9 @@
   <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="400" height="400" fill="#f5f2e8"/>
   <g id="Navy_circle" data-name="Navy circle" inkscape:label="Navy circle" inkscape:groupmode="layer">
     <circle id="Navy_circle_2" data-name="Navy circle" inkscape:label="Navy circle" cx="200.35" cy="200.21" r="170.04" fill="#14285a"/>
-    <rect id="Gold_rectangle" data-name="Gold rectangle" inkscape:label="Gold rectangle" x="120" y="150" width="161" height="81" fill="#f0b41e"/>
+    <rect id="Gold_rectangle" data-name="Gold rectangle" inkscape:label="Gold rectangle" x="120" y="150" width="160" height="81" fill="#f0b41e"/>
     <rect id="Red_rectangle" data-name="Red rectangle" inkscape:label="Red rectangle" x="150" y="260" width="100" height="30" fill="#c83c32"/>
-    <circle id="Light_gray_circle" data-name="Light gray circle" inkscape:label="Light gray circle" cx="294.92" cy="195.14" r="15.35" fill="#dcdce6"/>
-    <circle id="Light_gray_circle_2" data-name="Light gray circle 2" inkscape:label="Light gray circle 2" cx="105.73" cy="195.12" r="15.31" fill="#dcdce6"/>
+    <circle id="Light_gray_circle" data-name="Light gray circle" inkscape:label="Light gray circle" cx="295.16" cy="195.31" r="15.2" fill="#dcdce6"/>
+    <circle id="Light_gray_circle_2" data-name="Light gray circle 2" inkscape:label="Light gray circle 2" cx="105.52" cy="195.27" r="15.18" fill="#dcdce6"/>
   </g>
 </svg>

@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from .config import Config
+from .bezier import is_flat
 from .geometry import GradientFill, GradientStop, Prim
 from .imageio import load_image
 from .scene import Loaded, Node, Segmentation, Shape
@@ -157,6 +158,47 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
         node = _leaf(s, (H, W), cfg, img.scale)
         if node is not None:
             leaves[s.id] = node
+    if cfg.strokes:
+        from .stages.strokes import fit_stroke
+
+        def paint_ids(ids):
+            for sid in ids:
+                yield sid
+                yield from paint_ids(shapes[sid].children)
+
+        rank = {sid: i for i, sid in enumerate(paint_ids(roots))}
+        circles = []
+        for sid, node in leaves.items():
+            if node.kind == "circle":
+                p = node.params
+                circles.append((sid, shapes[sid].vis,
+                                Prim("circle", p["cx"]*img.scale-.5, p["cy"]*img.scale-.5,
+                                     p["r"]*img.scale, p["r"]*img.scale)))
+        for sid, node in leaves.items():
+            if node.kind != "path" or node.evenodd or node.grad is not None:
+                continue
+            stroke = fit_stroke(shapes[sid].full, cfg,
+                                [(mask, prim) for other, mask, prim in circles if rank[other] > rank[sid]])
+            if stroke is None:
+                continue
+            def number(value):
+                text = f"{value:.{cfg.path_precision}f}"
+                if "." in text:
+                    text = text.rstrip("0").rstrip(".")
+                return "0" if text in ("-0", "") else text
+            curves = [(c+.5)/img.scale for c in stroke.curves]
+            start = curves[0][0]
+            parts = [f"M{number(start[0])} {number(start[1])}"]
+            for curve in curves:
+                if is_flat(curve):
+                    parts.append(f"L{number(curve[3, 0])} {number(curve[3, 1])}")
+                else:
+                    parts.append("C"+" ".join(number(v) for v in curve[1:].ravel()))
+            node.d = "".join(parts)
+            node.stroke_width = stroke.width/img.scale
+            node.anchors = len(curves)+1
+            shapes[sid].full = shapes[sid].draw = stroke.full
+            shapes[sid].completed |= stroke.completed
     t3 = time.time()
 
     if cfg.remove_background:
@@ -168,7 +210,8 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     # classical base names, then optional semantic overrides
     for n in leaves.values():
         s = shapes[n.shape_id]
-        base = "Background" if s.is_background else f"{name.color_name(s.color)} {name.KIND_WORD[n.kind]}"
+        word = "stroke" if n.stroke_width is not None else name.KIND_WORD[n.kind]
+        base = "Background" if s.is_background else f"{name.color_name(s.color)} {word}"
         n.name = base
     res = Result("", tree, shapes, seg, img, cfg)
     groups: list[dict] = []
@@ -186,6 +229,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                  anchors=sum(n.anchors for n in leaves.values()),
                  primitives=sum(n.kind != "path" for n in leaves.values()),
                  gradients=sum(n.grad is not None for n in leaves.values()),
+                 strokes=sum(n.stroke_width is not None for n in leaves.values()),
                  t_segment=t1 - t0, t_order=t2 - t1, t_trace=t3 - t2, t_total=time.time() - t0)
     stats["vlm_names"] = len(labels or {})
     return Result(svg, tree, shapes, seg, img, cfg, stats)

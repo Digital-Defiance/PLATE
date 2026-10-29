@@ -1,20 +1,23 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 7, roadmap/status audit) · Version 0.0.1 · Tests: 81 passing, 9 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 9, continuous curves and editable strokes) · Version 0.0.1 · Tests: 114 passing, 8 expected feature gaps (`pytest -q`)
 
 ## Current remaining work — start here
 
-The geometry safety fixes are complete. The nine strict expected failures below
+Geometry safety, thin-detail recovery and initial open-stroke support are complete.
+All 18 ticks survive; both panel routes are continuous editable strokes. The
+independent `stroked_route` target passes. The eight strict expected failures below
 remain open; they are desired structural targets, not nine crashing pipeline tests.
 Appearance/integrity checks remain active. Current scene SSIM: mission patch
-**0.9628**, storefront **0.9623**, instrument panel **0.9666**, poster **0.9493**.
-Storefront clears 0.95 on both backgrounds; the poster still has a 0.94 regression
-floor and a desired ≥0.95 goal. Historical sections below retain their earlier measurements.
+**0.9815**, storefront **0.9738**, instrument panel **0.9854**, poster **0.9715**.
+All four clear 0.95 on white and dark backgrounds. Current regression floors:
+patch/panel 0.97, storefront/poster 0.96. Structural targets remain unmet; historical
+sections below retain their earlier measurements.
 
 Implementation order (details and acceptance checks in `ROADMAP.md`):
 
-1. Preserve thin details in segmentation: all **18 gauge ticks** are lost before tracing.
-2. Recover editable stroke centrelines, width, caps and joins.
+1. Extend stroke coverage beyond open curves: straight primitives/ticks, closed loops, branched networks and automatic cap/join inference. The panel currently has 2 of its 27 desired strokes.
+2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
 3. Fit shared gradients across supported occluders; retain separate ramps/flat swatches.
 4. Complete shapes behind edge-crossing letters/ribbons and reduce chained-circle drift.
 5. Preserve holes/components, then refine corners, primitive selection and complex object recovery.
@@ -26,11 +29,10 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `occlusion_chain` | Back circle drifts ≈3.5px, full-silhouette IoU ≈0.946; recover all authored circles accurately |
 | `gradient_badge` | 6 objects / 2 gradient discs; require 5 objects / 1 full radial disc under the ribbon |
 | `edge_crossing_type` | 7 objects; require 5, including a full disc behind the three outlined letters |
-| `stroked_route` | Filled outline; require one open 16px stroke plus endpoint circles and background |
-| `complex_mission_patch` | 55 objects / 0 gradients; target 45 / 2, with occluded objects, strokes and cutouts intact |
-| `complex_storefront` | 68 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
-| `complex_instrument_panel` | 37 objects; target 59, including all ticks and 27 editable strokes |
-| `complex_event_poster` | 57 objects; target 44 with full underlying shapes, holes, strokes and lettering; fidelity goal ≥0.95 |
+| `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
+| `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
+| `complex_instrument_panel` | 60 objects; ticks visible and both routes are editable strokes, but target 59 requires 27 strokes overall |
+| `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
 real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy
@@ -38,9 +40,87 @@ and request latency remain work. Other deferred items (palette pressure, soft
 alpha/shadows, scale consistency, optional SAM/text, product/export/release) remain
 tracked in `ROADMAP.md`.
 
-Session 7 changed documentation only: reconciled completed work, added the full
+Session 7 (historical) changed documentation only: reconciled completed work, added the full
 remaining queue, corrected stale gradient/VLM/text-fixture/Git notes, and retained
 earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed**.
+
+## Continuous curves and editable strokes (session 9)
+
+- Extended `segment.py` recovery to distant branches of partially seeded regions.
+  Require a repeated solid core so smooth gradient bands keep coherent assignments.
+  Palette discovery also examines stable pre-dilation cores, admitting repeated
+  new colours within the existing budget while respecting explicit palettes.
+  Both curved panel signal routes now form single continuous colour regions;
+  3/5/7px branches stay attached to their seeded heads.
+- Added `stages/strokes.py`: numpy thinning, unbranched-chain checks, subpixel
+  cross-section centring, width validation, open Schneider fitting and full-mask
+  reconstruction checks. Reject holes, meaningful junctions, taper and poor fits.
+  Round-cap/join detection currently runs on nonprimitive, nongradient path
+  candidates; existing live primitives remain primitives.
+- `Node` and the emitter now carry width/cap/join styles. Pipeline converts widths
+  and centreline coordinates back to source pixels and continues aligned terminals
+  only beneath touching, later-painted circles. A detached-circle regression
+  prevents invented visible connections; terminal contact is checked through the
+  antialias halo. Stats/metrics include `strokes`.
+  `Config.strokes=True` is default; `--set strokes=false` disables recovery.
+- Promoted **`stroked_route` from strict xfail to passing**, without changing its
+  independent target: one open 15.5px stroke within the 16±1px contract, full
+  hidden endpoints, 4 objects and **25 anchors vs 36 before**. SSIM **0.9913**
+  (previous filled outline 0.9917); editability/full target now pass.
+- Current complex results: panel **60 objects / 2 strokes / SSIM 0.9854**
+  (was 61 / 0 / 0.9788), patch **72 / 1 stroke / 2 radial fragments / 0.9815**,
+  storefront **73 / 0.9738**, poster **83 / 1 gradient / 0.9715**. Dark SSIM:
+  panel 0.9854, patch 0.9830, storefront 0.9752, poster 0.9715.
+- Regression coverage: five continuity cases, fourteen stroke cases (6/12/16px
+  curves, scaling, disable switch, explicit palette, integer coordinates, occluded
+  target, nonstroke rejection and styles/metrics), plus a poster-gradient guard.
+  A broad initial branch fallback lost that gradient; solid-colour confidence
+  checks fixed it. Square-ended wide lettering is not approximated by round caps.
+- Full suite **114 passed, 8 xfailed**, baseline 93/9. `plate bench samples` and
+  `plate bench samples/challenges` run with the unchanged VTracer control. Original
+  flat structural tests remain green; badge SSIM 0.9441→0.9492, face 0.9929→0.9919,
+  noisy badge 0.8675→0.8674 (small fidelity changes recorded, not hidden).
+- Visually inspected all originals, complex outputs, panel/routes and two changed
+  control goldens. Refreshed only `t2_two_circles` (≈0.1px fit changes) and
+  `t5_text_on_shape` (C/E fragments reconnect into letters). No OCR/text grouping
+  was added; all desired target SVGs remain unchanged. Nothing committed/pushed.
+- Remaining: full stroke coverage, shared gradient reconstruction, lettering/chain
+  completion, holes/components and complex object recovery, plus Illustrator import
+  and real artwork validation. Automatic detection still assumes round caps/joins;
+  the emitter supports explicit alternative styles for future models.
+
+## Isolated thin-detail recovery (session 8)
+
+- `stages/segment.py` now restores near-unmixed existing palette colours when an
+  entire isolated component lacks flat seeds. A wider local two-colour explanation
+  vetoes antialias blends. Components already containing flat seeds retain their
+  original assignments; this restriction preserves the three-circle stack that
+  an earlier, broader prototype regressed. Re-estimate coverage around restored
+  cores through the resampling halo; normal transparency/speckle cleanup remains.
+- Restored the corrected implementation and `tests/test_segment.py` after the
+  unfinished files were removed and later reappeared during the session. Verified
+  the corrected variant in a temporary copy before applying it to the workspace.
+- Twelve regression cases: 3/5/7px marks at 0/45/90°, false grey-outline veto,
+  transparency/speckle safeguards, and all **18 panel ticks**. The real-panel test
+  requires ≥80% coverage per tick in both segmentation and rendered SVG; measured
+  emitted coverage is **82.6–84.5%**, versus zero before. Stroke output is not yet
+  implemented; preserving a filled tick does not satisfy the full panel contract.
+- Bench before → after SSIM: panel **0.9666 → 0.9788** (37 → 61 objects), patch
+  **0.9628 → 0.9809** (55 → 78), storefront **0.9623 → 0.9699** (68 → 76), poster
+  **0.9493 → 0.9685** (57 → 85). More restored regions can expose additional
+  fragments; desired object counts/target SVGs remain unchanged. Patch now emits
+  **2 radial planet fragments**, not the target radial-planet/linear-hull pair.
+- Dark-background SSIM: patch **0.9825**, storefront **0.9708**, panel **0.9788**,
+  poster **0.9685**. Tightened regression floors to 0.97 patch/panel and 0.96
+  storefront/poster. The nine expected structural failures remain open.
+- `plate bench samples`: seven original sample SVGs remain byte-identical; badge
+  improves **0.9435 → 0.9441**, anchors **86 → 71**. Hidden-circle/stack tests stay
+  green; VTracer untouched. Visually reviewed panel before/after, all original
+  samples and the sole changed control golden (`t4_badge`: plaque width 161 → 160,
+  dot radii closer to authored 15px). Refreshed only that reviewed soft golden.
+- Full suite: **93 passed, 9 xfailed**, versus baseline 81/9. No commits/pushes.
+  Remaining narrow curved/attached branches and missing-palette-colour discovery
+  are explicitly tracked before editable stroke recovery.
 
 ## Geometry validation fixes (session 6)
 

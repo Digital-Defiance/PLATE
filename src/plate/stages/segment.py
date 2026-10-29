@@ -63,6 +63,30 @@ def _fill_unknown(labels: np.ndarray, unknown: np.ndarray) -> np.ndarray:
     return labels[iy, ix]
 
 
+def _edge_labels(pix: np.ndarray, pal: np.ndarray, nearby: np.ndarray):
+    """Best local solid-colour or two-colour coverage explanation per pixel."""
+    count, colors = nearby.shape
+    best_res = np.full(count, np.inf, np.float32)
+    best_lbl = np.full(count, -2, np.int32)
+    for i in range(colors):
+        for j in range(i, colors):
+            valid = nearby[:, i] & nearby[:, j]
+            if not valid.any():
+                continue
+            A, B = pal[i], pal[j]
+            if i == j:
+                res = np.linalg.norm(pix - A, axis=1)
+                lbl = np.full(count, i, np.int32)
+            else:
+                d = B - A
+                coverage = np.clip(((pix - A) @ d) / float(d @ d), 0.0, 1.0)
+                res = np.linalg.norm(pix - (A + coverage[:, None] * d), axis=1) + 1.5
+                lbl = np.where(coverage < 0.5, i, j).astype(np.int32)
+            better = valid & (res < best_res)
+            best_res[better], best_lbl[better] = res[better], lbl[better]
+    return best_lbl, best_res
+
+
 def segment(img: Loaded, cfg: Config) -> Segmentation:
     rgb, alpha = img.rgb, img.alpha
     H, W = alpha.shape
@@ -78,6 +102,23 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
         flat = opaque.copy()
 
     palette = _build_palette(rgb[flat], cfg)
+    # A narrow feature may have stable colour cores before edge dilation, but
+    # contribute no pixels to `flat`. Admit repeated colours from those cores
+    # within the remaining palette budget; explicit palettes remain authoritative.
+    if not cfg.palette and len(palette) < cfg.max_colors:
+        core = (grad <= cfg.edge_threshold) & edge & opaque
+        colors, counts = np.unique(rgb[core], axis=0, return_counts=True)
+        labs = _lab(colors.reshape(-1, 1, 3)).reshape(-1, 3) if len(colors) else []
+        for i in np.argsort(-counts):
+            if counts[i] < max(6, cfg.filter_speckle) or len(palette) >= cfg.max_colors:
+                break
+            existing = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
+            if np.linalg.norm(existing-labs[i], axis=1).min() >= cfg.color_merge:
+                # Prefer a repeated solid colour over one quantized sample of a
+                # smooth ramp: it must dominate its nearby RGB neighbourhood.
+                near = np.linalg.norm(colors.astype(float)-colors[i], axis=1) <= 12
+                if counts[i] >= 0.25*counts[near].sum():
+                    palette = np.vstack([palette, colors[i]])
     plab = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
     _, idx = cKDTree(plab).query(lab[flat])
 
@@ -98,26 +139,70 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                 ok[:, k] = ndi.binary_dilation(m, structure=np.ones((5, 5), bool))[ey, ex]
         pix = rgb[ey, ex].astype(np.float32)
         pal = palette.astype(np.float32)
-        best_res = np.full(ey.size, np.inf, np.float32)
-        best_lbl = np.full(ey.size, -2, np.int32)
-        for i in range(K):
-            for j in range(i, K):
-                valid = ok[:, i] & ok[:, j]
-                if not valid.any():
-                    continue
-                A, B = pal[i], pal[j]
-                if i == j:
-                    res = np.linalg.norm(pix - A, axis=1)
-                    lbl = np.full(ey.size, i, np.int32)
-                else:
-                    d = B - A
-                    alpha = np.clip(((pix - A) @ d) / float(d @ d), 0.0, 1.0)
-                    res = np.linalg.norm(pix - (A + alpha[:, None] * d), axis=1)
-                    lbl = np.where(alpha < 0.5, i, j).astype(np.int32)
-                    res = res + 1.5   # prefer the plain single-colour explanation when equal
-                better = valid & (res < best_res)
-                best_res[better] = res[better]
-                best_lbl[better] = lbl[better]
+        best_lbl, best_res = _edge_labels(pix, pal, ok)
+
+        # Edge dilation can consume a whole narrow mark, leaving no local flat
+        # seed for a colour that is already in the palette. Restore only nearly
+        # unmixed pixels (<=12 RGB distance, allowing resampling overshoot) with
+        # a clear gain over local fits.
+        candidates = np.flatnonzero(best_res > 6.0)
+        if candidates.size:
+            distance, nearest = cKDTree(pal).query(pix[candidates])
+            close = distance <= 12.0
+            candidates, distance, nearest = candidates[close], distance[close], nearest[close]
+            if candidates.size:
+                # A third palette colour can equal an antialiased blend of two
+                # neighbours. Include the edge halo in this veto, even when its
+                # flat seeds sit beyond the normal assignment radius.
+                wide = np.zeros((candidates.size, K), bool)
+                for k in range(K):
+                    wide[:, k] = ndi.maximum_filter(src == k, size=9, mode="constant")[
+                        ey[candidates], ex[candidates]]
+                _, local_res = _edge_labels(pix[candidates], pal, wide)
+                strong = local_res > distance + 6.0
+                seeds, colors = candidates[strong], nearest[strong]
+                affected = np.zeros(ey.size, bool)
+                for k in np.unique(colors):
+                    chosen = seeds[colors == k]
+                    # Also rescue distant branches of partially seeded curves.
+                    # Ordinary contours stay within the six-pixel resampling
+                    # halo of their flat seeds; do not alter those junctions.
+                    similar = (np.linalg.norm(rgb.astype(np.float32) - pal[k], axis=2)
+                               <= 12.0) & opaque
+                    count, components = cv2.connectedComponents(
+                        similar.astype(np.uint8), connectivity=8)
+                    supported = np.zeros(count, bool)
+                    supported[components[src == k]] = True
+                    distant = ndi.distance_transform_edt(src != k)[ey[chosen], ex[chosen]] > 7
+                    labels = components[ey[chosen], ex[chosen]]
+                    for label in np.unique(labels[distant & supported[labels]]):
+                        sample = rgb[components == label]
+                        sample = sample[::max(1, len(sample)//4096)]
+                        _, frequencies = np.unique(sample, axis=0, return_counts=True)
+                        # A flat branch has a repeated solid core. Smooth ramp
+                        # bands contain many RGB values and must keep the old
+                        # assignments so gradient fitting remains coherent.
+                        if frequencies.max() < 0.3*len(sample):
+                            distant[labels == label] = False
+                    chosen = chosen[~supported[components[ey[chosen], ex[chosen]]] | distant]
+                    if not chosen.size:
+                        continue
+                    anchors = np.zeros((H, W), bool)
+                    anchors[ey[chosen], ex[chosen]] = True
+                    near = ndi.maximum_filter(anchors, size=9, mode="constant")[ey, ex]
+                    ok[:, k] |= near
+                    affected |= near
+                if affected.any():
+                    for k in range(K):
+                        # Include the surrounding background through the edge
+                        # halo too, so recovered antialiased fringes do not all
+                        # get assigned to the new foreground colour.
+                        ok[affected, k] |= ndi.maximum_filter(
+                            src == k, size=13, mode="constant")[ey[affected], ex[affected]]
+                    # Re-estimate coverage only near restored cores; other edges
+                    # keep their original assignments. Speckle cleanup still runs.
+                    best_lbl[affected], best_res[affected] = _edge_labels(
+                        pix[affected], pal, ok[affected])
         got = best_lbl >= 0
         src[ey[got], ex[got]] = best_lbl[got]
     labels = _fill_unknown(src, src == -2)

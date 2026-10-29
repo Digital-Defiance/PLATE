@@ -15,11 +15,14 @@ typical auto-tracer produces, PLATE reconstructs the *editable structure* of the
   minimal-anchor Bézier path.
 - **Optional AI naming** — a local vision-language model (via LM Studio) can replace classical names
   ("Navy circle") with semantic ones ("Left Eye") and group related shapes, entirely offline.
+- **Editable open strokes** — suitable constant-width curves become open SVG paths with a stroke
+  width and round caps/joins. Existing live primitives stay primitives; uncertain fits stay outlines.
 
 By Digital Defiance (501(c)(3)). MIT licensed.
 
 > **Status (v0.0.1):** working classical engine; the real-LM-Studio VLM path is validated (naming +
-> semantic grouping against a live vision model). Gradient support is in active development.
+> semantic grouping against a live vision model). Linear/radial gradients and conservative open
+> strokes are implemented. Illustrator import/editability still needs the import checklist.
 > Full state and known limitations are in `STATUS.md`; plans in `ROADMAP.md`. Continuing the project
 > with a coding agent? Start with **`AGENTS.md`**.
 
@@ -48,7 +51,7 @@ cd /Volumes/Code/PLATE
 python3.11 -m venv .venv && source .venv/bin/activate   # use a 3.10+ interpreter; macOS system python3 may be 3.9
 pip install -e ".[dev,render]"      # dev = pytest + ruff; render = cairosvg + scikit-image
 plate doctor                        # check deps and whether LM Studio is reachable
-pytest -q                           # the test suite should pass (24 tests at time of writing)
+pytest -q                           # latest verification counts are recorded in STATUS.md
 ```
 
 `plate doctor` reports each dependency (including whether the cairo renderer is usable) and lists any
@@ -69,6 +72,9 @@ plate trace art.jpg --preset illustration        # logo | illustration | lineart
 
 # set ANY config lever ad hoc
 plate trace art.png --set simplify=1.2 --set max_colors=12
+
+# retain filled outlines instead of automatically recovering editable curved strokes
+plate trace art.png --set strokes=false
 
 # semantic names + groups from a local vision model (LM Studio must be running with a vision model).
 # --vlm-model is optional; omit it to auto-pick a loaded model, or pass the id shown by `plate doctor`.
@@ -103,29 +109,31 @@ e.g. `{"simplify": 2.0, "max_colors": 8}` — and those levers apply just to tha
    to avoid hairline seams.
 5. **Primitive snapping** — circle, ellipse, rect, rounded rect, polygon (≤14 vertices), ring
    (two circles, even-odd) emitted as live SVG elements; everything else falls through to…
-6. **Bézier tracing** — sub-pixel contours, corner detection, Schneider fit → minimal anchors.
+6. **Bézier tracing / strokes** — sub-pixel contours, corner detection and Schneider fitting.
+   Suitable unbranched constant-width curves instead get a fitted centreline and editable stroke;
+   gradient fills, junctions, closed loops and uncertain stroke fits retain their existing form.
 7. **Names** — classical ("Navy circle") or, if a VLM is configured, semantic names and groups from a
    local vision model. Output carries `id`, `data-name`, and `inkscape:label` so names survive import
    into both Illustrator and Inkscape.
 
 ## Measured (`plate bench samples`, synthetic set)
 
-Recorded baseline on the bundled synthetic samples (lower anchors/shape is better; SSIM P = PLATE,
+Measured default configuration on 2026-10-29 (lower anchors/shape is better; SSIM P = PLATE,
 V = plain VTracer). Regenerate any time with `plate bench samples`.
 
 | image | PLATE anchors (/shape) | VTracer anchors (/shape) | PLATE prim% | SSIM P / V |
 |---|---|---|---|---|
 | overlap | 12 (4.0) | 27 (9.0) | 100 | .994 / .990 |
 | stack3 | 16 (4.0) | 56 (14) | 100 | .997 / .986 |
-| face | 44 (5.5) | 82 (10) | 100 | .993 / .991 |
-| badge | 86 (8.6) | 389 (32) | 70 | .944 / .961 |
+| face | 43 (5.38) | 82 (10) | 100 | .992 / .991 |
+| badge | 64 (6.4) | 389 (32) | 70 | .949 / .961 |
 | ui_card | 24 (4.8) | 198 (33) | 100 | .971 / .991 |
-| noisy_badge | 115 (11.5) | 2707 (13) | 70 | .868 / .891 |
-| shaded (gradient) | 77 | 31 | 93 | .918 / .934 |
+| noisy_badge | 115 (11.5) | 2707 (13) | 70 | .867 / .891 |
+| shaded (gradient) | 39 (7.8) | 31 | 100 | .956 / .934 |
 
 Honest read: big editability wins on flat art; pixel fidelity is comparable to VTracer, slightly lower
-on a few. Smooth gradients currently posterize into flat bands (the `shaded` row) — dedicated gradient
-support is in progress (see `ROADMAP.md`).
+on a few. Basic smooth gradients are editable fills; complex occluded gradients can still split
+or posterize. Independent desired-SVG challenges and remaining failures are in `docs/challenges.md`.
 
 ## Testing
 
@@ -141,6 +149,14 @@ with a machine-checkable ground-truth contract (`tests/controls.py`) asserting o
 primitive types, parameters within tolerance, layer names, paint order, and nesting — plus a per-tier
 SSIM floor when the renderer is available, and a soft golden-SVG diff (`tests/golden/controls/`,
 refresh with `PLATE_UPDATE_GOLDEN=1`).
+
+Independent PNG/desired-SVG challenges check hidden geometry, holes, gradients, stroke width and
+paint order. The `stroked_route` target now passes as one open stroke behind its endpoint circles.
+Eight desired structural targets remain expected failures; ordinary fidelity/integrity checks stay
+active. Stroke detection uses only existing numpy/scipy dependencies; `--set strokes=false` disables
+it. Automatic recovery currently targets open curved paths with round caps/joins; closed/branched
+strokes and inference of other cap/join styles remain work. Metrics and per-image stats include
+`strokes` alongside object/anchor/gradient counts.
 
 ## Levers & presets
 

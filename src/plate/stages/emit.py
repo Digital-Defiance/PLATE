@@ -79,6 +79,10 @@ def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, grads: list, depth: in
     p = n.params
     N = lambda v: _num(v, prec)
     if n.kind == "path":
+        if n.stroke_width is not None:
+            return [f'{pad}<path{lab} d="{n.d}" fill="none" stroke="{_hex(n.color)}" '
+                    f'stroke-width="{N(n.stroke_width)}" stroke-linecap={quoteattr(n.stroke_linecap)} '
+                    f'stroke-linejoin={quoteattr(n.stroke_linejoin)}/>']
         rule = ' fill-rule="evenodd"' if n.evenodd else ""
         return [f'{pad}<path{lab} d="{n.d}"{fill}{rule}/>']
     if n.kind == "circle":

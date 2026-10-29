@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="360" height="240" viewBox="0 0 360 240">
   <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="360" height="240" fill="#ffffff"/>
-  <circle id="Gold_circle" data-name="Gold circle" inkscape:label="Gold circle" cx="110.59" cy="130.27" r="70.15" fill="#e6a014"/>
-  <circle id="Green_circle" data-name="Green circle" inkscape:label="Green circle" cx="250.24" cy="130.23" r="70.08" fill="#288c46"/>
+  <circle id="Gold_circle" data-name="Gold circle" inkscape:label="Gold circle" cx="110.48" cy="130.28" r="70.09" fill="#e6a014"/>
+  <circle id="Green_circle" data-name="Green circle" inkscape:label="Green circle" cx="250.35" cy="130.23" r="70.02" fill="#288c46"/>
 </svg>

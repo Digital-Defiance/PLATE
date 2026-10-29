@@ -17,6 +17,13 @@ from plate.scene import Loaded, Segmentation, Shape
 from plate.stages.gradient import detect
 
 
+def test_complex_poster_keeps_gradient_when_recovering_thin_branches():
+    from pathlib import Path
+    from plate import pipeline
+    path = Path(__file__).resolve().parents[1] / "samples/challenges/complex_event_poster.png"
+    assert pipeline.run(path, Config()).stats["gradients"] >= 1
+
+
 # --------------------------------------------------------------------------- helpers
 
 def _grid(n=40):

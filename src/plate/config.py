@@ -35,6 +35,7 @@ class Config:
     smooth: float = 0.8             # contour smoothing sigma (px) before fitting
     corner_threshold: float = 55.0  # degrees; turns sharper than this stay corners
     path_precision: int = 2         # decimals in path coordinates
+    strokes: bool = True            # conservative constant-width open-curve recovery
     # --- primitives ---
     snap_primitives: bool = True    # circles/ellipses/rects/polygons -> real elements
     snap_tolerance: float = 0.012   # mean edge deviation as a fraction of shape size
