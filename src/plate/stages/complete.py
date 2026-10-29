@@ -218,12 +218,15 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
     min_extra = max(10, int(0.004 * area))
 
     def evaluate(P: np.ndarray, prim: Prim | None):
+        # Check the actual fitted model before restoring small raster residuals.
+        # Once unioned with Rm, containment is tautological; accepting such a fit
+        # could emit a primitive that drops a substantial part of the observation.
+        if (Rm & ~P).sum() > 0.03 * area:
+            return None
         P = P | Rm
         extra = P & ~Rm
         ne = int(extra.sum())
         if ne < min_extra:
-            return None
-        if (Rm & ~P).sum() > 0.03 * area:
             return None
         if int((extra & Cm).sum()) < 0.9 * ne or int((extra & Cv).sum()) < 0.7 * ne:
             return None

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="960" viewBox="0 0 960 960">
+  <defs>
+    <linearGradient id="poster-wash" gradientUnits="userSpaceOnUse" x1="210" y1="0" x2="750" y2="0">
+      <stop offset="0" stop-color="#edba68" />
+      <stop offset="1" stop-color="#d17d79" />
+    </linearGradient>
+  </defs>
+  <rect id="background" x="0" y="0" width="960" height="960" fill="#f5edda" />
+  <circle id="gradient-disc-behind-title" cx="480" cy="468" r="260" fill="url(#poster-wash)" />
+  <ellipse id="mint-ellipse" cx="650" cy="650" rx="190" ry="102" fill="#a9d1b5" transform="rotate(-26 650 650)" />
+  <path id="open-ring" d="M137 620a148 148 0 1 0 296 0a148 148 0 1 0 -296 0Z M197 620a88 88 0 1 0 176 0a88 88 0 1 0 -176 0Z" fill="#182e4c" fill-rule="evenodd" />
+  <path id="crossing-line-1" d="M510 440H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="crossing-line-2" d="M510 464H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="crossing-line-3" d="M510 488H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="crossing-line-4" d="M510 512H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="crossing-line-5" d="M510 536H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="crossing-line-6" d="M510 560H865" fill="none" stroke="#182e4c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="foreground-disc" cx="265" cy="680" r="78" fill="#e88040" />
+  <polygon id="diagonal-ribbon" points="90,490 800,344 828,418 110,564" fill="#bb4b45" />
+  <polygon id="ribbon-cap" points="800,344 870,333 851,376 890,406 828,418" fill="#182e4c" />
+  <circle id="dot-1-1" cx="705" cy="555" r="8" fill="#267d83" />
+  <circle id="dot-1-2" cx="748" cy="555" r="8" fill="#267d83" />
+  <circle id="dot-1-3" cx="791" cy="555" r="8" fill="#267d83" />
+  <circle id="dot-1-4" cx="834" cy="555" r="8" fill="#267d83" />
+  <circle id="dot-2-1" cx="705" cy="598" r="8" fill="#267d83" />
+  <circle id="dot-2-2" cx="748" cy="598" r="8" fill="#267d83" />
+  <circle id="dot-2-3" cx="791" cy="598" r="8" fill="#267d83" />
+  <circle id="dot-2-4" cx="834" cy="598" r="8" fill="#267d83" />
+  <circle id="dot-3-1" cx="705" cy="641" r="8" fill="#267d83" />
+  <circle id="dot-3-2" cx="748" cy="641" r="8" fill="#267d83" />
+  <circle id="dot-3-3" cx="791" cy="641" r="8" fill="#267d83" />
+  <circle id="dot-3-4" cx="834" cy="641" r="8" fill="#267d83" />
+  <polygon id="spark-1" points="105.00,88.00 108.73,106.27 127.00,110.00 108.73,113.73 105.00,132.00 101.27,113.73 83.00,110.00 101.27,106.27" fill="#e88040" />
+  <polygon id="spark-2" points="845.00,718.00 848.73,736.27 867.00,740.00 848.73,743.73 845.00,762.00 841.27,743.73 823.00,740.00 841.27,736.27" fill="#e88040" />
+  <polygon id="spark-3" points="90.00,708.00 93.73,726.27 112.00,730.00 93.73,733.73 90.00,752.00 86.27,733.73 68.00,730.00 86.27,726.27" fill="#e88040" />
+  <path id="headline-1-F" d="M0 0H42V12H12V26H35V38H12V60H0Z" fill="#182e4c" fill-rule="evenodd" transform="translate(94 173) scale(3)" />
+  <path id="headline-2-O" d="M12 0H30Q42 0 42 12V48Q42 60 30 60H12Q0 60 0 48V12Q0 0 12 0Z M14 11Q12 11 12 14V46Q12 49 15 49H27Q30 49 30 46V14Q30 11 27 11Z" fill="#182e4c" fill-rule="evenodd" transform="translate(256 173) scale(3)" />
+  <path id="headline-3-R" d="M0 0H27Q42 0 42 17Q42 30 29 33L44 60H30L16 35H12V60H0Z M12 11V24H25Q30 24 30 17Q30 11 25 11Z" fill="#182e4c" fill-rule="evenodd" transform="translate(418 173) scale(3)" />
+  <path id="headline-4-M" d="M0 60V0H13L23 28L33 0H46V60H34V23L23 49L12 23V60Z" fill="#182e4c" fill-rule="evenodd" transform="translate(580 173) scale(3)" />
+  <rect id="top-rule" x="95" y="85" width="585" height="7" fill="#182e4c" />
+  <rect id="top-rule-short" x="720" y="85" width="145" height="7" fill="#e88040" />
+  <rect id="footer" x="60" y="810" width="840" height="100" fill="#182e4c" />
+  <path id="footer-letter-1-S" d="M42 0V12H15Q12 12 12 17Q12 22 17 23L29 27Q43 31 43 44Q43 60 27 60H0V48H27Q31 48 31 43Q31 39 26 37L14 33Q0 29 0 16Q0 0 16 0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(85 833) scale(0.85)" />
+  <path id="footer-letter-2-T" d="M0 0H44V12H28V60H16V12H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(130.9 833) scale(0.85)" />
+  <path id="footer-letter-3-U" d="M0 0H12V44Q12 49 18 49H25Q31 49 31 44V0H43V45Q43 60 27 60H16Q0 60 0 45Z" fill="#f5edda" fill-rule="evenodd" transform="translate(176.8 833) scale(0.85)" />
+  <path id="footer-letter-4-D" d="M0 0H24Q44 0 44 20V40Q44 60 24 60H0Z M12 12V48H23Q32 48 32 39V21Q32 12 23 12Z" fill="#f5edda" fill-rule="evenodd" transform="translate(222.7 833) scale(0.85)" />
+  <path id="footer-letter-5-I" d="M2 0H40V11H27V49H40V60H2V49H15V11H2Z" fill="#f5edda" fill-rule="evenodd" transform="translate(268.6 833) scale(0.85)" />
+  <path id="footer-letter-6-O" d="M12 0H30Q42 0 42 12V48Q42 60 30 60H12Q0 60 0 48V12Q0 0 12 0Z M14 11Q12 11 12 14V46Q12 49 15 49H27Q30 49 30 46V14Q30 11 27 11Z" fill="#f5edda" fill-rule="evenodd" transform="translate(314.5 833) scale(0.85)" />
+  <rect id="footer-detail-1" x="665" y="839" width="190" height="5" fill="#a9d1b5" />
+  <rect id="footer-detail-2" x="665" y="856" width="160" height="5" fill="#a9d1b5" />
+  <rect id="footer-detail-3" x="665" y="873" width="130" height="5" fill="#a9d1b5" />
+</svg>

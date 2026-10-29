@@ -1,6 +1,70 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 4) · Version 0.0.1 · Tests: 62 passing, 5 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 6) · Version 0.0.1 · Tests: 81 passing, 9 expected feature gaps (`pytest -q`)
+
+## Geometry validation fixes (session 6)
+
+- Fixed **cropped primitive scoring** in `stages/primitives.py`: candidate error
+  now includes the full primitive footprint, rather than clipping it into the
+  source mask crop. Rotated ellipse bounds are analytic; polygon/rect bounds
+  follow their raster vertices. Reject non-finite fits and comparisons exceeding
+  twice the source dimensions before allocating an expanded raster.
+- Fixed **ineffective completion containment check** in `stages/complete.py`:
+  reject models that exclude >3% of the observation BEFORE unioning in observed
+  pixels. Existing relative T-junction logic and acceptance thresholds retained.
+- Added 6 regression cases in `tests/test_geometry_validation.py`. Before fixing:
+  4 failed / 2 passed, reproducing oversized ellipses on long rects, an accepted
+  completion model discarding visible pixels, and the complex poster footer.
+  After fixing: all pass; valid completion remains accepted.
+- `plate bench samples/challenges`: poster **SSIM 0.9283 → 0.9493**, footer now a
+  live rect (rx=420, ry=50) instead of an ellipse (rx≈663). Storefront **0.9515 →
+  0.9623**, pavement stays rectangular, anchors **576 → 567**. Panel **0.9665 →
+  0.9666**; mission patch unchanged **0.9628**. Object counts remain unchanged;
+  full challenge contracts still have nine expected gaps. Raised regression SSIM
+  floors to **0.95 storefront / 0.94 poster** to protect the measured gains.
+- `plate bench samples -o /tmp/plate-geometry-after-samples`: all eight original
+  PLATE SVGs are **byte-identical** to the previous session. VTracer baseline
+  untouched. Visually inspected before/after renders and all original outputs.
+- Full suite before: **75 passed, 9 xfailed**. After: **81 passed, 9 xfailed**,
+  renderer enabled and localhost allowed for the mock VLM server. `git diff
+  --check` clean. No commit/push; existing staged and unstaged work preserved.
+- Next focused fix: preserve the 18 missing gauge ticks in segmentation, then
+  recover stroke centreline/width. Gradient and edge-crossing completion work
+  remains as described in `docs/challenges.md`.
+
+## Complex PNG compositions (session 5)
+
+- Created **four large compositions with independently authored target SVGs** in
+  `samples/challenges/`: mission patch (960×960, 45 target objects), storefront
+  (960×800, 64), instrument panel (960×800, 59), event poster (960×960, 44).
+  `scripts/make_complex_scenes.py` reproducibly authors and rasterizes them at 4×
+  with Lanczos downsampling. Lettering is custom outlined geometry; no font/assets
+  are required. All target objects have visible pixels (audited by isolated masks).
+- Added contracts to `tests/challenges.py` and source artwork protections in
+  `tests/test_complex_scene_assets.py` (object/gradient/stroke counts, image sizes,
+  portable vector content, and nine genuine transparent mission-patch cutouts).
+  All four desired structures remain strict expected gaps; appearance and SVG
+  integrity checks remain active. Regression SSIM floors: patch/panel 0.95,
+  storefront 0.94, poster 0.92. Desired fidelity remains ≥0.95; lower floors pin
+  measured behaviour on new difficult fixtures, not success against the goal.
+- `plate bench samples/challenges -o /tmp/plate-complex-bench`: mission patch
+  **55 objects / 0 gradients / SSIM 0.9628** (target 45 / 2); storefront **68 /
+  0.9515** (target 64); panel **37 / 0.9665** (target 59); poster **57 / 0.9283**
+  (target 44). Dark-background SSIM: 0.9644 / 0.9485 / 0.9665 / 0.9283.
+  VTracer controls retained. Original `plate bench samples` values unchanged.
+- Visually inspected all four PNGs and source-vs-rendered-PLATE comparisons.
+  Confirmed all 18 gauge ticks are absent immediately after segmentation.
+  Patch palette-limit sweeps 16/32/64 made no difference; panel denoise=0 made
+  no difference; disabling primitive snaps leaves 37 objects (SSIM 0.9660).
+- Code inspection found an ineffective completion containment check (model is
+  unioned with observations before containment is tested) and cropped primitive
+  comparisons that cannot penalize model area outside the mask crop. Poster
+  footer incorrectly emits an ellipse with rx≈663 versus the source rect's
+  half-width 420. These are diagnosed/proposed fixes, **not fixed this session**.
+  Suggested sequence and supporting evidence recorded in `docs/challenges.md`.
+- Full renderer-enabled suite: **75 passed, 9 xfailed** (existing mock VLM server
+  requires localhost permission). Pipeline, emitter and baseline were not edited;
+  existing user changes preserved. Nothing committed or pushed.
 
 ## Independent desired-output challenges (session 4)
 

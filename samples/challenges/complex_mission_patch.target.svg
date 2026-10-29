@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="960" viewBox="0 0 960 960">
+  <defs>
+    <radialGradient id="planet-light" gradientUnits="userSpaceOnUse" cx="430" cy="350" r="205">
+      <stop offset="0" stop-color="#ecd494" />
+      <stop offset="1" stop-color="#997698" />
+    </radialGradient>
+    <linearGradient id="hull-light" gradientUnits="userSpaceOnUse" x1="535" y1="0" x2="635" y2="0">
+      <stop offset="0" stop-color="#f5edda" />
+      <stop offset="1" stop-color="#a9c6c8" />
+    </linearGradient>
+  </defs>
+  <path id="patch-rim-nine-cutouts" d="M60 460a420 420 0 1 0 840 0a420 420 0 1 0 -840 0Z M153.531 236.305a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M308.179 106.54a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M506.991 71.4841a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M696.695 140.531a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M826.46 295.179a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M696.695 779.469a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M506.991 848.516a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M308.179 813.46a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M119.54 624.821a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z" fill="#182e4c" fill-rule="evenodd" />
+  <circle id="sky" cx="480" cy="460" r="360" fill="#267d83" />
+  <polygon id="star-1" points="285.00,205.00 287.55,217.45 300.00,220.00 287.55,222.55 285.00,235.00 282.45,222.55 270.00,220.00 282.45,217.45" fill="#f5edda" />
+  <polygon id="star-2" points="380.00,140.00 381.70,148.30 390.00,150.00 381.70,151.70 380.00,160.00 378.30,151.70 370.00,150.00 378.30,148.30" fill="#f5edda" />
+  <polygon id="star-3" points="550.00,146.00 552.38,157.62 564.00,160.00 552.38,162.38 550.00,174.00 547.62,162.38 536.00,160.00 547.62,157.62" fill="#f5edda" />
+  <polygon id="star-4" points="700.00,248.00 702.04,257.96 712.00,260.00 702.04,262.04 700.00,272.00 697.96,262.04 688.00,260.00 697.96,257.96" fill="#f5edda" />
+  <polygon id="star-5" points="230.00,419.00 231.87,428.13 241.00,430.00 231.87,431.87 230.00,441.00 228.13,431.87 219.00,430.00 228.13,428.13" fill="#f5edda" />
+  <polygon id="star-6" points="730.00,455.00 732.55,467.45 745.00,470.00 732.55,472.55 730.00,485.00 727.45,472.55 715.00,470.00 727.45,467.45" fill="#f5edda" />
+  <polygon id="star-7" points="250.00,713.00 252.04,722.96 262.00,725.00 252.04,727.04 250.00,737.00 247.96,727.04 238.00,725.00 247.96,722.96" fill="#f5edda" />
+  <polygon id="star-8" points="650.00,700.00 651.70,708.30 660.00,710.00 651.70,711.70 650.00,720.00 648.30,711.70 640.00,710.00 648.30,708.30" fill="#f5edda" />
+  <ellipse id="back-orbit" cx="465" cy="420" rx="280" ry="90" fill="none" stroke="#a9d1b5" stroke-width="8" transform="rotate(-24 465 420)" />
+  <circle id="shaded-planet" cx="460" cy="400" r="182" fill="url(#planet-light)" />
+  <ellipse id="crater-1" cx="385" cy="325" rx="27" ry="18" fill="#b18c9e" />
+  <ellipse id="crater-2" cx="405" cy="450" rx="35" ry="22" fill="#b18c9e" />
+  <ellipse id="crater-3" cx="515" cy="470" rx="19" ry="12" fill="#b18c9e" />
+  <circle id="small-moon" cx="675" cy="340" r="48" fill="#e9bc59" />
+  <ellipse id="front-orbit" cx="465" cy="420" rx="270" ry="73" fill="none" stroke="#f5edda" stroke-width="5" transform="rotate(24 465 420)" />
+  <rect id="left-solar-array" x="455" y="325" width="68" height="115" fill="#182e4c" />
+  <rect id="right-solar-array" x="647" y="325" width="68" height="115" fill="#182e4c" />
+  <path id="left-panel-cell-1" d="M467 350h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="left-panel-cell-2" d="M467 380h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="left-panel-cell-3" d="M467 410h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-panel-cell-1" d="M659 350h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-panel-cell-2" d="M659 380h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-panel-cell-3" d="M659 410h44" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="left-array-strut" d="M515 385H555" fill="none" stroke="#f5edda" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-array-strut" d="M615 385H655" fill="none" stroke="#f5edda" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="exhaust" d="M563 458Q550 500 585 551Q620 500 607 458Z" fill="#e88040" />
+  <path id="left-fin" d="M553 390L520 465L560 448Z" fill="#e88040" />
+  <path id="right-fin" d="M617 390L650 465L610 448Z" fill="#e88040" />
+  <path id="spacecraft-hull" d="M585 240Q535 298 553 435L585 470L617 435Q635 298 585 240Z" fill="url(#hull-light)" />
+  <circle id="porthole-rim" cx="585" cy="350" r="29" fill="#182e4c" />
+  <circle id="porthole-glass" cx="585" cy="350" r="18" fill="#267d83" />
+  <circle id="porthole-highlight" cx="578" cy="343" r="5" fill="#f5edda" />
+  <polygon id="crossing-ribbon" points="125,565 835,565 810,685 150,685" fill="#e88040" />
+  <path id="outlined-title-1-O" d="M12 0H30Q42 0 42 12V48Q42 60 30 60H12Q0 60 0 48V12Q0 0 12 0Z M14 11Q12 11 12 14V46Q12 49 15 49H27Q30 49 30 46V14Q30 11 27 11Z" fill="#f5edda" fill-rule="evenodd" transform="translate(315 587) scale(1.26667)" />
+  <path id="outlined-title-2-R" d="M0 0H27Q42 0 42 17Q42 30 29 33L44 60H30L16 35H12V60H0Z M12 11V24H25Q30 24 30 17Q30 11 25 11Z" fill="#f5edda" fill-rule="evenodd" transform="translate(383.4 587) scale(1.26667)" />
+  <path id="outlined-title-3-B" d="M0 0H27Q41 0 41 15Q41 25 34 29Q44 33 44 45Q44 60 28 60H0Z M12 11V24H24Q29 24 29 17Q29 11 24 11Z M12 35V49H25Q31 49 31 42Q31 35 25 35Z" fill="#f5edda" fill-rule="evenodd" transform="translate(451.8 587) scale(1.26667)" />
+  <path id="outlined-title-4-I" d="M2 0H40V11H27V49H40V60H2V49H15V11H2Z" fill="#f5edda" fill-rule="evenodd" transform="translate(520.2 587) scale(1.26667)" />
+  <path id="outlined-title-5-T" d="M0 0H44V12H28V60H16V12H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(588.6 587) scale(1.26667)" />
+  <circle id="left-ribbon-rivet" cx="192" cy="625" r="10" fill="#182e4c" />
+  <circle id="right-ribbon-rivet" cx="768" cy="625" r="10" fill="#182e4c" />
+  <circle id="rank-dot-1" cx="430" cy="757" r="9" fill="#e9bc59" />
+  <circle id="rank-dot-2" cx="480" cy="757" r="9" fill="#e9bc59" />
+  <circle id="rank-dot-3" cx="530" cy="757" r="9" fill="#e9bc59" />
+</svg>

@@ -11,7 +11,7 @@ import numpy as np
 
 from ..config import Config
 from ..geometry import (Prim, contours_xy, fit_circle, fit_ellipse, fit_rect, mean_deviation,
-                        outer_contour, raster_prim)
+                        outer_contour, prim_polygon, raster_prim)
 from ..masks import Mask
 
 
@@ -33,6 +33,36 @@ def normalize(pr: Prim) -> Prim:
     return pr
 
 
+def _full_primitive_deviation(mask: np.ndarray, pr: Prim) -> float:
+    """Measure the entire candidate, including parts outside the source crop.
+
+    A fitted ellipse can be much wider than a rectangle and still resemble it
+    when rasterized into that rectangle's bounding box. Comparing that clipped
+    raster hides the added area that would appear in the emitted SVG.
+    """
+    if pr.kind in ("circle", "ellipse"):
+        rx, ry = pr.rx, pr.rx if pr.kind == "circle" else pr.ry
+        angle = np.deg2rad(pr.angle if pr.kind == "ellipse" else 0)
+        dx = np.hypot(rx * np.cos(angle), ry * np.sin(angle))
+        dy = np.hypot(rx * np.sin(angle), ry * np.cos(angle))
+        bounds = np.array([pr.cx - dx, pr.cy - dy, pr.cx + dx, pr.cy + dy])
+    else:
+        points = prim_polygon(pr)
+        bounds = np.r_[points.min(axis=0), points.max(axis=0)]
+    if not np.isfinite(bounds).all():
+        return float("inf")
+    h, w = mask.shape
+    x0, y0 = min(0, int(np.floor(bounds[0])) - 1), min(0, int(np.floor(bounds[1])) - 1)
+    x1, y1 = max(w, int(np.ceil(bounds[2])) + 2), max(h, int(np.ceil(bounds[3])) + 2)
+    # Snapping fits a complete silhouette, not an occluded fragment. Reject
+    # degenerate fits before allocating an arbitrarily large comparison raster.
+    if x1 - x0 > 2 * w or y1 - y0 > 2 * h:
+        return float("inf")
+    reference = np.pad(mask, ((-y0, y1 - h), (-x0, x1 - w)))
+    candidate = raster_prim(pr, reference.shape, origin=(x0, y0))
+    return mean_deviation(reference, candidate)
+
+
 def snap(mask: Mask, cfg: Config) -> Prim | None:
     if mask.empty() or mask.area < 30:
         return None
@@ -45,10 +75,8 @@ def snap(mask: Mask, cfg: Config) -> Prim | None:
     c = big[0]
     area = float(mask.area)
     tol = max(0.7, cfg.snap_tolerance * np.sqrt(area))
-    shape = a.shape
-
     def ok(pr: Prim, strict: float = 1.0) -> bool:
-        return mean_deviation(a, raster_prim(pr, shape)) <= tol * strict
+        return _full_primitive_deviation(a, pr) <= tol * strict
 
     def finish(pr: Prim) -> Prim:
         pr.cx += mask.x0 - pad

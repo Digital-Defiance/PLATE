@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="800" viewBox="0 0 960 800">
+  <rect id="background" x="0" y="0" width="960" height="800" fill="#f5edda" />
+  <rect id="chassis" x="40" y="50" width="880" height="700" fill="#182e4c" rx="36" />
+  <rect id="inset" x="75" y="200" width="810" height="405" fill="#24475c" rx="20" />
+  <circle id="mount-rim-1" cx="78" cy="88" r="13" fill="#a9d1b5" />
+  <path id="mount-slot-1" d="M72 88h12" fill="none" stroke="#182e4c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="mount-rim-2" cx="882" cy="88" r="13" fill="#a9d1b5" />
+  <path id="mount-slot-2" d="M876 88h12" fill="none" stroke="#182e4c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="mount-rim-3" cx="78" cy="712" r="13" fill="#a9d1b5" />
+  <path id="mount-slot-3" d="M72 712h12" fill="none" stroke="#182e4c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="mount-rim-4" cx="882" cy="712" r="13" fill="#a9d1b5" />
+  <path id="mount-slot-4" d="M876 712h12" fill="none" stroke="#182e4c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="panel-title-1-S" d="M42 0V12H15Q12 12 12 17Q12 22 17 23L29 27Q43 31 43 44Q43 60 27 60H0V48H27Q31 48 31 43Q31 39 26 37L14 33Q0 29 0 16Q0 0 16 0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(120 114) scale(0.8)" />
+  <path id="panel-title-2-Y" d="M0 0H14L23 23L32 0H46L29 36V60H17V36Z" fill="#f5edda" fill-rule="evenodd" transform="translate(163.2 114) scale(0.8)" />
+  <path id="panel-title-3-S" d="M42 0V12H15Q12 12 12 17Q12 22 17 23L29 27Q43 31 43 44Q43 60 27 60H0V48H27Q31 48 31 43Q31 39 26 37L14 33Q0 29 0 16Q0 0 16 0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(206.4 114) scale(0.8)" />
+  <path id="panel-title-4-T" d="M0 0H44V12H28V60H16V12H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(249.6 114) scale(0.8)" />
+  <path id="panel-title-5-E" d="M0 0H42V12H12V24H35V36H12V48H42V60H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(292.8 114) scale(0.8)" />
+  <path id="panel-title-6-M" d="M0 60V0H13L23 28L33 0H46V60H34V23L23 49L12 23V60Z" fill="#f5edda" fill-rule="evenodd" transform="translate(336 114) scale(0.8)" />
+  <rect id="title-rule" x="465" y="145" width="350" height="5" fill="#a9d1b5" />
+  <circle id="gauge-1-bezel" cx="250" cy="365" r="99" fill="#e9bc59" />
+  <circle id="gauge-1-face" cx="250" cy="365" r="85" fill="#182e4c" />
+  <path id="gauge-1-tick-1" d="M196.76 402.28L188.56 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-tick-2" d="M187.21 348.18L177.56 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-tick-3" d="M222.53 306.09L218.30 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-tick-4" d="M277.47 306.09L281.70 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-tick-5" d="M312.79 348.18L322.44 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-tick-6" d="M303.24 402.28L311.44 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-1-needle" d="M250 365L211.82 326.82" fill="none" stroke="#e88040" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="gauge-1-hub" cx="250" cy="365" r="10" fill="#f5edda" />
+  <rect id="gauge-1-label" x="214" y="490" width="72" height="8" fill="#a9d1b5" />
+  <circle id="gauge-2-bezel" cx="480" cy="365" r="99" fill="#e9bc59" />
+  <circle id="gauge-2-face" cx="480" cy="365" r="85" fill="#182e4c" />
+  <path id="gauge-2-tick-1" d="M426.76 402.28L418.56 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-tick-2" d="M417.21 348.18L407.56 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-tick-3" d="M452.53 306.09L448.30 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-tick-4" d="M507.47 306.09L511.70 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-tick-5" d="M542.79 348.18L552.44 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-tick-6" d="M533.24 402.28L541.44 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-2-needle" d="M480 365L507.00 318.23" fill="none" stroke="#e88040" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="gauge-2-hub" cx="480" cy="365" r="10" fill="#f5edda" />
+  <rect id="gauge-2-label" x="444" y="490" width="72" height="8" fill="#a9d1b5" />
+  <circle id="gauge-3-bezel" cx="710" cy="365" r="99" fill="#e9bc59" />
+  <circle id="gauge-3-face" cx="710" cy="365" r="85" fill="#182e4c" />
+  <path id="gauge-3-tick-1" d="M656.76 402.28L648.56 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-tick-2" d="M647.21 348.18L637.56 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-tick-3" d="M682.53 306.09L678.30 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-tick-4" d="M737.47 306.09L741.70 297.03" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-tick-5" d="M772.79 348.18L782.44 345.59" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-tick-6" d="M763.24 402.28L771.44 408.02" fill="none" stroke="#f5edda" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="gauge-3-needle" d="M710 365L760.74 346.53" fill="none" stroke="#e88040" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="gauge-3-hub" cx="710" cy="365" r="10" fill="#f5edda" />
+  <rect id="gauge-3-label" x="674" y="490" width="72" height="8" fill="#a9d1b5" />
+  <path id="left-signal-route" d="M250 515v25q0 20 20 20h165q20 0 20 20v40" fill="none" stroke="#a9d1b5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-signal-route" d="M710 515v25q0 20 -20 20H525q-20 0 -20 20v40" fill="none" stroke="#e9bc59" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <rect id="status-housing-1" x="322" y="625" width="76" height="50" fill="#24475c" rx="9" />
+  <circle id="status-light-1" cx="360" cy="650" r="13" fill="#bb4b45" />
+  <rect id="status-housing-2" x="442" y="625" width="76" height="50" fill="#24475c" rx="9" />
+  <circle id="status-light-2" cx="480" cy="650" r="13" fill="#e88040" />
+  <rect id="status-housing-3" x="562" y="625" width="76" height="50" fill="#24475c" rx="9" />
+  <circle id="status-light-3" cx="600" cy="650" r="13" fill="#a9d1b5" />
+</svg>
