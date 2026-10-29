@@ -173,6 +173,64 @@ def t5_occluded_circle():
     return _finish(im, 360, 360)
 
 
+# ---------------------------------------------------------------------------
+# Gradient controls (smooth linear/radial ramps -> single gradient-filled shapes)
+# ---------------------------------------------------------------------------
+
+def _lerp(a, b, t):
+    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(len(a)))
+
+
+def t3_linear_grad():
+    """A rectangle with a horizontal blue->red ramp on white -> ONE linear-gradient shape."""
+    w, h = 320, 240
+    im = Image.new("RGBA", (w * SS, h * SS), WHITE)
+    d = ImageDraw.Draw(im)
+    x0, x1 = 50 * SS, 270 * SS
+    y0, y1 = 60 * SS, 180 * SS
+    blue, red = (40, 90, 210, 255), (210, 50, 50, 255)
+    for x in range(x0, x1):
+        t = (x - x0) / float(x1 - x0 - 1)
+        d.line([(x, y0), (x, y1)], fill=_lerp(blue, red, t))
+    return _finish(im, w, h)
+
+
+def t3_radial_grad():
+    """A disc with a bright-centre->dark-edge radial ramp on white -> ONE radial-gradient
+    circle primitive (gradient + primitive orthogonality)."""
+    w, h = 300, 300
+    im = Image.new("RGBA", (w * SS, h * SS), WHITE)
+    cx, cy, r = 150 * SS, 150 * SS, 110 * SS
+    # a gentle bright-centre -> mid-edge ramp: a shallow span posterizes into evenly-stepping
+    # rings (adjacent-band Lab dE well under grad_step_de), so the whole disc merges into ONE
+    # radial-gradient region rather than shedding a high-contrast edge ring.
+    bright, dark = (240, 215, 150, 255), (120, 95, 155, 255)
+    # draw concentric rings outward so the centre stays bright
+    steps = 160
+    d = ImageDraw.Draw(im)
+    for k in range(steps, 0, -1):
+        t = k / float(steps)
+        rr = r * t
+        d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=_lerp(bright, dark, t))
+    return _finish(im, w, h)
+
+
+def t4_grad_behind_circle():
+    """A horizontal-ramp rectangle with a solid opaque circle covering part of it ->
+    one FULL gradient rect (no hole) + the circle painted on top."""
+    w, h = 340, 280
+    im = Image.new("RGBA", (w * SS, h * SS), WHITE)
+    d = ImageDraw.Draw(im)
+    x0, x1 = 40 * SS, 300 * SS
+    y0, y1 = 50 * SS, 230 * SS
+    left, right = (30, 160, 90, 255), (230, 200, 40, 255)
+    for x in range(x0, x1):
+        t = (x - x0) / float(x1 - x0 - 1)
+        d.line([(x, y0), (x, y1)], fill=_lerp(left, right, t))
+    d.ellipse(S([150, 80, 270, 200]), fill=(190, 40, 60, 255))    # solid circle on top
+    return _finish(im, w, h)
+
+
 CONTROLS = {
     # T1
     "t1_circle": t1_circle,
@@ -190,6 +248,10 @@ CONTROLS = {
     "t5_blob": t5_blob,
     "t5_hexagon": t5_hexagon,
     "t5_occluded_circle": t5_occluded_circle,
+    # gradients
+    "t3_linear_grad": t3_linear_grad,
+    "t3_radial_grad": t3_radial_grad,
+    "t4_grad_behind_circle": t4_grad_behind_circle,
 }
 
 

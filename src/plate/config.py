@@ -44,6 +44,24 @@ class Config:
     vlm_model: str = ""             # model id in LM Studio ("" = first loaded model)
     vlm_groups: bool = True         # let the VLM propose semantic groups
     segmenter: str = "classical"    # classical | sam (optional, needs [ai] extra)
+    # --- gradients ---
+    gradients: bool = True           # detect smooth ramps -> single linear/radial gradient fill
+    grad_max_residual: float = 0.06  # max normalized colour-fit RMS (0..1) to accept a gradient
+    grad_min_bands: int = 6          # a ramp must posterize into at least this many flat bands
+    grad_min_frac: float = 0.00017   # min visible area (fraction of canvas H*W) for a ramp region
+    grad_band_max_frac: float = 0.15  # a ramp band must be <= this fraction of H*W (see note)
+    grad_step_de: float = 14.0       # max Lab dE between adjacent bands to join one ramp
+    # NOTE on grad_band_max_frac: the design calibrated this at 0.0017 (~4000 px at a
+    # hypothetical work_size=1536) assuming a smooth ramp posterizes into many thin slivers.
+    # Verified by running: the actual `shaded` sample (400x400, never upscaled) posterizes
+    # into only ~12 chunky bands, each 2-23% of the canvas, so a 0.0017 gate made gradient
+    # detection a guaranteed no-op on the one sample it must fire on. Measured sweep: at 0.15
+    # the sphere ramp is admitted (shaded -> 1 radial gradient, 5 shapes, SSIM ~0.956) while
+    # EVERY flat sample/control stays at zero gradients. The real flat-art guard is
+    # grad_min_bands (flat art never yields >=6 dE-adjacent monotone bands), confirmed by the
+    # no-regression test; this gate only has to exclude a lone oversized flat region, which
+    # grad_min_bands already rejects as a singleton. So 0.15 fires on ramps without regressing
+    # flat art. Fractions still track work_size automatically (resolution-invariance test).
     # --- output ---
     illustrator_layers: bool = True # ids/labels so nested groups show in Illustrator Layers
 

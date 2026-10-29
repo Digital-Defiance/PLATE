@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .geometry import Prim
+from .geometry import GradientFill, Prim
 from .masks import Mask
 
 
@@ -33,6 +33,7 @@ class Shape:
     name: str = ""
     label: str = ""              # semantic hint from VLM/SAM
     is_background: bool = False
+    grad: GradientFill | None = None  # smooth-ramp fill (linear/radial), None = flat
 
 
 @dataclass
@@ -54,3 +55,4 @@ class Node:
     evenodd: bool = False
     anchors: int = 0
     shape_id: int | None = None
+    grad: GradientFill | None = None  # SVG-space gradient fill (set by _leaf), None = flat

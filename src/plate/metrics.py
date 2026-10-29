@@ -26,12 +26,14 @@ def _path_anchors(d: str) -> int:
 
 def analyze_svg(svg: str) -> dict:
     root = ET.fromstring(svg)
-    shapes = prims = anchors = unnamed = groups = 0
+    shapes = prims = anchors = unnamed = groups = gradients = 0
     depth = [0]
 
     def walk(el, d):
-        nonlocal shapes, prims, anchors, unnamed, groups
+        nonlocal shapes, prims, anchors, unnamed, groups, gradients
         t = _local(el.tag)
+        if t in ("linearGradient", "radialGradient"):
+            gradients += 1
         if t == "g":
             groups += 1
             depth[0] = max(depth[0], d + 1)
@@ -54,6 +56,7 @@ def analyze_svg(svg: str) -> dict:
 
     walk(root, 0)
     return dict(shapes=shapes, groups=groups, layer_depth=depth[0], anchors=anchors,
+                gradients=gradients,
                 anchors_per_shape=round(anchors / max(shapes, 1), 2),
                 primitive_ratio=round(prims / max(shapes, 1), 3),
                 unnamed_ratio=round(unnamed / max(shapes + groups, 1), 3), bytes=len(svg.encode()))

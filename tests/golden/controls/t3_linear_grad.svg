@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="320" height="240" viewBox="0 0 320 240">
+  <defs>
+  <linearGradient id="Purple_rectangle_gradient" gradientUnits="userSpaceOnUse" x1="44.68" y1="135.9" x2="274.96" y2="104.46">
+    <stop offset="0" stop-color="#3358c8"/>
+    <stop offset="0.21" stop-color="#4952b3"/>
+    <stop offset="0.36" stop-color="#634c9b"/>
+    <stop offset="0.5" stop-color="#7d4682"/>
+    <stop offset="0.64" stop-color="#97406a"/>
+    <stop offset="0.79" stop-color="#b13a51"/>
+    <stop offset="1" stop-color="#c8353c"/>
+  </linearGradient>
+  </defs>
+  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="320" height="240" fill="#ffffff"/>
+  <rect id="Purple_rectangle" data-name="Purple rectangle" inkscape:label="Purple rectangle" x="50" y="60" width="220" height="120" fill="url(#Purple_rectangle_gradient)"/>
+</svg>

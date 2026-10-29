@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from .config import Config
-from .geometry import Prim
+from .geometry import GradientFill, GradientStop, Prim
 from .imageio import load_image
 from .scene import Loaded, Node, Segmentation, Shape
 from .stages import emit, name, order
@@ -28,6 +28,22 @@ class Result:
     stats: dict = field(default_factory=dict)
 
 
+def _convert_grad(grad: GradientFill, P, S) -> GradientFill:
+    """Map a shape's gradient geometry from working pixel-centre coords into SVG coords.
+    Positions go through P(v)=(v+0.5)/scale, lengths through S(v)=v/scale. Returns a
+    FRESH GradientFill (never mutates the shape's descriptor); stops copied unchanged."""
+    def pt(p):
+        return None if p is None else (P(p[0]), P(p[1]))
+    return GradientFill(
+        kind=grad.kind,
+        stops=[GradientStop(s.offset, s.rgb) for s in grad.stops],
+        start=pt(grad.start), end=pt(grad.end),
+        center=pt(grad.center),
+        radius=None if grad.radius is None else S(grad.radius),
+        focal=pt(grad.focal),
+    )
+
+
 def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
     mask = shape.draw or shape.full
     if mask.empty():
@@ -39,21 +55,22 @@ def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
         prim = normalize(shape.prim) if shape.prim is not None else snap(shape.full, cfg)
     S = lambda v: v / scale
     P = lambda v: (v + 0.5) / scale
+    node: Node | None = None
     if prim is not None:
         if prim.kind == "circle":
-            return Node("", "circle", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), r=S(prim.rx)),
+            node = Node("", "circle", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), r=S(prim.rx)),
                         anchors=4, shape_id=shape.id)
-        if prim.kind == "ellipse":
-            return Node("", "ellipse", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
+        elif prim.kind == "ellipse":
+            node = Node("", "ellipse", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
                         ry=S(prim.ry), angle=prim.angle), anchors=4, shape_id=shape.id)
-        if prim.kind in ("rect", "rrect"):
-            return Node("", prim.kind, shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
+        elif prim.kind in ("rect", "rrect"):
+            node = Node("", prim.kind, shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
                         ry=S(prim.ry), angle=prim.angle, r=S(prim.r)),
                         anchors=4 if prim.kind == "rect" else 8, shape_id=shape.id)
-        if prim.kind == "polygon":
+        elif prim.kind == "polygon":
             pts = [(P(x), P(y)) for x, y in prim.pts]
-            return Node("", "polygon", shape.color, params=dict(pts=pts), anchors=len(pts), shape_id=shape.id)
-    if cfg.snap_primitives and shape.prim is None:
+            node = Node("", "polygon", shape.color, params=dict(pts=pts), anchors=len(pts), shape_id=shape.id)
+    if node is None and cfg.snap_primitives and shape.prim is None:
         ring = snap_ring(shape.full, cfg)
         if ring is not None and not (shape.draw and shape.draw.area != shape.full.area):
             parts = []
@@ -62,12 +79,17 @@ def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
                 f = lambda v: f"{v:.{cfg.path_precision}f}".rstrip("0").rstrip(".")
                 parts.append(f"M{f(x - rr)} {f(y)}A{f(rr)} {f(rr)} 0 1 0 {f(x + rr)} {f(y)}"
                              f"A{f(rr)} {f(rr)} 0 1 0 {f(x - rr)} {f(y)}Z")
-            return Node("", "path", shape.color, d="".join(parts), evenodd=True, anchors=8,
+            node = Node("", "path", shape.color, d="".join(parts), evenodd=True, anchors=8,
                         shape_id=shape.id)
-    d, anchors, evenodd = mask_to_path(mask, canvas, cfg, scale)
-    if not d:
-        return None
-    return Node("", "path", shape.color, d=d, evenodd=evenodd, anchors=anchors, shape_id=shape.id)
+    if node is None:
+        d, anchors, evenodd = mask_to_path(mask, canvas, cfg, scale)
+        if not d:
+            return None
+        node = Node("", "path", shape.color, d=d, evenodd=evenodd, anchors=anchors, shape_id=shape.id)
+    # single tail: every node kind carries its shape's gradient, converted to SVG coords
+    if shape.grad is not None:
+        node.grad = _convert_grad(shape.grad, P, S)
+    return node
 
 
 def _build_tree(shapes: list[Shape], roots: list[int], leaves: dict[int, Node], cfg: Config,
@@ -115,6 +137,9 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     img = load_image(path, cfg)
     H, W = img.alpha.shape
     seg = segment(img, cfg)
+    if cfg.gradients:
+        from .stages.gradient import detect
+        seg = detect(seg, img, cfg)
     t1 = time.time()
     transparent = seg.rid == -1
     roots = order.build(seg, transparent, cfg)
@@ -160,6 +185,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     stats = dict(shapes=len(leaves), completed=sum(s.completed for s in shapes),
                  anchors=sum(n.anchors for n in leaves.values()),
                  primitives=sum(n.kind != "path" for n in leaves.values()),
+                 gradients=sum(n.grad is not None for n in leaves.values()),
                  t_segment=t1 - t0, t_order=t2 - t1, t_trace=t3 - t2, t_total=time.time() - t0)
     stats["vlm_names"] = len(labels or {})
     return Result(svg, tree, shapes, seg, img, cfg, stats)

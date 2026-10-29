@@ -30,18 +30,6 @@ ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = Path(__file__).resolve().parent / "golden" / "controls"
 
 
-@pytest.fixture(scope="session")
-def controls_dir():
-    d = ROOT / "samples" / "controls"
-    # (re)generate if any expected image is missing
-    missing = [n for n in CONTROLS if not (d / f"{n}.png").exists()]
-    if missing:
-        subprocess.check_call(
-            [sys.executable, str(ROOT / "scripts" / "make_controls.py"), str(d)], cwd=ROOT
-        )
-    return d
-
-
 # --- tree helpers ----------------------------------------------------------
 
 def _flatten(nodes, depth=0, out=None):
@@ -116,10 +104,22 @@ def test_control(cname, controls_dir):
                 f"{where}: anchors {node.anchors} > {obj.max_anchors}")
         # params
         _check_params(where, node, obj.params, TOL)
+        # gradient presence / kind (None = don't care)
+        if obj.grad_kind is not None:
+            assert node.grad is not None, f"{where}: expected a {obj.grad_kind} gradient, got none"
+            assert node.grad.kind == obj.grad_kind, (
+                f"{where}: grad kind {node.grad.kind!r} != {obj.grad_kind!r}")
 
     # 3) tier-specific structural checks
     if cname == "t3_ring":
         assert 'fill-rule="evenodd"' in r.svg, "ring must emit an even-odd fill"
+    if cname == "t4_grad_behind_circle":
+        assert "<linearGradient" in r.svg, "gradient rect must emit a linearGradient"
+        rect_node = next(n for n, _ in flat if n.kind in {"rect", "rrect"})
+        circ_idx = next(i for i, (n, _) in enumerate(flat) if n.kind == "circle")
+        rect_idx = next(i for i, (n, _) in enumerate(flat) if n is rect_node)
+        assert not rect_node.evenodd, "no-hole: gradient rect must NOT be even-odd"
+        assert circ_idx > rect_idx, "circle must paint after (on top of) the gradient rect"
     if cname == "t3_rotated_ellipse":
         ell = flat[1][0]
         rx, ry = ell.params["rx"], ell.params["ry"]

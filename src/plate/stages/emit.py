@@ -57,16 +57,25 @@ def _rot(p: dict, prec: int) -> str:
     return "" if abs(a) < 1e-6 else f' transform="rotate({_num(a, 3)} {_num(p["cx"], prec)} {_num(p["cy"], prec)})"'
 
 
-def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, depth: int = 0, top: bool = False) -> list[str]:
+def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, grads: list, depth: int = 0,
+             top: bool = False) -> list[str]:
     pad = "  " * (depth + 1)
     lab = _label(n, ids, layers, top)
     if n.kind == "group":
         out = [f"{pad}<g{lab}>"]
         for c in n.children:
-            out += node_svg(c, ids, prec, layers, depth + 1)
+            out += node_svg(c, ids, prec, layers, grads, depth + 1)
         out.append(f"{pad}</g>")
         return out
-    fill = f' fill="{_hex(n.color)}"'
+    # a gradient id is minted AFTER _label (so existing layer ids stay byte-identical) and
+    # ALWAYS from the shared _Ids, independent of cfg.illustrator_layers -- a fill="url(#id)"
+    # reference needs a live <defs> target regardless of whether elements carry their own id.
+    if n.grad is not None:
+        gid = ids.make(f"{n.name} gradient")
+        grads.append((gid, n.grad))
+        fill = f' fill="url(#{gid})"'
+    else:
+        fill = f' fill="{_hex(n.color)}"'
     p = n.params
     N = lambda v: _num(v, prec)
     if n.kind == "path":
@@ -87,12 +96,38 @@ def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, depth: int = 0, top: b
     raise ValueError(n.kind)
 
 
+def _grad_svg(gid: str, g, prec: int) -> list[str]:
+    N = lambda v: _num(v, prec)
+    stops = [f'    <stop offset="{N(s.offset)}" stop-color="{_hex(s.rgb)}"/>' for s in g.stops]
+    if g.kind == "linear":
+        sx, sy = g.start
+        ex, ey = g.end
+        head = (f'  <linearGradient id="{gid}" gradientUnits="userSpaceOnUse" '
+                f'x1="{N(sx)}" y1="{N(sy)}" x2="{N(ex)}" y2="{N(ey)}">')
+        return [head, *stops, "  </linearGradient>"]
+    cx, cy = g.center
+    foc = f' fx="{N(g.focal[0])}" fy="{N(g.focal[1])}"' if g.focal is not None else ""
+    head = (f'  <radialGradient id="{gid}" gradientUnits="userSpaceOnUse" '
+            f'cx="{N(cx)}" cy="{N(cy)}" r="{N(g.radius)}"{foc}>')
+    return [head, *stops, "  </radialGradient>"]
+
+
 def write_svg(nodes: list[Node], size: tuple[int, int], prec: int = 2, layers: bool = True) -> str:
     w, h = size
     ids = _Ids()
+    grads: list = []
     body: list[str] = []
     for n in nodes:
-        body += node_svg(n, ids, prec, layers, 0, top=True)
+        body += node_svg(n, ids, prec, layers, grads, 0, top=True)
     head = (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" '
             f'width="{w}" height="{h}" viewBox="0 0 {w} {h}">')
-    return "\n".join(['<?xml version="1.0" encoding="UTF-8"?>', head, *body, "</svg>", ""])
+    # a single <defs> is emitted ONLY when at least one gradient exists, so flat art is
+    # byte-identical (no empty <defs> line). It appears textually before the body but is
+    # BUILT from ids allocated during the body walk above.
+    defs: list[str] = []
+    if grads:
+        defs.append("  <defs>")
+        for gid, g in grads:
+            defs += _grad_svg(gid, g, prec)
+        defs.append("  </defs>")
+    return "\n".join(['<?xml version="1.0" encoding="UTF-8"?>', head, *defs, *body, "</svg>", ""])

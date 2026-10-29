@@ -38,6 +38,25 @@ class Prim:
         return replace(self, rx=self.rx + d, ry=self.ry + d, r=self.r + d if self.kind == "rrect" else 0)
 
 
+@dataclass
+class GradientStop:
+    offset: float                    # 0..1 along the gradient axis
+    rgb: tuple[int, int, int]
+
+
+@dataclass
+class GradientFill:
+    kind: str                        # "linear" | "radial"
+    stops: list[GradientStop]
+    # linear geometry (working pixel-centre coords; SVG coords after _convert_grad):
+    start: tuple[float, float] | None = None   # (x, y)
+    end: tuple[float, float] | None = None     # (x, y)
+    # radial geometry:
+    center: tuple[float, float] | None = None  # (cx, cy)
+    radius: float | None = None
+    focal: tuple[float, float] | None = None   # (fx, fy), optional, None in v1
+
+
 def contours_xy(mask: np.ndarray, level: float = 0.5) -> list[np.ndarray]:
     """Sub-pixel contours of a boolean mask as (x, y) arrays (padded so shapes touching
     the array edge still close)."""
@@ -183,3 +202,181 @@ def mean_deviation(mask: np.ndarray, cand: np.ndarray) -> float:
     xor = int((mask ^ cand).sum())
     per = int((mask & ~cv2.erode(mask.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)).sum())
     return xor / max(per, 1)
+
+
+# ----------------------------------------------------------------- gradient fits
+# Number of gradient stops EMITTED is fixed at GRAD_STOPS regardless of how many
+# source bands a region had: we bin the per-pixel axis parameter u in [0,1] into
+# GRAD_STOPS equal-width bins and take each non-empty bin's mean colour as a stop.
+# This makes the emitted stop list well-defined for ANY admitted region (a region
+# with the minimum bands and one with hundreds of bands both yield a valid,
+# correctly-ordered <=GRAD_STOPS stop list). The minimum-bands admission gate
+# (grad_min_bands) lives in stages/gradient.py and is INDEPENDENT of GRAD_STOPS:
+# it counts *source* flat bands before fitting, while GRAD_STOPS counts *emitted*
+# stops sampled from the fitted curve. The two numbers never need to match.
+GRAD_STOPS = 7
+
+
+def _luma(C: np.ndarray) -> np.ndarray:
+    """Rec.601 luma of an (n, 3) float rgb array in 0..255 (inline, no segment import)."""
+    return 0.299 * C[:, 0] + 0.587 * C[:, 1] + 0.114 * C[:, 2]
+
+
+def _binned_stops(u: np.ndarray, C: np.ndarray):
+    """Piecewise-linear stop curve from GRAD_STOPS equal-width bins over u in [0,1].
+
+    Returns (offsets, colours, residual):
+      offsets  : (m,) empirical pixel-mean u of each non-empty bin, sorted ascending
+      colours  : (m, 3) mean rgb of each non-empty bin
+      residual : RMS over all pixels of ||C - curve(u)|| / 255 (channel-averaged),
+                 measured against the UNCLAMPED empirical offsets.
+    """
+    b = np.clip(np.floor(u * GRAD_STOPS).astype(int), 0, GRAD_STOPS - 1)
+    offs, cols = [], []
+    for k in range(GRAD_STOPS):
+        m = b == k
+        if not m.any():
+            continue
+        offs.append(float(u[m].mean()))
+        cols.append(C[m].mean(axis=0))
+    if not offs:
+        return None
+    offs = np.asarray(offs, float)
+    cols = np.asarray(cols, float)
+    order = np.argsort(offs)
+    offs, cols = offs[order], cols[order]
+    # residual against the piecewise-linear interpolation at empirical offsets
+    pred = np.empty_like(C)
+    for c in range(3):
+        pred[:, c] = np.interp(u, offs, cols[:, c])
+    residual = float(np.sqrt(np.mean((C - pred) ** 2)) / 255.0)
+    return offs, cols, residual
+
+
+def _stopcurve_eval(offs: np.ndarray, cols: np.ndarray, t: float) -> np.ndarray:
+    """Interpolate the piecewise stop curve at a single parameter t in [0,1]."""
+    return np.array([np.interp(t, offs, cols[:, c]) for c in range(3)])
+
+
+def _finalize_stops(offs: np.ndarray, cols: np.ndarray) -> list[GradientStop]:
+    """Cosmetic post-processing (runs AFTER the residual is computed): clamp the
+    extreme offsets to exactly 0/1 so the gradient spans the full axis, then collapse
+    consecutive near-identical stops (rgb delta < 2) to keep the SVG small."""
+    offs = offs.copy()
+    offs[0] = 0.0
+    offs[-1] = 1.0
+    stops: list[GradientStop] = []
+    for o, c in zip(offs, cols):
+        rgb = tuple(int(round(v)) for v in c)
+        if stops and abs(stops[-1].offset - o) < 1e-9:
+            continue
+        if stops:
+            pr, pg, pb = stops[-1].rgb
+            if abs(pr - rgb[0]) + abs(pg - rgb[1]) + abs(pb - rgb[2]) < 2:
+                continue
+        stops.append(GradientStop(offset=float(o), rgb=rgb))
+    if len(stops) < 2:                       # degenerate: force the two endpoints
+        stops = [GradientStop(0.0, tuple(int(round(v)) for v in cols[0])),
+                 GradientStop(1.0, tuple(int(round(v)) for v in cols[-1]))]
+    return stops
+
+
+def fit_linear_gradient(P: np.ndarray, C: np.ndarray) -> tuple["GradientFill", float]:
+    """Fit a linear colour ramp. P=(n,2) pixel-centre coords, C=(n,3) rgb in 0..255.
+    Returns (GradientFill, normalized_residual); residual inf when degenerate."""
+    inf = (GradientFill("linear", []), float("inf"))
+    if len(P) < 3:
+        return inf
+    mean_p = P.mean(axis=0)
+    Q = P - mean_p
+    L = _luma(C)
+    Lh = L - L.mean()
+    G = Q.T @ Q                               # 2x2
+    det = G[0, 0] * G[1, 1] - G[0, 1] * G[1, 0]
+    if abs(det) < 1e-6:
+        return inf
+    u_raw = np.linalg.solve(G, Q.T @ Lh)
+    nrm = float(np.hypot(u_raw[0], u_raw[1]))
+    if nrm < 1e-9:
+        return inf
+    u = u_raw / nrm
+    t = Q @ u
+    span = float(t.max() - t.min())
+    if span < 1e-9:
+        return inf
+    th = (t - t.min()) / span
+    binned = _binned_stops(th, C)
+    if binned is None:
+        return inf
+    offs, cols, residual = binned
+    start = tuple(mean_p + u * t.min())
+    end = tuple(mean_p + u * t.max())
+    stops = _finalize_stops(offs, cols)
+    grad = GradientFill("linear", stops, start=(float(start[0]), float(start[1])),
+                        end=(float(end[0]), float(end[1])))
+    return grad, residual
+
+
+def _radial_residual_vec(center: np.ndarray, P: np.ndarray, Lh: np.ndarray) -> np.ndarray:
+    """Per-pixel VECTOR residual for the radial-centre search: observed (centred) luma
+    minus a least-squares affine prediction from the normalized radius at `center`.
+    least_squares needs a vector with Jacobian structure, NOT a scalar (must-fix #2)."""
+    rho = np.hypot(P[:, 0] - center[0], P[:, 1] - center[1])
+    rmax = float(rho.max())
+    if rmax < 1e-9:
+        return Lh
+    rho = rho / rmax
+    # best affine fit luma ~= a + b*rho (closed form), residual = observed - predicted
+    A = np.c_[np.ones_like(rho), rho]
+    coef, *_ = np.linalg.lstsq(A, Lh, rcond=None)
+    return Lh - A @ coef
+
+
+def fit_radial_gradient(P: np.ndarray, C: np.ndarray) -> tuple["GradientFill", float]:
+    """Fit a radial colour ramp. P=(n,2) pixel-centre coords, C=(n,3) rgb in 0..255.
+    Centre is seeded from lightness-weighted top/bottom decile centroids and refined
+    with a bounded least_squares on a PER-PIXEL vector residual (must-fix #2).
+    Returns (GradientFill, normalized_residual); residual inf when degenerate."""
+    inf = (GradientFill("radial", []), float("inf"))
+    if len(P) < 3:
+        return inf
+    L = _luma(C)
+    Lh = L - L.mean()
+    lo, hi = np.percentile(L, 10), np.percentile(L, 90)
+
+    def _centroid(select, weight):
+        if not select.any():
+            return P.mean(axis=0)
+        w = np.clip(weight[select], 1e-6, None)
+        return np.array([np.sum(w * P[select, 0]) / w.sum(),
+                         np.sum(w * P[select, 1]) / w.sum()])
+
+    top = L >= hi                              # bright centre candidate
+    bot = L <= lo                              # dark centre candidate
+    cand = [_centroid(top, L - L.min()), _centroid(bot, L.max() - L)]
+
+    best = None
+    for c0 in cand:
+        try:
+            sol = least_squares(_radial_residual_vec, c0, args=(P, Lh), max_nfev=30)
+            center = sol.x
+        except Exception:                      # noqa: BLE001 - solver blow-up -> skip
+            center = c0
+        rho = np.hypot(P[:, 0] - center[0], P[:, 1] - center[1])
+        rmax = float(rho.max())
+        if rmax < 1.0:
+            continue
+        rho_hat = rho / rmax
+        binned = _binned_stops(rho_hat, C)
+        if binned is None:
+            continue
+        offs, cols, residual = binned
+        if best is None or residual < best[0]:
+            best = (residual, center, rmax, offs, cols)
+    if best is None:
+        return inf
+    residual, center, rmax, offs, cols = best
+    stops = _finalize_stops(offs, cols)
+    grad = GradientFill("radial", stops, center=(float(center[0]), float(center[1])),
+                        radius=float(rmax))
+    return grad, residual

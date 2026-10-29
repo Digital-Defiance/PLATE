@@ -32,6 +32,7 @@ class Obj:
     min_anchors: int | None = None
     max_anchors: int | None = None
     group_depth: int = 0
+    grad_kind: str | None = None   # None = don't care; "linear" | "radial" = assert this fill
 
 
 @dataclass
@@ -174,5 +175,43 @@ CONTROLS: dict[str, Control] = {
             Obj("circle", name="Red circle", params=dict(cx=150, cy=180, r=90)),
             Obj({"rect", "rrect"}, name="Blue rectangle"),
         ],
+    ),
+
+    # ---- gradients: smooth ramps -> single gradient-filled shapes --------
+    "t3_linear_grad": Control(
+        tier="T3", shapes=2, completed=0, primitives=2, max_total_anchors=16,
+        # A horizontal blue->red ramp rect on white. The ramp collapses to ONE shape
+        # (rect primitive may snap or stay a path) carrying a linearGradient fill.
+        objects=[
+            Obj("rect", name="Background"),
+            Obj({"rect", "rrect", "path"}, grad_kind="linear",
+                params=dict(cx=160, cy=120, rx=110, ry=60)),
+        ],
+        ssim_floor=0.95,
+    ),
+    "t3_radial_grad": Control(
+        tier="T3", shapes=2, completed=0, primitives=2, max_total_anchors=16,
+        # A bright-centre -> dark-edge disc on white. The disc is ONE live <circle>
+        # primitive that ALSO carries a radialGradient fill (orthogonality).
+        objects=[
+            Obj("rect", name="Background"),
+            Obj("circle", grad_kind="radial", params=dict(cx=150, cy=150, r=110)),
+        ],
+        ssim_floor=0.95,
+    ),
+    "t4_grad_behind_circle": Control(
+        tier="T4", shapes=3, completed=0, primitives=3, max_total_anchors=20,
+        # A horizontal-ramp rect with a solid opaque circle covering part of it.
+        # Contract (design section 4): the ramp is ONE full gradient rect (NO hole),
+        # the circle is painted AFTER it (on top). The no-hole / paint-order asserts
+        # live in the bespoke t4_grad_behind_circle branch of test_controls.py.
+        # group_depth pinned from the first real run: both nest under the background.
+        objects=[
+            Obj("rect", name="Background"),
+            Obj({"rect", "rrect", "path"}, grad_kind="linear",
+                params=dict(cx=170, cy=140, rx=130, ry=90), group_depth=1),
+            Obj("circle", params=dict(cx=210, cy=140, r=60), group_depth=1),
+        ],
+        ssim_floor=0.95,
     ),
 }
