@@ -1,6 +1,46 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 6) · Version 0.0.1 · Tests: 81 passing, 9 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 7, roadmap/status audit) · Version 0.0.1 · Tests: 81 passing, 9 expected feature gaps (`pytest -q`)
+
+## Current remaining work — start here
+
+The geometry safety fixes are complete. The nine strict expected failures below
+remain open; they are desired structural targets, not nine crashing pipeline tests.
+Appearance/integrity checks remain active. Current scene SSIM: mission patch
+**0.9628**, storefront **0.9623**, instrument panel **0.9666**, poster **0.9493**.
+Storefront clears 0.95 on both backgrounds; the poster still has a 0.94 regression
+floor and a desired ≥0.95 goal. Historical sections below retain their earlier measurements.
+
+Implementation order (details and acceptance checks in `ROADMAP.md`):
+
+1. Preserve thin details in segmentation: all **18 gauge ticks** are lost before tracing.
+2. Recover editable stroke centrelines, width, caps and joins.
+3. Fit shared gradients across supported occluders; retain separate ramps/flat swatches.
+4. Complete shapes behind edge-crossing letters/ribbons and reduce chained-circle drift.
+5. Preserve holes/components, then refine corners, primitive selection and complex object recovery.
+6. Improve per-object failure diagnostics so partial progress is visible despite count mismatches.
+
+| Remaining challenge | Current failure / required target |
+| --- | --- |
+| `perforated_plate` | Blue path has 2 connected components; require 1, with all 3 holes and the separate gold island preserved |
+| `occlusion_chain` | Back circle drifts ≈3.5px, full-silhouette IoU ≈0.946; recover all authored circles accurately |
+| `gradient_badge` | 6 objects / 2 gradient discs; require 5 objects / 1 full radial disc under the ribbon |
+| `edge_crossing_type` | 7 objects; require 5, including a full disc behind the three outlined letters |
+| `stroked_route` | Filled outline; require one open 16px stroke plus endpoint circles and background |
+| `complex_mission_patch` | 55 objects / 0 gradients; target 45 / 2, with occluded objects, strokes and cutouts intact |
+| `complex_storefront` | 68 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
+| `complex_instrument_panel` | 37 objects; target 59, including all ticks and 27 editable strokes |
+| `complex_event_poster` | 57 objects; target 44 with full underlying shapes, holes, strokes and lettering; fidelity goal ≥0.95 |
+
+Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
+real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy
+and request latency remain work. Other deferred items (palette pressure, soft
+alpha/shadows, scale consistency, optional SAM/text, product/export/release) remain
+tracked in `ROADMAP.md`.
+
+Session 7 changed documentation only: reconciled completed work, added the full
+remaining queue, corrected stale gradient/VLM/text-fixture/Git notes, and retained
+earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed**.
 
 ## Geometry validation fixes (session 6)
 
@@ -95,7 +135,7 @@ Last updated: 2026-10-29 (session 6) · Version 0.0.1 · Tests: 81 passing, 9 ex
 - Reproduction commands, exact targets, measured metrics, and future scene ideas:
   `docs/challenges.md`. Illustrator import remains unverified.
 
-## Gradients (new this session — feat/gradients worktree)
+## Gradients (implemented in session 3)
 Smooth colour ramps inside one region are now detected and emitted as real SVG
 `<linearGradient>` / `<radialGradient>` fills instead of posterized flat bands. New stage
 `src/plate/stages/gradient.py` runs BETWEEN `segment()` and `order.build()`: it groups
@@ -157,33 +197,33 @@ out as a live `<circle>` that also carries `fill="url(#...)"`.
 - Ground-truth checks: hidden circle recovered to <1px (tests/test_pipeline.py); 3-circle stack ordering; ellipse orientation; annulus → 2 circles.
 - Auto denoise (bilateral) for noisy/JPEG input.
 - CLI: trace, batch, sweep, bench, doctor, `--set lever=value`, `--report`, sidecar `.plate.json`.
-- **CONTROL regression suite (new this session)**: `scripts/make_controls.py` generates 11 synthetic PNGs in 5 complexity tiers (T1 trivial → T5 hard); `tests/controls.py` holds the ground-truth contract; `tests/test_controls.py` asserts the structured `Result` (object counts, primitive types, params within tolerance, layer names, paint order, nesting), enforces a per-tier SSIM floor when a renderer is present, and keeps a soft golden-SVG diff (`tests/golden/controls/`, `PLATE_UPDATE_GOLDEN=1` to refresh). All 11 clear their SSIM floor (worst 0.982).
+- **CONTROL regression suite**: `scripts/make_controls.py` generates 15 synthetic PNGs in 5 complexity tiers (T1 trivial → T5 hard); `tests/controls.py` holds current-behaviour contracts; `tests/test_controls.py` asserts object counts, primitive parameters, names, paint order and nesting, with fidelity floors and soft golden-SVG diffs (`tests/golden/controls/`). A separate set of 12 independent desired-SVG challenges includes 9 still-unmet structural targets.
 
-## Verified on real hardware THIS SESSION (macOS M-series, Python 3.11 venv)
+## Earlier real-hardware verification (macOS M-series, Python 3.11 venv)
 - **Real LM Studio VLM path works end to end** (was mock-only before). `plate doctor --vlm-url http://localhost:1234/v1` lists loaded models; `plate trace samples/face.png --vlm-url ... --vlm-model qwen/qwen3.8-27b` produced semantic names (Face, Mouth, Tongue, Left/Right Eye, Eye Highlight) AND semantic groups (eyes = eyeball+highlight) as nested Illustrator `<g>` layers. SSIM 0.993.
 - `qwen/qwen3.8-27b` is vision-capable and works for both naming and grouping. `qwen2.5-coder-7b` is text-only (HTTP 400 on images). Embedding models are skipped by the new auto-selector.
 - `cairosvg` rendering now works on this machine (so `bench`/`--report`/sweep report SSIM). Required `brew install cairo` (already present) PLUS the dyld fix below.
 
-## Fixed this session
+## Earlier environment/VLM fixes
 - **`plate doctor` crashed** when an optional dep is installed but unusable (cairosvg importing but failing to load libcairo raised `OSError`, not `ImportError`, so the old `except ImportError` missed it and doctor died before checking LM Studio). Now catches any exception and reports BROKEN/optional; probes cairosvg through the renderer helper.
 - **cairosvg could not find libcairo on macOS/Homebrew.** cairocffi's dlopen doesn't search `/opt/homebrew/lib`, and SIP strips `DYLD_*` across protected binaries, so it must be set before process start. `cli.main` now re-execs itself once (guarded by `PLATE_DYLD_REEXEC`) with `DYLD_FALLBACK_LIBRARY_PATH` pointing at the Homebrew cairo dir (`raster.cairo_lib_dirs` / `ensure_dyld_cairo`). Added `src/plate/__main__.py` so `python -m plate` is a valid re-exec target. Renderer now "just works" via the CLI.
 - **VLM grouping intermittently failed** with "no JSON in reply". Root cause: Qwen3 is a reasoning model and wraps/precedes JSON with `<think>…</think>` blocks and prose. Hardened `vlm._json` to strip think-blocks and code fences and extract the first *balanced* `{...}`/`[...]`. NOTE: `response_format: json_object` is NOT used — LM Studio returns HTTP 400 for it on this model.
 - **VLM model auto-selection was blind** (`models[0]`). New `vlm.pick_model` skips obvious non-vision models (embedding/rerank/tts/etc.) and `describe` logs which model it used and warns when zero names come back. Explicit `--vlm-model` still wins.
 
-## NOT verified / unknown (do these next on the Mac)
+## Remaining external validation
 1. **Illustrator import**: do top-level `<g>` become layers with the right names? Are circles/rects editable live shapes? Follow `docs/illustrator-checklist.md` and record results here. (STILL the main open P0 — needs a human in Illustrator.)
 2. **Real-world images** (logos, clipart, scans). Only synthetic samples tested. Collect 10–20 real ones into `samples/real/` and run `plate bench`.
 3. VLM naming quality: the model names both eyes "Left Eye" (dedupe suffixes → "Left Eye 2") rather than distinguishing left/right; naming is ~6s/shape (one request per shape → 47–65s for the face). Prompt/throughput tuning is open.
 
 ## Known weaknesses
-- Gradients/shading/photos get posterized into flat bands (by design for now; see ROADMAP "Gradients"). THIS IS THE NEXT PLANNED FEATURE.
+- Basic linear/radial gradients work. Disconnected/occluded ramps and decorated shaded objects can still split or posterize; photos and conic/mesh gradients remain unsupported.
 - Occluder with a bar crossing a circle's edge (badge inner disc) → no completion, stays a Bézier path.
 - Triangle apex can get 2 vertices (bevel from blur); polygon snap keeps them.
 - Noisy input: ring edges slightly wobbly after denoise; SSIM 0.87.
 - Naming a ring/annulus says "Red shape" (could be "Red ring"). Ring/annulus currently stays a single even-odd path, NOT two `<circle>`s (pinned as a known-behaviour control in `t3_ring`).
 - SAM segmenter not implemented (config `segmenter` accepts only "classical").
 - No disk cache for segmentation; large images (>3000px) are downscaled to `work_size` (1536) for analysis, output is rescaled.
-- Uncommitted: nothing has been `git commit`ted yet.
+- Source control: the repository exists. Inspect staged/unstaged changes and preserve them; commit/push only when Jessica asks.
 
 ## Env notes for the next session
 - venv at `.venv` (Python 3.11 via `python3.11`); system python is 3.9 which is too old. `pip install -e ".[dev,render]"` done.
