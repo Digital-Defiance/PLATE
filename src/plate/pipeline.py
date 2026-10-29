@@ -1,0 +1,165 @@
+"""Pipeline orchestration: image -> layered SVG."""
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
+
+from .config import Config
+from .geometry import Prim
+from .imageio import load_image
+from .scene import Loaded, Node, Segmentation, Shape
+from .stages import emit, name, order
+from .stages.primitives import snap, snap_ring
+from .stages.segment import segment
+from .stages.trace import mask_to_path
+
+
+@dataclass
+class Result:
+    svg: str
+    nodes: list[Node]
+    shapes: list[Shape]
+    seg: Segmentation
+    loaded: Loaded
+    cfg: Config
+    stats: dict = field(default_factory=dict)
+
+
+def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
+    mask = shape.draw or shape.full
+    if mask.empty():
+        return None
+    prim: Prim | None = None
+    if cfg.snap_primitives:
+        from .stages.primitives import normalize
+        # exact primitive from completion if we have one; otherwise try to snap the silhouette
+        prim = normalize(shape.prim) if shape.prim is not None else snap(shape.full, cfg)
+    S = lambda v: v / scale
+    P = lambda v: (v + 0.5) / scale
+    if prim is not None:
+        if prim.kind == "circle":
+            return Node("", "circle", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), r=S(prim.rx)),
+                        anchors=4, shape_id=shape.id)
+        if prim.kind == "ellipse":
+            return Node("", "ellipse", shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
+                        ry=S(prim.ry), angle=prim.angle), anchors=4, shape_id=shape.id)
+        if prim.kind in ("rect", "rrect"):
+            return Node("", prim.kind, shape.color, params=dict(cx=P(prim.cx), cy=P(prim.cy), rx=S(prim.rx),
+                        ry=S(prim.ry), angle=prim.angle, r=S(prim.r)),
+                        anchors=4 if prim.kind == "rect" else 8, shape_id=shape.id)
+        if prim.kind == "polygon":
+            pts = [(P(x), P(y)) for x, y in prim.pts]
+            return Node("", "polygon", shape.color, params=dict(pts=pts), anchors=len(pts), shape_id=shape.id)
+    if cfg.snap_primitives and shape.prim is None:
+        ring = snap_ring(shape.full, cfg)
+        if ring is not None and not (shape.draw and shape.draw.area != shape.full.area):
+            parts = []
+            for cx, cy, r in ring:
+                x, y, rr = P(cx), P(cy), S(r)
+                f = lambda v: f"{v:.{cfg.path_precision}f}".rstrip("0").rstrip(".")
+                parts.append(f"M{f(x - rr)} {f(y)}A{f(rr)} {f(rr)} 0 1 0 {f(x + rr)} {f(y)}"
+                             f"A{f(rr)} {f(rr)} 0 1 0 {f(x - rr)} {f(y)}Z")
+            return Node("", "path", shape.color, d="".join(parts), evenodd=True, anchors=8,
+                        shape_id=shape.id)
+    d, anchors, evenodd = mask_to_path(mask, canvas, cfg, scale)
+    if not d:
+        return None
+    return Node("", "path", shape.color, d=d, evenodd=evenodd, anchors=anchors, shape_id=shape.id)
+
+
+def _build_tree(shapes: list[Shape], roots: list[int], leaves: dict[int, Node], cfg: Config,
+                canvas_area: int) -> list[Node]:
+    def flat(sid: int) -> list[Node]:
+        out = [leaves[sid]] if sid in leaves else []
+        for c in shapes[sid].children:
+            out += flat(c)
+        return out
+
+    def build(sid: int, depth: int) -> list[Node]:
+        s = shapes[sid]
+        leaf = leaves.get(sid)
+        if not s.children:
+            return [leaf] if leaf else []
+        if depth >= cfg.group_depth:
+            return flat(sid)
+        kids: list[Node] = []
+        for c in s.children:
+            kids += build(c, depth + 1)
+        if leaf is None:
+            return kids
+        g = Node("", "group", None, children=[leaf, *kids], shape_id=sid)
+        return [g]
+
+    nodes: list[Node] = []
+    for rid in roots:
+        s = shapes[rid]
+        if cfg.group_depth <= 0:
+            nodes += flat(rid)
+        elif s.is_background:
+            # background stays its own layer; its children become top-level layers
+            if rid in leaves:
+                nodes.append(leaves[rid])
+            for c in s.children:
+                nodes += build(c, 0)
+        else:
+            nodes += build(rid, 0)
+    return nodes
+
+
+def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | None = None) -> Result:
+    cfg = cfg or Config()
+    t0 = time.time()
+    img = load_image(path, cfg)
+    H, W = img.alpha.shape
+    seg = segment(img, cfg)
+    t1 = time.time()
+    transparent = seg.rid == -1
+    roots = order.build(seg, transparent, cfg)
+    t2 = time.time()
+    shapes = seg.shapes
+
+    # background = root shape covering most of the canvas
+    for rid in roots:
+        if shapes[rid].sil.area >= 0.6 * H * W:
+            shapes[rid].is_background = True
+            break
+
+    leaves: dict[int, Node] = {}
+    for s in shapes:
+        node = _leaf(s, (H, W), cfg, img.scale)
+        if node is not None:
+            leaves[s.id] = node
+    t3 = time.time()
+
+    if cfg.remove_background:
+        for s in shapes:
+            if s.is_background:
+                leaves.pop(s.id, None)
+    tree = _build_tree(shapes, roots, leaves, cfg, H * W)
+
+    # classical base names, then optional semantic overrides
+    for n in leaves.values():
+        s = shapes[n.shape_id]
+        base = "Background" if s.is_background else f"{name.color_name(s.color)} {name.KIND_WORD[n.kind]}"
+        n.name = base
+    res = Result("", tree, shapes, seg, img, cfg)
+    groups: list[dict] = []
+    if cfg.name_layers and cfg.vlm_url:
+        from . import vlm
+        sem, groups = vlm.describe(res, cfg)
+        labels = {**sem, **(labels or {})}
+    if groups:
+        from . import vlm
+        tree = vlm.apply_groups(tree, groups)
+    name.assign_names(tree, labels)
+
+    svg = emit.write_svg(tree, img.orig_size, cfg.path_precision, cfg.illustrator_layers)
+    stats = dict(shapes=len(leaves), completed=sum(s.completed for s in shapes),
+                 anchors=sum(n.anchors for n in leaves.values()),
+                 primitives=sum(n.kind != "path" for n in leaves.values()),
+                 t_segment=t1 - t0, t_order=t2 - t1, t_trace=t3 - t2, t_total=time.time() - t0)
+    stats["vlm_names"] = len(labels or {})
+    return Result(svg, tree, shapes, seg, img, cfg, stats)

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "plate-svg"
+version = "0.0.1"
+description = "PLATE: Primitive-aware Layered Amodal Tracing Engine. Local AI raster-to-SVG with real layers, for Illustrator."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+  "vtracer>=0.6",
+  "pillow>=10",
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "opencv-python-headless>=4.8",
+  "tomli>=2; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+# LM Studio needs no extra deps (stdlib urllib); heavy model deps stay optional.
+render = ["cairosvg", "scikit-image"]   # fidelity metrics, reports, `plate bench`
+sam = ["torch", "transformers"]         # optional SAM-family segmenter (not built yet)
+dev = ["pytest", "ruff", "cairosvg", "scikit-image"]
+
+[project.scripts]
+plate = "plate.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

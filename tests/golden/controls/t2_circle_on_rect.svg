@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="340" height="300" viewBox="0 0 340 300">
+  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="340" height="300" fill="#ffffff"/>
+  <g id="Dark_gray_rectangle" data-name="Dark gray rectangle" inkscape:label="Dark gray rectangle" inkscape:groupmode="layer">
+    <rect id="Dark_gray_rectangle_2" data-name="Dark gray rectangle" inkscape:label="Dark gray rectangle" x="50" y="60" width="240" height="180" fill="#3c465a"/>
+    <circle id="Red_circle" data-name="Red circle" inkscape:label="Red circle" cx="190.36" cy="150.21" r="60.06" fill="#f0503c"/>
+  </g>
+</svg>
