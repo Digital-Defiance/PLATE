@@ -154,3 +154,43 @@ def test_boundary_ok_distinguishes_scattered_outliers_from_a_clustered_defect():
     many = res.copy()
     many[rng.choice(n, 80, replace=False)] = 2.5       # 8% outliers -> reject
     assert not _boundary_ok(many, .85)
+
+
+def test_circular_transparent_holes_are_emitted_as_arcs(tmp_path):
+    """A round TRANSPARENT perforation forces an even-odd compound path; its round
+    hole should trace as compact SVG arcs (round, editable), not a long Bézier chain.
+    A non-circular transparent hole in the same path must stay Béziers."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    import cairosvg
+    # transparent holes (no white rect behind) => one even-odd compound path
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">'
+           '<path fill="#286ec8" fill-rule="evenodd" d="M40 40H360V160H40Z '
+           'M90 100a38 38 0 1 0 76 0a38 38 0 1 0 -76 0Z '              # round hole
+           'M250 62H326V138H250Z"/>'                                    # square hole
+           '</svg>')
+    with Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(), scale=4))) as image:
+        path = tmp_path / "plate.png"
+        image.resize((400, 200), Image.Resampling.LANCZOS).save(path)
+    result = pipeline.run(path, Config())
+    plate = next(e for e in ET.fromstring(result.svg).iter()
+                 if e.tag.rsplit("}", 1)[-1] == "path" and e.get("fill-rule") == "evenodd")
+    d = plate.get("d")
+    assert d.count("A") >= 2, "round transparent hole should be emitted as arcs"
+    # the square hole must NOT be arced — it stays straight segments (no extra arcs)
+    assert d.count("A") <= 4, "a non-circular hole must stay Béziers/lines, not arcs"
+    with Image.open(path) as image:
+        assert metrics.fidelity(result.svg, np.asarray(image.convert("RGBA")),
+                                bg=(255, 255, 255))["ssim"] >= 0.97
+
+
+def test_perforated_plate_holes_are_arcs_and_compact():
+    """The perforated_plate challenge: its three round holes should emit as arcs,
+    keeping the plate well under its old anchor count, still matching the target."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    result = pipeline.run(directory / "perforated_plate.png")
+    stats = metrics.analyze_svg(result.svg)
+    assert stats["anchors"] <= 28, f"round holes should keep anchors low, got {stats['anchors']}"
+    assert_target(result.svg, (directory / "perforated_plate.target.svg").read_text())

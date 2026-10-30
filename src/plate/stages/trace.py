@@ -10,7 +10,7 @@ from scipy import ndimage as ndi
 
 from ..bezier import contour_to_beziers, is_flat
 from ..config import Config
-from ..geometry import contours_xy, poly_area
+from ..geometry import contours_xy, fit_circle, poly_area
 from ..masks import Mask
 
 
@@ -64,8 +64,33 @@ def mask_to_path(mask: Mask, canvas: tuple[int, int], cfg: Config, scale: float)
     def P(p):
         return f"{_fmt((p[0] + 0.5) / scale, prec)} {_fmt((p[1] + 0.5) / scale, prec)}"
 
+    # The largest contour is the outer silhouette; the rest are holes. A hole that
+    # is a near-perfect circle (a punched round perforation) is far more compact and
+    # more editable as two SVG arcs (4 anchors) than a long Bézier chain, and stays
+    # exactly round under resize. Snap only interior holes, only on a tight circle
+    # fit, so non-circular holes and the outer contour keep their Bézier tracing.
+    outer_idx = max(range(len(conts)), key=lambda i: abs(poly_area(conts[i]))) if conts else -1
+    hole_tol = max(0.35 * scale, 0.4)
+
+    def circle_arc(c):
+        if len(c) < 24:
+            return None
+        pr, rms, cov = fit_circle(c)
+        if rms > hole_tol or cov < 6.1 or pr.rx < 2:  # ~350deg coverage, real radius
+            return None
+        x, y, rr = (pr.cx + 0.5) / scale, (pr.cy + 0.5) / scale, pr.rx / scale
+        f = lambda v: _fmt(v, prec)
+        return (f"M{f(x - rr)} {f(y)}A{f(rr)} {f(rr)} 0 1 0 {f(x + rr)} {f(y)}"
+                f"A{f(rr)} {f(rr)} 0 1 0 {f(x - rr)} {f(y)}Z")
+
     d, anchors = [], 0
-    for c in conts:
+    for i, c in enumerate(conts):
+        if i != outer_idx:
+            arc = circle_arc(c)
+            if arc is not None:
+                d.append(arc)
+                anchors += 4
+                continue
         res = contour_to_beziers(c, tol, cfg.corner_threshold)
         if res is None:
             continue
