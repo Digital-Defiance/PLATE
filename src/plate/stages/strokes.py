@@ -55,6 +55,32 @@ def _ellipse_distance(points, q):
     return distance*np.where((x/rx)**2+(y/ry)**2 >= 1, 1, -1)
 
 
+def _longest_run(flags: np.ndarray) -> int:
+    """Longest contiguous run of True in a CLOSED (circular) boolean sequence."""
+    if not flags.any():
+        return 0
+    if flags.all():
+        return int(flags.size)
+    doubled = np.concatenate([flags, flags])
+    best = run = 0
+    for v in doubled:
+        run = run + 1 if v else 0
+        best = max(best, run)
+    return min(best, int(flags.sum()))
+
+
+def _boundary_ok(residual: np.ndarray, tol: float, max_frac: float = .05, max_run: int = 12) -> bool:
+    """Accept a loop whose boundary deviates beyond `tol` only at a few SCATTERED
+    points. A real notch, bite or variable-width defect produces a long CONTIGUOUS
+    run of deviating samples (and also fails the separate footprint-XOR gate); busy
+    crossings where the stroke overlaps other artwork produce sparse, isolated
+    outliers. Reject when outliers are too common or clustered into an arc."""
+    bad = np.abs(residual) > tol
+    if not bad.any():
+        return True
+    return bad.mean() <= max_frac and _longest_run(bad) <= max_run
+
+
 def fit_closed(mask: Mask, cfg: Config, img=None, color=None, covers=()) -> ClosedStroke | None:
     """Recover a thin circular/elliptical loop with two complete boundaries.
 
@@ -99,7 +125,13 @@ def fit_closed(mask: Mask, cfg: Config, img=None, color=None, covers=()) -> Clos
     boundary = np.concatenate(contours)
     xy = np.rint(boundary).astype(int)
     free = ~near_cover[xy[:, 1], xy[:, 0]]
-    if free.mean() < .9:
+    # A ring threaded through a busy composition (e.g. an orbit behind satellites,
+    # a wordmark and a core) can have a large fraction of its boundary near later
+    # shapes, yet its visible arcs still massively over-determine the ellipse. Trust
+    # the fit when at least half the boundary is free; the residual and footprint
+    # gates below (evaluated on the free boundary / free region) remain the real
+    # guarantees against accepting a mostly-hidden sliver as a full loop.
+    if free.mean() < .5:
         return None
     points = boundary[free]
     sample = points[::max(1, len(points)//1600)]
@@ -130,7 +162,11 @@ def fit_closed(mask: Mask, cfg: Config, img=None, color=None, covers=()) -> Clos
                             q0, bounds=(lower, upper), max_nfev=80)
         q, width = fit.x[:-1], fit.x[-1]
         residual = np.abs(distance(points, q))-width/2
-        if np.sqrt(np.mean(residual**2)) > .35 or np.max(np.abs(residual)) > .85:
+        # Overall tightness must hold (RMS), but allow a few SCATTERED points past
+        # the max tolerance where the stroke crosses other artwork; a real notch is
+        # a long contiguous deviating run and is rejected by _boundary_ok (and by the
+        # footprint-XOR gate below).
+        if np.sqrt(np.mean(residual**2)) > .35 or not _boundary_ok(residual, .85):
             continue
         radius = q[2] if kind == "circle" else min(q[2:4])
         if width > .15*radius:
@@ -142,15 +178,25 @@ def fit_closed(mask: Mask, cfg: Config, img=None, color=None, covers=()) -> Clos
             continue
         missing, extra = predicted & ~reference, reference & ~predicted
         uncovered = missing & ~covered
+        # Stray pixels (prediction far from observation or vice versa) flag a real
+        # geometric defect — a detached blob, a notch — but a thin stroke crossing
+        # other artwork smears its boundary by a couple of px. Tolerate stray area
+        # up to the observed max boundary deviation (3px dilation) PROVIDED it stays
+        # a tiny fraction of the loop; the XOR gate still caps gross mismatch.
+        tol_px = 3
+        stray_missing = uncovered & ~ndi.binary_dilation(reference, iterations=tol_px)
+        stray_extra = extra & ~ndi.binary_dilation(predicted, iterations=tol_px)
+        stray_allow = .01 * np.count_nonzero(reference | predicted)
         if (np.count_nonzero((reference ^ predicted) & ~covered)/max(1, np.count_nonzero((reference | predicted) & ~covered)) > .06
-                or np.any(uncovered & ~ndi.binary_dilation(reference))
-                or np.any(extra & ~ndi.binary_dilation(predicted))):
+                or np.count_nonzero(stray_missing) > stray_allow
+                or np.count_nonzero(stray_extra) > stray_allow):
             continue
         # Validate every observed boundary, including points near occluders that
-        # were excluded from fitting. Deviations there need actual cover pixels.
+        # were excluded from fitting. Deviations there need actual cover pixels, or
+        # must be sparse/scattered (busy crossings) rather than a clustered defect.
         residual = np.abs(distance(boundary, q))-width/2
-        bad = np.abs(residual) > .85
-        if np.any(bad & ~near_cover[xy[:, 1], xy[:, 0]]):
+        free_boundary = ~near_cover[xy[:, 1], xy[:, 0]]
+        if not _boundary_ok(residual[free_boundary], .85):
             continue
         prim = Prim(kind, q[0]+ref.x0, q[1]+ref.y0, q[2],
                     q[2] if kind == "circle" else q[3],
