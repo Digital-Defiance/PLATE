@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="960" viewBox="0 0 800 960">
+  <path id="shield-four-transparent-cutouts" d="M100 110L400 40L700 110L670 540Q650 650 400 760Q150 650 130 540Z M393 59a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M115 150a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M671 150a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z M393 739a7 7 0 1 0 14 0a7 7 0 1 0 -14 0Z" fill="#182e4c" fill-rule="evenodd" />
+  <path id="shield-field" d="M137 137L400 80L663 137L635 525Q615 620 400 714Q185 620 165 525Z" fill="#f5edda" />
+  <path id="left-laurel-stem" d="M400 650Q250 630 210 470" fill="none" stroke="#e9bc59" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <ellipse id="left-laurel-leaf-1" cx="320" cy="645" rx="13" ry="28" fill="#a9d1b5" transform="rotate(-38 320 645)" />
+  <ellipse id="left-laurel-leaf-2" cx="299" cy="617" rx="13" ry="28" fill="#267d83" transform="rotate(-41 299 617)" />
+  <ellipse id="left-laurel-leaf-3" cx="278" cy="589" rx="13" ry="28" fill="#a9d1b5" transform="rotate(-44 278 589)" />
+  <ellipse id="left-laurel-leaf-4" cx="257" cy="561" rx="13" ry="28" fill="#267d83" transform="rotate(-47 257 561)" />
+  <ellipse id="left-laurel-leaf-5" cx="236" cy="533" rx="13" ry="28" fill="#a9d1b5" transform="rotate(-50 236 533)" />
+  <ellipse id="left-laurel-leaf-6" cx="215" cy="505" rx="13" ry="28" fill="#267d83" transform="rotate(-53 215 505)" />
+  <path id="right-laurel-stem" d="M400 650Q550 630 590 470" fill="none" stroke="#e9bc59" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <ellipse id="right-laurel-leaf-1" cx="480" cy="645" rx="13" ry="28" fill="#a9d1b5" transform="rotate(38 480 645)" />
+  <ellipse id="right-laurel-leaf-2" cx="501" cy="617" rx="13" ry="28" fill="#267d83" transform="rotate(41 501 617)" />
+  <ellipse id="right-laurel-leaf-3" cx="522" cy="589" rx="13" ry="28" fill="#a9d1b5" transform="rotate(44 522 589)" />
+  <ellipse id="right-laurel-leaf-4" cx="543" cy="561" rx="13" ry="28" fill="#267d83" transform="rotate(47 543 561)" />
+  <ellipse id="right-laurel-leaf-5" cx="564" cy="533" rx="13" ry="28" fill="#a9d1b5" transform="rotate(50 564 533)" />
+  <ellipse id="right-laurel-leaf-6" cx="585" cy="505" rx="13" ry="28" fill="#267d83" transform="rotate(53 585 505)" />
+  <polygon id="crest-star-1" points="320.00,152.00 322.38,163.62 334.00,166.00 322.38,168.38 320.00,180.00 317.62,168.38 306.00,166.00 317.62,163.62" fill="#e9bc59" />
+  <polygon id="crest-star-2" points="400.00,107.00 403.05,121.95 418.00,125.00 403.05,128.05 400.00,143.00 396.95,128.05 382.00,125.00 396.95,121.95" fill="#e9bc59" />
+  <polygon id="crest-star-3" points="480.00,152.00 482.38,163.62 494.00,166.00 482.38,168.38 480.00,180.00 477.62,168.38 466.00,166.00 477.62,163.62" fill="#e9bc59" />
+  <path id="fox-full-silhouette" d="M222 210L306 250L400 180L494 250L578 210L553 410L520 480L400 571L280 480L247 410Z" fill="#e88040" />
+  <polygon id="left-ear" points="237,230 296,267 258,323" fill="#182e4c" />
+  <polygon id="right-ear" points="563,230 504,267 542,323" fill="#182e4c" />
+  <polygon id="forehead-facet" points="400,201 464,268 400,390 336,268" fill="#e9bc59" />
+  <path id="left-cheek" d="M252 334L336 379L400 493L344 510L282 465Z" fill="#f5edda" />
+  <path id="right-cheek" d="M548 334L464 379L400 493L456 510L518 465Z" fill="#f5edda" />
+  <polygon id="left-eye-mask" points="269,326 357,366 375,404 296,389" fill="#182e4c" />
+  <polygon id="right-eye-mask" points="531,326 443,366 425,404 504,389" fill="#182e4c" />
+  <path id="left-eye" d="M290 354L343 374Q318 388 290 354Z" fill="#f5edda" />
+  <path id="right-eye" d="M510 354L457 374Q482 388 510 354Z" fill="#f5edda" />
+  <circle id="left-pupil" cx="323" cy="373" r="5" fill="#182e4c" />
+  <circle id="right-pupil" cx="477" cy="373" r="5" fill="#182e4c" />
+  <path id="muzzle" d="M362 423Q400 408 438 423L459 475L400 527L341 475Z" fill="#f5edda" />
+  <polygon id="nose" points="376,447 424,447 400,473" fill="#182e4c" />
+  <path id="mouth" d="M400 470V490Q382 505 368 488M400 490Q418 505 432 488" fill="none" stroke="#182e4c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="left-whisker-1" d="M352 455Q311 452 288 438" fill="none" stroke="#182e4c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="left-whisker-2" d="M352 472Q311 474 288 471" fill="none" stroke="#182e4c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-whisker-1" d="M448 455Q489 452 512 438" fill="none" stroke="#182e4c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="right-whisker-2" d="M448 472Q489 474 512 471" fill="none" stroke="#182e4c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <polygon id="left-ribbon-tail" points="70,759 151,776 151,860 55,878 79,819" fill="#e88040" />
+  <polygon id="right-ribbon-tail" points="730,759 649,776 649,860 745,878 721,819" fill="#e88040" />
+  <polygon id="left-ribbon-fold" points="115,855 151,831 151,879" fill="#e9bc59" />
+  <polygon id="right-ribbon-fold" points="685,855 649,831 649,879" fill="#e9bc59" />
+  <rect id="name-ribbon" x="115" y="750" width="570" height="115" fill="#182e4c" rx="8" />
+  <path id="outlined-name-1-E" d="M0 0H42V12H12V24H35V36H12V48H42V60H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(208 764) scale(1.5)" />
+  <path id="outlined-name-2-M" d="M0 60V0H13L23 28L33 0H46V60H34V23L23 49L12 23V60Z" fill="#f5edda" fill-rule="evenodd" transform="translate(289 764) scale(1.5)" />
+  <path id="outlined-name-3-B" d="M0 0H27Q41 0 41 15Q41 25 34 29Q44 33 44 45Q44 60 28 60H0Z M12 11V24H24Q29 24 29 17Q29 11 24 11Z M12 35V49H25Q31 49 31 42Q31 35 25 35Z" fill="#f5edda" fill-rule="evenodd" transform="translate(370 764) scale(1.5)" />
+  <path id="outlined-name-4-E" d="M0 0H42V12H12V24H35V36H12V48H42V60H0Z" fill="#f5edda" fill-rule="evenodd" transform="translate(451 764) scale(1.5)" />
+  <path id="outlined-name-5-R" d="M0 0H27Q42 0 42 17Q42 30 29 33L44 60H30L16 35H12V60H0Z M12 11V24H25Q30 24 30 17Q30 11 25 11Z" fill="#f5edda" fill-rule="evenodd" transform="translate(532 764) scale(1.5)" />
+  <circle id="rank-dot-1" cx="365" cy="904" r="5" fill="#e9bc59" />
+  <circle id="rank-dot-2" cx="400" cy="904" r="5" fill="#e9bc59" />
+  <circle id="rank-dot-3" cx="435" cy="904" r="5" fill="#e9bc59" />
+</svg>

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480">
+  <defs>
+    <radialGradient id="orbital-light" gradientUnits="userSpaceOnUse" cx="185" cy="195" r="180">
+      <stop offset="0" stop-color="#f0cc8a" />
+      <stop offset="1" stop-color="#bb6c8f" />
+    </radialGradient>
+  </defs>
+  <path id="badge-ring-four-cutouts" d="M55 240a160 160 0 1 0 320 0a160 160 0 1 0 -320 0Z M67 240a148 148 0 1 0 296 0a148 148 0 1 0 -296 0Z M211 84a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z M367 240a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z M211 396a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z M55 240a4 4 0 1 0 8 0a4 4 0 1 0 -8 0Z" fill="#182e4c" fill-rule="evenodd" />
+  <ellipse id="back-orbit" cx="215" cy="240" rx="196" ry="66" fill="none" stroke="#a9d1b5" stroke-width="8" transform="rotate(-25 215 240)" />
+  <circle id="gradient-core" cx="215" cy="240" r="117" fill="url(#orbital-light)" />
+  <path id="monogram-O" d="M141 240a74 74 0 1 0 148 0a74 74 0 1 0 -148 0Z M162 240a53 53 0 1 0 106 0a53 53 0 1 0 -106 0Z" fill="#182e4c" fill-rule="evenodd" />
+  <path id="upper-light-arc" d="M164 196Q189 166 226 176" fill="none" stroke="#f5edda" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="lower-light-arc" d="M247 280Q225 306 192 293" fill="none" stroke="#f5edda" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <ellipse id="front-orbit" cx="215" cy="240" rx="190" ry="62" fill="none" stroke="#e9bc59" stroke-width="6" transform="rotate(25 215 240)" />
+  <circle id="near-satellite" cx="366" cy="310" r="13" fill="#182e4c" />
+  <circle id="near-satellite-core" cx="366" cy="310" r="7" fill="#a9d1b5" />
+  <circle id="far-satellite" cx="64" cy="170" r="13" fill="#182e4c" />
+  <circle id="far-satellite-core" cx="64" cy="170" r="7" fill="#a9d1b5" />
+  <polygon id="core-spark" points="293.00,143.00 296.22,158.78 312.00,162.00 296.22,165.22 293.00,181.00 289.78,165.22 274.00,162.00 289.78,158.78" fill="#f5edda" />
+  <path id="wordmark-1-O" d="M12 0H30Q42 0 42 12V48Q42 60 30 60H12Q0 60 0 48V12Q0 0 12 0Z M14 11Q12 11 12 14V46Q12 49 15 49H27Q30 49 30 46V14Q30 11 27 11Z" fill="#182e4c" fill-rule="evenodd" transform="translate(450 110) scale(2.5)" />
+  <path id="wordmark-2-R" d="M0 0H27Q42 0 42 17Q42 30 29 33L44 60H30L16 35H12V60H0Z M12 11V24H25Q30 24 30 17Q30 11 25 11Z" fill="#182e4c" fill-rule="evenodd" transform="translate(585 110) scale(2.5)" />
+  <path id="wordmark-3-B" d="M0 0H27Q41 0 41 15Q41 25 34 29Q44 33 44 45Q44 60 28 60H0Z M12 11V24H24Q29 24 29 17Q29 11 24 11Z M12 35V49H25Q31 49 31 42Q31 35 25 35Z" fill="#182e4c" fill-rule="evenodd" transform="translate(720 110) scale(2.5)" />
+  <path id="wordmark-4-I" d="M2 0H40V11H27V49H40V60H2V49H15V11H2Z" fill="#182e4c" fill-rule="evenodd" transform="translate(855 110) scale(2.5)" />
+  <path id="wordmark-5-T" d="M0 0H44V12H28V60H16V12H0Z" fill="#182e4c" fill-rule="evenodd" transform="translate(990 110) scale(2.5)" />
+  <path id="descriptor-1-S" d="M42 0V12H15Q12 12 12 17Q12 22 17 23L29 27Q43 31 43 44Q43 60 27 60H0V48H27Q31 48 31 43Q31 39 26 37L14 33Q0 29 0 16Q0 0 16 0Z" fill="#267d83" fill-rule="evenodd" transform="translate(455 300) scale(0.666667)" />
+  <path id="descriptor-2-T" d="M0 0H44V12H28V60H16V12H0Z" fill="#267d83" fill-rule="evenodd" transform="translate(491 300) scale(0.666667)" />
+  <path id="descriptor-3-U" d="M0 0H12V44Q12 49 18 49H25Q31 49 31 44V0H43V45Q43 60 27 60H16Q0 60 0 45Z" fill="#267d83" fill-rule="evenodd" transform="translate(527 300) scale(0.666667)" />
+  <path id="descriptor-4-D" d="M0 0H24Q44 0 44 20V40Q44 60 24 60H0Z M12 12V48H23Q32 48 32 39V21Q32 12 23 12Z" fill="#267d83" fill-rule="evenodd" transform="translate(563 300) scale(0.666667)" />
+  <path id="descriptor-5-I" d="M2 0H40V11H27V49H40V60H2V49H15V11H2Z" fill="#267d83" fill-rule="evenodd" transform="translate(599 300) scale(0.666667)" />
+  <path id="descriptor-6-O" d="M12 0H30Q42 0 42 12V48Q42 60 30 60H12Q0 60 0 48V12Q0 0 12 0Z M14 11Q12 11 12 14V46Q12 49 15 49H27Q30 49 30 46V14Q30 11 27 11Z" fill="#267d83" fill-rule="evenodd" transform="translate(635 300) scale(0.666667)" />
+  <path id="motion-line-1" d="M755 307H1000Q1070 307 1115 282" fill="none" stroke="#a9d1b5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="motion-line-2" d="M755 331H1000Q1070 331 1115 306" fill="none" stroke="#e9bc59" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <path id="motion-line-3" d="M755 355H1000Q1070 355 1115 330" fill="none" stroke="#182e4c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <circle id="descriptor-dot-1" cx="460" cy="380" r="4" fill="#e9bc59" />
+  <circle id="descriptor-dot-2" cx="485" cy="380" r="4" fill="#e9bc59" />
+  <circle id="descriptor-dot-3" cx="510" cy="380" r="4" fill="#e9bc59" />
+  <circle id="descriptor-dot-4" cx="535" cy="380" r="4" fill="#e9bc59" />
+  <circle id="descriptor-dot-5" cx="560" cy="380" r="4" fill="#e9bc59" />
+  <polygon id="motion-chevron-1" points="1010,390 1026,374 1036,374 1020,390" fill="#267d83" />
+  <polygon id="motion-chevron-2" points="1042,390 1058,374 1068,374 1052,390" fill="#267d83" />
+  <polygon id="motion-chevron-3" points="1074,390 1090,374 1100,374 1084,390" fill="#267d83" />
+</svg>
