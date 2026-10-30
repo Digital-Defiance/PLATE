@@ -221,7 +221,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                 _closed_node(node, s, loop_fits[s.vis], img.scale)
             leaves[s.id] = node
     if cfg.strokes:
-        from .stages.strokes import fit_closed, fit_straight, fit_stroke
+        from .stages.strokes import fit_closed, fit_straight, fit_stroke, fit_crossed_curve
         from .stages.complete import occludes
         from .masks import touches
 
@@ -239,11 +239,19 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                 circles.append((sid, shapes[sid].vis,
                                 Prim("circle", p["cx"]*img.scale-.5, p["cy"]*img.scale-.5,
                                      p["r"]*img.scale, p["r"]*img.scale)))
+        closed_fits = {}
+        for sid, node in leaves.items():
+            if node.grad is None and not shapes[sid].is_background and node.stroke_width is None:
+                fitted = fit_closed(shapes[sid].full, cfg, img, shapes[sid].color,
+                                    [shapes[other].vis for other in leaves if rank[other] > rank[sid]])
+                if fitted is not None:
+                    closed_fits[sid] = fitted
+        closed_ids = set(closed_fits) | {sid for sid, node in leaves.items()
+                                        if node.kind in ("circle", "ellipse") and node.stroke_width is not None}
         for sid, node in leaves.items():
             if node.grad is not None or shapes[sid].is_background or node.stroke_width is not None:
                 continue
-            closed = fit_closed(shapes[sid].full, cfg, img, shapes[sid].color,
-                                [shapes[other].vis for other in leaves if rank[other] > rank[sid]])
+            closed = closed_fits.get(sid)
             if closed is not None:
                 _closed_node(node, shapes[sid], closed, img.scale)
                 continue
@@ -269,6 +277,10 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                                          max(0, x0-2):min(W, x1+2)] < 128)
                 if curved_candidate:
                     stroke = fit_stroke(shapes[sid].full, cfg, covers, img, shapes[sid].color)
+                if stroke is None and node.kind in ("path", "polygon"):
+                    overlays = [shapes[other].vis for other in closed_ids if rank[other] > rank[sid]
+                                and touches(shapes[sid].vis, shapes[other].vis, (H, W), 2)]
+                    stroke = fit_crossed_curve(shapes[sid].vis, cfg, overlays, img, shapes[sid].color)
             if stroke is None:
                 continue
             node.kind, node.params, node.evenodd = "path", {}, False

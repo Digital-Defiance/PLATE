@@ -9,7 +9,7 @@ from scipy import ndimage as ndi
 from scipy.optimize import least_squares
 from scipy.spatial import cKDTree
 
-from ..bezier import bez, fit_open
+from ..bezier import bez, fit_open, _d1, _d2
 from ..config import Config
 from ..geometry import Prim, contours_xy, fit_circle, fit_ellipse, raster_prim, poly_area
 from ..masks import Mask, crop_like, touches
@@ -552,7 +552,7 @@ def _refine(points, mask, radius):
     return p, widths
 
 
-def _flat_terminal(boundary, curves, width):
+def _flat_terminal(boundary, curves, width, tolerance=.12, front_fraction=.05):
     """Reject a confidently flat source cap before emitting a round-cap curve.
 
     Whole-shape IoU can hide the two missing corners of a long square-ended
@@ -569,11 +569,11 @@ def _flat_terminal(boundary, curves, width):
         if len(cap) < 3:
             continue
         along = (cap-end) @ outward
-        front = cap[along >= along.max()-max(.2, .05*width)]
+        front = cap[along >= along.max()-max(.2, front_fraction*width)]
         if len(front) < 3:
             continue
         _, singular, axes = np.linalg.svd(front-front.mean(axis=0), full_matrices=False)
-        if singular[-1]/np.sqrt(len(front)) <= .12 and np.ptp(front @ axes[0]) >= .75*width:
+        if singular[-1]/np.sqrt(len(front)) <= tolerance and np.ptp(front @ axes[0]) >= .75*width:
             return True
     return False
 
@@ -678,3 +678,97 @@ def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (
     full.x0 += int(low[0])
     full.y0 += int(low[1])
     return Stroke(curves, float(best[1]), full, bool(covers))
+
+
+def _curve_distance(curve, points):
+    """Euclidean distance to a cubic, including its finite round-cap endpoints."""
+    dense = bez(curve, np.linspace(0, 1, 100))
+    t = cKDTree(dense).query(points)[1]/99
+    for _ in range(6):
+        delta = bez(curve, t)-points
+        first, second = _d1(curve, t), _d2(curve, t)
+        numerator = (delta*first).sum(axis=1)
+        denominator = (first*first).sum(axis=1)+(delta*second).sum(axis=1)
+        t = np.clip(t-numerator/np.maximum(denominator, 1e-8), 0, 1)
+    return np.linalg.norm(bez(curve, t)-points, axis=1)
+
+
+def fit_crossed_curve(mask: Mask, cfg: Config, overlays: Sequence[Mask] = (),
+                      img=None, color=None) -> Stroke | None:
+    """Fit a short curve whose terminal is clipped by a proven later closed stroke.
+
+    The caller establishes the occluder's native loop geometry and paint order.
+    Fit only free boundaries, keeping a visible round cap to constrain the model;
+    every inferred exposed pixel must still match the original observation.
+    """
+    if not cfg.strokes or not cfg.complete_hidden or not overlays or mask.area < 80:
+        return None
+    a = np.pad(mask.a, 1)
+    if ndi.label(a)[1] != 1 or np.any(ndi.binary_fill_holes(a) != a):
+        return None
+    radius = float(ndi.distance_transform_edt(a).max())
+    if max(a.shape) < 8*radius or mask.area < 24*radius*radius:
+        return None
+    points = _chain(_thin(a), radius)
+    if points is None or len(points) < 12*radius:
+        return None
+    points, widths = _refine(points, a, radius)
+    trim = max(2, int(2*radius))
+    core = widths[trim:-trim]
+    if not len(core) or np.percentile(core, 10) < 2 or np.percentile(core, 90) > 1.35*np.percentile(core, 10):
+        return None
+    width = float(np.median(core))
+    points += [mask.x0-1, mask.y0-1]
+    # Keep the completion local; do not infer an unconstrained long hidden tail.
+    pad = int(np.ceil(2*width))+3
+    ref = Mask(np.zeros(tuple(np.array(mask.a.shape)+2*pad), bool), mask.y0-pad, mask.x0-pad)
+    cover = np.zeros(ref.a.shape, bool)
+    for overlay in overlays:
+        cover |= crop_like(overlay, ref)
+    yy, xx = np.indices(ref.a.shape)
+    grid = np.c_[xx.ravel()+ref.x0, yy.ravel()+ref.y0]
+    ends = points[[0, -1]]
+    contact = [np.any(cover & (np.hypot(xx+ref.x0-end[0], yy+ref.y0-end[1]) < width)) for end in ends]
+    if sum(contact) != 1:
+        return None  # one exposed cap is needed; both hidden ends are ambiguous
+    boundary = contours_xy(mask.a)[0]+[mask.x0, mask.y0]
+    near = ndi.binary_dilation(cover, iterations=2)
+    local = np.rint(boundary-[ref.x0, ref.y0]).astype(int)
+    free = boundary[~near[local[:, 1], local[:, 0]]]
+    if len(free) < 40 or len(free) < .65*len(boundary):
+        return None
+    distance = np.r_[0., np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))]
+    u = distance/distance[-1]
+    basis = np.c_[(1-u)**3, 3*(1-u)**2*u, 3*(1-u)*u**2, u**3]
+    curve = np.linalg.lstsq(basis, points, rcond=None)[0]
+    initial = np.r_[curve.ravel(), width]
+    span = np.r_[np.full(8, min(4., width/2)), min(1.5, width/4)]
+    fit = least_squares(lambda q: _curve_distance(q[:8].reshape(4, 2), free)-q[8]/2,
+                        initial, bounds=(initial-span, initial+span), max_nfev=80)
+    if np.sqrt(np.mean(fit.fun**2)) > .35 or np.max(np.abs(fit.fun)) > .85:
+        return None
+    curve, width = fit.x[:8].reshape(4, 2), float(fit.x[8])
+    if _flat_terminal(free, [curve], width, tolerance=.3, front_fraction=.1):
+        return None
+    # Subpixel source edges retain the corners that binary ownership may round
+    # away on a short, oblique flat cap. Preserve that local negative evidence.
+    field = _coverage_field(np.pad(mask.a, 6), mask, 6, img, color)
+    source = [] if field is None else contours_xy(field)
+    if len(source) == 1:
+        boundary = source[0]+[mask.x0-6, mask.y0-6]
+        local = np.rint(boundary-[ref.x0, ref.y0]).astype(int)
+        free_source = boundary[~near[local[:, 1], local[:, 0]]]
+        if _flat_terminal(free_source, [curve], width, tolerance=.15):
+            return None
+    distances = _curve_distance(curve, grid).reshape(ref.a.shape)
+    predicted = distances <= width/2
+    observed = crop_like(mask, ref)
+    exposed = ~cover
+    iou = np.count_nonzero(predicted & observed & exposed)/max(1, np.count_nonzero((predicted | observed) & exposed))
+    missing = predicted & ~observed
+    if (iou < .95 or np.any(missing & exposed & ~ndi.binary_dilation(observed))
+            or np.any(observed & ~ndi.binary_dilation(predicted))
+            or np.count_nonzero(missing & cover) < width
+            or np.count_nonzero(missing & cover) > 2*width*width):
+        return None
+    return Stroke([curve], width, Mask(predicted, ref.y0, ref.x0), True)
