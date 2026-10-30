@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-29 (session 18, wrap-up requested)
+# PLATE handover — 2026-10-29 (session 19, stroked loops across crossings)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -6,18 +6,74 @@ rendering.
 
 ## State at handover
 
-- **HEAD is `632bb1c`** (`fix: keep mixed-content holes open around a clear alpha void`) —
-  the session-18 mixed-content hole fix, now committed and signed (the previous handover
-  left it uncommitted; it was verified green and committed on takeover). Working tree CLEAN.
-- Recent lineage: `632bb1c` (session 18) ← `ebf8762` (session 17, thin alpha contours) ←
-  `a56c13e` (sessions 14–16, straight/closed strokes + instrument panel) ← `0a0fddc`.
+- **HEAD is `a2579f0`**. Working tree CLEAN; everything committed and GPG-signed.
+- Recent lineage: `a2579f0` (session-19 docs) ← `c5762b2` (session-19 tests) ←
+  `7f0210c` (session-19 feat: stroked loops across crossings) ← `ea4330e` (docs) ←
+  `632bb1c` (session 18, mixed-content holes) ← `ebf8762` (session 17) ←
+  `a56c13e` (sessions 14–16) ← `0a0fddc`.
 - No push. Commit/push only when Jessica asks.
-- **Tests: 213 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **Tests: 216 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
-- No push. Commit/push only when Jessica asks (she asked for the commits below).
 
-## Mixed-content hole fix (session 18, uncommitted)
+## Stroked loops crossing other artwork (session 19)
+
+- Closed the previous handover's primary ORBIT continuation item: the gold **front
+  orbit** now recovers as one editable **stroked ellipse** (width 6.06 vs target 6,
+  rx/ry 190/62). `fit_closed` in `src/plate/stages/strokes.py` required every
+  boundary sample < 0.85px, every predicted/observed pixel within 1px, and ≥90% of
+  the boundary free of later shapes. A thin stroke threaded through the badge ring,
+  gradient core, satellites and wordmark violates all three (~2% of its boundary
+  smears up to 2.8px at crossings; ~37% sits near later-painted covers) even though
+  its visible arcs over-determine the ellipse (free-only fit RMS 0.26, footprint
+  XOR 0.017).
+- Three GUARDED relaxations, each still backed by a strong independent gate — a real
+  notch/defect is still rejected:
+  - `_boundary_ok` (new helper): tolerate boundary samples past tolerance only when
+    SCATTERED (≤5% of points AND longest contiguous run ≤12). A notch is a long
+    contiguous run → still fails.
+  - stray-pixel footprint check: allow stray area within 3px of the shape up to 1%
+    of the loop (was: any pixel >1px away rejects). The XOR ≤ 0.06 gate still caps
+    gross mismatch.
+  - free-boundary gate 0.9 → 0.5: a loop at least half-visible is over-determined;
+    the residual/footprint gates on the free region remain the guarantees.
+- Commits `7f0210c` (feat) + `c5762b2` (3 regressions: real-ORBIT front-orbit
+  recovery, a notched ring still rejected, and the `_boundary_ok` scattered-vs-
+  clustered unit test). ORBIT now emits **2 ellipses / 4 strokes** (was 1 / 3).
+- **ORBIT's overall structural gap stays OPEN** (strict xfail): still **60 objects
+  vs target 34**. The mint **back orbit** fragments into disconnected arcs, and the
+  wordmark/emblem still fragment. Suite **216 passed, 6 xfailed**; panel stays
+  59/27, ROOT 51/3, all eight original samples and the other challenges unchanged.
+  No target/golden edits.
+
+## IMPORTANT correction: why git commits hang (and the real fix)
+
+Earlier handovers blamed the commit template / gpg. **That was wrong.** The real
+blocker is a GLOBAL `pre-commit` hook: `core.hooksPath` points at
+`~/.git-templates/hooks`, whose `pre-commit` opens an AppleScript "Select Identity"
+GUI (`osascript choose from list`) that blocks forever in a non-interactive shell.
+The hook honours its own bypass, `hooks.skipidentityprompt=true`. GPG signing works
+fine once the hook is skipped. Commit with (all per-invocation `-c`, config untouched,
+commits stay signed):
+`GIT_EDITOR=true git -c hooks.skipidentityprompt=true -c commit.template= -c gpg.program=/tmp/gpg-batch.sh commit -F <msgfile>`
+where `/tmp/gpg-batch.sh` is `#!/bin/sh` + `exec /opt/homebrew/bin/gpg --batch --no-tty "$@"`.
+(Also: write commit messages to a file and use `-F`; multiline `-m` and streaming
+`pytest` output both get truncated by the shell tooling here, so redirect pytest to a
+log and read the tail.)
+
+## Immediate continuation — next ORBIT blocker
+
+**Interrupted / merged closed loops** is now the specific remaining ORBIT blocker
+(and ROOT's inner ring). `fit_closed` needs exactly one component with two complete
+contours, so the mint back orbit — split into disconnected arcs by occluders — never
+reaches it. This requires pooling disconnected arc fragments of the SAME stroke into
+one ellipse/circle before fitting, WITHOUT inventing tangents across unrelated gaps
+(mirror the discipline already in `complete.try_complete`'s contour pooling: per-
+component evidence, relative T-junction support). It is a genuinely new capability,
+larger than the session-19 gate relaxations — give it its own focused pass. After
+that, ORBIT also needs wordmark/emblem de-fragmentation to reach 34 objects.
+
+## Mixed-content hole fix (session 18, committed `632bb1c`)
 
 - `order._silhouettes` previously reopened an entire hole only when >50% of its
   pixels were transparent. ORBIT's front ellipse encloses a mostly opaque gradient
@@ -86,7 +142,11 @@ rendering.
 
 ## Immediate continuation
 
-First review/commit the verified session-18 work if Jessica requests it. Then:
+> SUPERSEDED (session-18 note): item 1 below (front-orbit `fit_closed` rejection) was
+> RESOLVED in session 19 — see "Stroked loops crossing other artwork" above; the front
+> orbit now recovers as a stroked ellipse. Items 2–3 (back-orbit arc reconciliation,
+> ROOT inner ring) remain open and are folded into the current "Immediate continuation —
+> next ORBIT blocker" section near the top. Kept here for history.
 
 1. ORBIT's front silhouette is now hollow, but `fit_closed` rejects gradient-crossing
    segmentation errors: approximately 45 boundary points exceed .85px deviation,
