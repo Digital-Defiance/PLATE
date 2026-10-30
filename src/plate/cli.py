@@ -7,12 +7,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from . import __version__
 from .config import PRESETS, Config, load
 
-IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
 
 
 def _coerce(cfg_field: dataclasses.Field, raw: str):
@@ -74,7 +73,8 @@ def _run_one(src: Path, dst: Path, cfg: Config, report: bool = False, quiet: boo
     try:
         from .raster import have_renderer
         if have_renderer():
-            rgba = np.asarray(Image.open(src).convert("RGBA"))
+            from .imageio import open_rgba
+            rgba = np.asarray(open_rgba(src))
             fid = metrics.fidelity(res.svg, rgba)
     except Exception:                                   # noqa: BLE001
         pass
@@ -147,8 +147,9 @@ def _bench(args) -> int:
     cfg = _cfg(args)
     out = Path(args.output or "bench_out")
     print(f"{'image':18} {'engine':8} {'shapes':>6} {'anchors':>7} {'/shape':>6} {'prim%':>5} {'named%':>6} {'ssim':>6}")
+    from .imageio import open_rgba
     for f in files:
-        rgba = np.asarray(Image.open(f).convert("RGBA"))
+        rgba = np.asarray(open_rgba(f))
         rows = {}
         rows["plate"] = _run_one(f, out / f"{f.stem}.plate.svg", cfg, quiet=True)
         base_svg = out / f"{f.stem}.vtracer.svg"
@@ -255,7 +256,15 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--vlm-url", dest="vlm_url"); d.set_defaults(fn=_doctor)
 
     args = p.parse_args(argv)
-    return args.fn(args)
+    from .imageio import ImageLoadError
+    try:
+        return args.fn(args)
+    except ImageLoadError as e:
+        print(f"plate: {e}", file=sys.stderr)
+        return 2
+    except KeyboardInterrupt:
+        print("plate: interrupted", file=sys.stderr)
+        return 130
 
 
 if __name__ == "__main__":

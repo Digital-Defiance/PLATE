@@ -310,7 +310,9 @@ def fit_straight(mask: Mask, cfg: Config, img: Loaded | None = None, color=None,
     delta = pixels-centre
     length = float(np.ptp(delta @ axis)+1)
     width = float(np.ptp(delta @ [-axis[1], axis[0]])+1)
-    if length < 2.5*width:
+    # A one-pixel row cannot carry a round-capped stroke, and its half-width (0.5)
+    # would start the bounded fit below its own 0.75px floor (scipy raises).
+    if length < 2.5*width or width < 1.5:
         return None
     contours = contours_xy(a)
     if len(contours) != 1:

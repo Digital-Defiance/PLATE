@@ -5,8 +5,6 @@ import base64
 import html
 import io
 
-from PIL import Image
-
 from .scene import Node
 
 
@@ -26,7 +24,8 @@ def _tree(nodes: list[Node]) -> str:
 
 
 def build(src_path, result, metrics: dict, fid: dict | None) -> str:
-    im = Image.open(src_path).convert("RGBA")
+    from .imageio import open_rgba
+    im = open_rgba(src_path)  # displayed orientation, 16-bit scaled — matches the SVG
     buf = io.BytesIO(); im.save(buf, "PNG")
     b64 = base64.b64encode(buf.getvalue()).decode()
     rows = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in {**metrics, **(fid or {}),

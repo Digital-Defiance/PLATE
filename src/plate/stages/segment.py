@@ -26,6 +26,11 @@ def _hex_to_rgb(h: str) -> tuple[int, int, int]:
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
+# Upper bound on an automatic palette of exactly-repeated flat colours (swatch charts,
+# mosaics, pixel art). Bounds the O(K^2) per-pair edge assignment cost.
+FLAT_PALETTE_CEILING = 96
+
+
 def _build_palette(px: np.ndarray, cfg: Config) -> np.ndarray:
     if cfg.palette:
         return np.array([_hex_to_rgb(c) for c in cfg.palette], np.uint8)
@@ -46,6 +51,13 @@ def _build_palette(px: np.ndarray, cfg: Config) -> np.ndarray:
         pal.append(c)
         pal_lab.append(l)
     if len(pal) <= cfg.max_colors:
+        return np.array(pal, np.uint8)
+    # Many genuinely FLAT colours (a swatch chart, mosaic, pixel art) are not a photo:
+    # k-means would merge distinct swatches into averaged blobs. The kept colours
+    # already explain >=99% of flat pixels exactly (photo noise/ramps never do), so
+    # honour them up to a hard ceiling that bounds the per-pair edge assignment cost.
+    # Only automatic palettes reach here; max_colors stays a cap on noisy input.
+    if len(pal) <= FLAT_PALETTE_CEILING and counts.sum() >= 0.99 * len(px):
         return np.array(pal, np.uint8)
     # photo-like: too many distinct colours -> k-means in Lab
     sample = px if len(px) <= 200_000 else px[np.random.default_rng(0).choice(len(px), 200_000, replace=False)]
@@ -91,6 +103,10 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
     rgb, alpha = img.rgb, img.alpha
     H, W = alpha.shape
     opaque = alpha >= 128
+    if not opaque.any():
+        # Nothing visible (a fully transparent image): no palette, no shapes.
+        return Segmentation(rid=np.full((H, W), -1, np.int32), shapes=[],
+                            palette=np.zeros((0, 3), np.uint8))
     lab = _lab(rgb)
 
     gx = cv2.Sobel(lab, cv2.CV_32F, 1, 0, ksize=3)
@@ -105,12 +121,15 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
     # A narrow feature may have stable colour cores before edge dilation, but
     # contribute no pixels to `flat`. Admit repeated colours from those cores
     # within the remaining palette budget; explicit palettes remain authoritative.
-    if not cfg.palette and len(palette) < cfg.max_colors:
+    # A flat palette honoured above max_colors keeps that larger budget here, or thin
+    # gaps between swatches (whose pixels are all edge) would lose their colour.
+    budget = cfg.max_colors if len(palette) <= cfg.max_colors else FLAT_PALETTE_CEILING
+    if not cfg.palette and len(palette) < budget:
         core = (grad <= cfg.edge_threshold) & edge & opaque
         colors, counts = np.unique(rgb[core], axis=0, return_counts=True)
         labs = _lab(colors.reshape(-1, 1, 3)).reshape(-1, 3) if len(colors) else []
         for i in np.argsort(-counts):
-            if counts[i] < max(6, cfg.filter_speckle) or len(palette) >= cfg.max_colors:
+            if counts[i] < max(6, cfg.filter_speckle) or len(palette) >= budget:
                 break
             existing = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
             if np.linalg.norm(existing-labs[i], axis=1).min() >= cfg.color_merge:
@@ -182,21 +201,34 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                     # halo of their flat seeds; do not alter those junctions.
                     similar = (np.linalg.norm(rgb.astype(np.float32) - pal[k], axis=2)
                                <= 12.0) & opaque
-                    count, components = cv2.connectedComponents(
+                    count, components, boxes, _ = cv2.connectedComponentsWithStats(
                         similar.astype(np.uint8), connectivity=8)
                     supported = np.zeros(count, bool)
                     supported[components[src == k]] = True
                     distant = ndi.distance_transform_edt(src != k)[ey[chosen], ex[chosen]] > 7
                     labels = components[ey[chosen], ex[chosen]]
                     for label in np.unique(labels[distant & supported[labels]]):
-                        sample = rgb[components == label]
+                        x, y, w, h = boxes[label, :4]
+                        member = components[y:y + h, x:x + w] == label
+                        pixels = rgb[y:y + h, x:x + w]
+                        sample = pixels[member]
                         sample = sample[::max(1, len(sample)//4096)]
                         _, frequencies = np.unique(sample, axis=0, return_counts=True)
                         # A flat branch has a repeated solid core. Smooth ramp
                         # bands contain many RGB values and must keep the old
                         # assignments so gradient fitting remains coherent.
                         if frequencies.max() < 0.3*len(sample):
-                            distant[labels == label] = False
+                            # A thin antialiased stroke (small text, a curved
+                            # rule) is mostly fringe, which dilutes the mode of
+                            # the whole component. Judge its interior instead:
+                            # a solid mark keeps one repeated core colour there,
+                            # whereas a ramp band varies inside as well.
+                            inner = pixels[ndi.binary_erosion(member)]
+                            if len(inner):
+                                inner = inner[::max(1, len(inner)//4096)]
+                                _, core_freq = np.unique(inner, axis=0, return_counts=True)
+                            if not len(inner) or core_freq.max() < 0.5*len(inner):
+                                distant[labels == label] = False
                     # A colour-matching unresolved core needs a seed even inside
                     # the normal resampling halo; otherwise that halo can erase
                     # a whole thin alpha-supported loop. Already-assigned edges
@@ -235,6 +267,10 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
             cleaned[np.isin(cc, small)] = -2
     # transparent specks are kept as-is (never refilled)
     cleaned[(labels == -1)] = -1
+    if not (cleaned >= 0).any():
+        # Every opaque region was a "speck" (e.g. a 2x2 icon): there is nothing left to
+        # refill from, and removing them would emit an empty SVG. Keep the originals.
+        cleaned = labels
     labels = _fill_unknown(cleaned, cleaned == -2)
 
     # regions

@@ -64,7 +64,17 @@ def _full_primitive_deviation(mask: np.ndarray, pr: Prim) -> float:
 
 
 def snap(mask: Mask, cfg: Config) -> Prim | None:
-    if mask.empty() or mask.area < 30:
+    if mask.empty():
+        return None
+    if mask.area < 30:
+        # Too few pixels to fit reliably, but a mask that fills its whole bounding box
+        # IS exactly an axis-aligned rectangle (a tiny icon, a 1x1 image). Emit that
+        # instead of letting the blurred contour tracer turn it into a stray lens.
+        # One-pixel-wide survivors of speckle filtering are almost always antialias
+        # fringes between shapes; keep dropping those (except a whole 1x1 image).
+        h, w = mask.a.shape
+        if mask.a.all() and (min(h, w) >= 2 or mask.area == 1):
+            return Prim("rect", mask.x0 + (w - 1) / 2, mask.y0 + (h - 1) / 2, w / 2, h / 2)
         return None
     pad = 3
     a = np.pad(mask.a, pad)
