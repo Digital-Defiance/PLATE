@@ -15,13 +15,13 @@ typical auto-tracer produces, PLATE reconstructs the *editable structure* of the
   minimal-anchor Bézier path.
 - **Optional AI naming** — a local vision-language model (via LM Studio) can replace classical names
   ("Navy circle") with semantic ones ("Left Eye") and group related shapes, entirely offline.
-- **Editable open strokes** — suitable constant-width curves become open SVG paths with a stroke
-  width and round caps/joins. Existing live primitives stay primitives; uncertain fits stay outlines.
+- **Editable strokes** — suitable constant-width curves become open SVG paths with a stroke
+  width and round caps/joins; thin circular/elliptical loops become native stroked primitives.
 
 By Digital Defiance (501(c)(3)). MIT licensed.
 
 > **Status (v0.0.1):** working classical engine; the real-LM-Studio VLM path is validated (naming +
-> semantic grouping against a live vision model). Linear/radial gradients and conservative open
+> semantic grouping against a live vision model). Linear/radial gradients and conservative
 > strokes are implemented. Illustrator import/editability still needs the import checklist.
 > Full state and known limitations are in `STATUS.md`; plans in `ROADMAP.md`. Continuing the project
 > with a coding agent? Start with **`AGENTS.md`**.
@@ -113,7 +113,10 @@ e.g. `{"simplify": 2.0, "max_colors": 8}` — and those levers apply just to tha
    (two circles, even-odd) emitted as live SVG elements; everything else falls through to…
 6. **Bézier tracing / strokes** — sub-pixel contours, corner detection and Schneider fitting.
    Suitable unbranched constant-width curves instead get a fitted centreline and editable stroke;
-   gradient fills, junctions, closed loops and uncertain stroke fits retain their existing form.
+   straight round-capped marks can also replace ellipse/rectangle approximations. Their cap fits
+   use PNG antialias coverage and compete with rectangle/ellipse models. Complete thin loops can
+   become stroked circles/ellipses. Gradient fills, junctions, interrupted loops and uncertain
+   stroke fits retain their existing form; filled discs and genuine cutouts are protected.
 7. **Names** — classical ("Navy circle") or, if a VLM is configured, semantic names and groups from a
    local vision model. Output carries `id`, `data-name`, and `inkscape:label` so names survive import
    into both Illustrator and Inkscape.
@@ -129,13 +132,15 @@ V = plain VTracer). Regenerate any time with `plate bench samples`.
 | stack3 | 16 (4.0) | 56 (14) | 100 | .997 / .986 |
 | face | 43 (5.38) | 82 (10) | 100 | .992 / .991 |
 | badge | 64 (6.4) | 389 (32) | 70 | .949 / .961 |
-| ui_card | 24 (4.8) | 198 (33) | 100 | .971 / .991 |
+| ui_card | 14 (2.8) | 198 (33) | 40 | .979 / .991 |
 | noisy_badge | 115 (11.5) | 2707 (13) | 70 | .867 / .891 |
 | shaded (gradient) | 39 (7.8) | 31 | 100 | .956 / .934 |
 
 Honest read: big editability wins on flat art; pixel fidelity is comparable to VTracer, slightly lower
 on a few. Basic smooth gradients are editable fills; complex occluded gradients can still split
 or posterize. Independent desired-SVG challenges and remaining failures are in `docs/challenges.md`.
+The UI card now has three editable straight strokes in place of filled pill approximations;
+its lower primitive percentage reflects that representation change.
 
 ## Testing
 
@@ -159,10 +164,15 @@ paint order. The `stroked_route` target now passes as one open stroke behind its
 Three complex logo fixtures add an EMBER fox crest, ORBIT wordmark and ROOT tree seal,
 with independently authored SVG targets and transparent PNGs. Regenerate with
 `python scripts/make_logo_challenges.py`; see `docs/challenges.md` for current failures.
-Nine desired structural targets remain expected failures; ordinary fidelity/integrity checks stay
+Six desired structural targets remain expected failures; ordinary fidelity/integrity checks stay
 active. Stroke detection uses only existing numpy/scipy dependencies; `--set strokes=false` disables
-it. Automatic recovery currently targets open curved paths with round caps/joins; closed/branched
-strokes and inference of other cap/join styles remain work. Metrics and per-image stats include
+it. Automatic recovery targets round-capped straight marks and open curves, including a straight
+terminal hidden under an aligned circular hub. The full instrument-panel target now passes:
+**59 objects, all 27 strokes, 249 anchors**. ROOT's outer seal is an editable circle stroke,
+reducing its total anchors from **610 to 559** (3/32 strokes). Interrupted/branched strokes,
+opaque counters, more general occluders and other cap/join styles remain work.
+`--set complete_hidden=false` also disables stroke completion.
+Metrics and per-image stats include
 `strokes` alongside object/anchor/gradient counts.
 
 ## Levers & presets

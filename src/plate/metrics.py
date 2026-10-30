@@ -41,12 +41,13 @@ def analyze_svg(svg: str) -> dict:
                 unnamed += 1
         elif t in _SHAPES:
             shapes += 1
+            stroked = el.get("stroke") not in (None, "none") and el.get("fill") == "none"
+            strokes += int(stroked)
             if not (el.get("id") or el.get("data-name")):
                 unnamed += 1
             if t == "path":
                 anchors += _path_anchors(el.get("d", ""))
-                if el.get("stroke") not in (None, "none") and el.get("fill") == "none":
-                    strokes += 1
+                if stroked:
                     if not re.search("[Zz]", el.get("d", "")):
                         anchors += 1  # the start anchor of an open centreline
             elif t in ("circle", "ellipse"):

@@ -11,17 +11,17 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | Scene / input | Desired SVG | Verified result (2026-10-29) | White-background SSIM |
 | --- | --- | --- | --- |
 | [Nested dial](../samples/challenges/nested_dial.png) | [Target](../samples/challenges/nested_dial.target.svg): background + seven full circles; nested housing, bezel, face, hub and three repeated markers | Pass; 8 objects | 0.9916 |
-| [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Gap: plate path has a stray second component, despite correct holes and 2 objects | 0.9902 |
-| [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Gap: back circle centre drifts ≈3.5px; full silhouette IoU ≈0.946 | 0.9852 |
+| [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Pass: one plate component, three holes, separate island; 2 objects | 0.9907 |
+| [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Pass: back circle drift ≈0.1px, all full silhouettes/order match; 5 objects | 0.9932 |
 | [Twin gradients](../samples/challenges/twin_gradients.png) | [Target](../samples/challenges/twin_gradients.target.svg): two separate rectangles with opposite linear gradients, two overlaid circles, background | Pass; 5 objects, 2 gradients | 0.9882 |
 | [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Pass: 5 objects, 1 full radial disc, 20 anchors | 0.9924 |
 | [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Pass: 5 objects, full disc and correct paint order, 36 anchors | 0.9931 |
 | [Discrete palette](../samples/challenges/discrete_palette.png) | [Target](../samples/challenges/discrete_palette.target.svg): eight hard-edged, flat rectangles + background; zero gradients | Pass; 9 rectangles | 0.9963 |
 | [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Pass: one 15.5px open stroke (16±1px contract), full hidden endpoints, 4 objects | 0.9913 |
 
-All eight currently clear an SSIM floor of 0.95 on **both white and dark backgrounds**.
-That does not imply that the editable structure is correct: the back circle in the
-occlusion chain still drifts despite SSIM 0.9852.
+All eight now pass their independent structural targets and clear SSIM 0.95 on
+**both white and dark backgrounds**. The other three compositions and three complex logos
+still have structural gaps despite passing their appearance floors; the instrument panel now passes.
 
 ## Complex compositions
 
@@ -41,7 +41,7 @@ holes rather than a background colour painted over the artwork.
 | --- | --- | --- | --- | --- |
 | EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 2 | 0.9662 / 0.9678 |
 | ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 60 | 7 → 3 | 0.9787 / 0.9846 |
-| ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 52 | 32 → 0 | 0.9784 / 0.9836 |
+| ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 52 | 32 → 3 | 0.9830 / 0.9863 |
 
 EMBER exercises a faceted animal silhouette, four transparent shield cutouts,
 12 laurel leaves, thin whiskers, ribbon layering and outlined lettering. Its
@@ -51,6 +51,9 @@ strokes, satellites, lettering and motion lines. ROOT exercises organic curves,
 touching branches/roots, 15 leaf silhouettes and veins, a transparent trunk counter
 and closed circular strokes. All three retain strict structural gaps; appearance
 floors remain active at 0.96 for EMBER and 0.97 for ORBIT/ROOT on both backgrounds.
+ROOT's outer seal now independently matches its target as an editable 18px circle
+stroke, reducing total anchors from 610 to 559. Its interrupted inner ring and
+merged tree networks remain unresolved, as do ORBIT's interrupted orbital loops.
 
 `tests/test_logo_assets.py` protects the inventories, transparent negative spaces
 and exact supersampled SVG/PNG pairing. Regenerate only from the authored targets
@@ -84,11 +87,11 @@ The table below records the initial baseline, before the geometry validation fix
 - **Event poster:** a gradient disc behind large outlined letters, an occluded ring,
   rotated ellipse, diagonal ribbon, six crossing lines, repeated dots, and footer.
 
-All four structural contracts are strict expected feature gaps. Appearance checks
+The panel's structural contract passes; the other three scenes remain strict feature gaps. Appearance checks
 remain active. After geometry validation and isolated thin-detail recovery,
 regression floors are 0.97 for the patch/panel and 0.96 for the storefront/poster.
-All four now clear the ≥0.95 appearance goal on both backgrounds; their editable
-structures still fail. The original eight fixtures retain their 0.95 floors.
+All four clear the ≥0.95 appearance goal on both backgrounds. The original eight
+fixtures retain their 0.95 floors.
 
 [`scripts/make_complex_scenes.py`](../scripts/make_complex_scenes.py) authors both
 targets and PNGs. `scripts/make_challenges.py` can also rerasterize the checked-in
@@ -197,6 +200,34 @@ Full suite: **114 passed, 8 expected structural gaps**. All desired SVGs remain
 unchanged; only the now-met route gap marker was removed. Two soft control goldens
 were reviewed/refreshed for subpixel circle fits and reconnected lettering.
 
+### Straight-stroke results (session 14)
+
+The panel's 18 ticks and four screw slots now match their authored stroke targets;
+there are **24/27 editable strokes**, **259 anchors vs 303**, and SSIM **0.9862**
+on both backgrounds. Three needles still need hidden endpoints under their hubs,
+and the separate 60-vs-59 object mismatch remains.
+
+The patch's six solar-cell lines bring it to **7/10 strokes**, **782 anchors**;
+storefront paving joints bring it to **2/4 strokes**, **572 anchors**. Their
+appearance scores are unchanged. ROOT's name rules become two-anchor strokes,
+reducing anchors **902→610** and improving SSIM **0.9784→0.9806**. Other logo
+outputs are unchanged. Closed rings, branched networks and other cap styles remain
+open. The full suite is **164 passed, 7 strict expected structural gaps**.
+
+### Full instrument panel passes (session 15)
+
+The unchanged 59-object target now passes, including all **27 editable strokes**,
+full hidden needle geometry, widths, topology and paint order. The three needles
+continue beneath their hubs after contact, relative T-junction, free-cap fitting
+and source-colour checks. The redundant navy chassis island is merged only after
+checking the parent's painted model and earlier overpainting. Small gaps, pupils,
+transparent-hole islands and badge repair strips have regression protection.
+
+Panel anchors fall **259→249**; white/dark SSIM improves **0.9862→0.9864**.
+Only the panel SVG changes from session 14: all eight original samples, every other
+challenge and every VTracer output are byte-identical. Suite: **186 passed,
+6 strict expected structural gaps**. Targets and goldens are unchanged.
+
 ## What is enforced
 
 [`tests/challenges.py`](../tests/challenges.py) holds the desired contracts;
@@ -213,7 +244,7 @@ were reviewed/refreshed for subpixel circle fits and reconnected lettering.
 - Valid unique IDs, resolved gradient references, no embedded raster fallback.
 - Appearance against the PNG on two backgrounds, regardless of structural gap status.
 
-Nine remaining structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
+Six remaining structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
 crashes and fidelity regressions still fail normally. A fully met target produces
 XPASS and fails the suite until its gap marker is removed. Do not replace the target
 SVG with today's output to make a test pass.

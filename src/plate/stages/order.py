@@ -7,11 +7,14 @@
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 from scipy import ndimage as ndi
 
 from ..config import Config
-from ..masks import Mask, contains, touches, crop_like
+from ..geometry import raster_prim
+from ..masks import Mask, contains, touches, crop_like, inter_area
 from ..scene import Segmentation, Shape
 from .complete import try_complete
 
@@ -69,12 +72,13 @@ def _assign_parents(shapes: list[Shape]) -> None:
             shapes[s.parent].children.append(s.id)
 
 
-def _toposort(ids: list[int], edges: set[tuple[int, int]], shapes: list[Shape]) -> list[int]:
+def _toposort(ids: list[int], edges: set[tuple[int, int]], shapes: list[Shape], stable=False) -> list[int]:
     """edges (a, b): a is painted before b. Larger shapes first when unconstrained."""
     remaining = set(ids)
     out: list[int] = []
     edges = {e for e in edges if e[0] in remaining and e[1] in remaining}
-    key = lambda i: (-shapes[i].sil.area, i)
+    positions = {sid: i for i, sid in enumerate(ids)}
+    key = positions.__getitem__ if stable else lambda i: (-shapes[i].sil.area, i)
     while remaining:
         ready = [i for i in remaining if not any(e[1] == i for e in edges)]
         if not ready:  # cycle: break by dropping incoming edges of the largest shape
@@ -89,7 +93,7 @@ def _toposort(ids: list[int], edges: set[tuple[int, int]], shapes: list[Shape]) 
 
 
 def merge_fragments(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> Segmentation:
-    """Reunite flat siblings only when a supported primitive explains their union.
+    """Reunite redundant parent islands or supported flat sibling fragments.
 
     Same colour supplies candidates, not permission to merge. The shared outline
     must preserve every visible fragment and add hidden area beneath neighbours
@@ -98,6 +102,67 @@ def merge_fragments(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> 
     if not cfg.complete_hidden:
         return seg
     H, W = transparent.shape
+    painted_interiors = {}
+
+    def painted_inside(shape, earlier=False):
+        key = shape.id, earlier
+        if key not in painted_interiors:
+            primitive = shape.prim
+            if cfg.snap_primitives and primitive is None:
+                from .primitives import snap
+                primitive = snap(shape.full, cfg)
+            if cfg.snap_primitives and primitive is not None:
+                painted = raster_prim(primitive, (H, W))
+                # OpenCV's inclusive raster edge plus antialias coverage can
+                # account for two border rows; interior overpainting cannot.
+                model = Mask.from_full(ndi.binary_erosion(painted, iterations=2))
+            elif earlier:
+                # Confident stroke geometry ignores filled-path bleed. Otherwise
+                # preserve islands that may repair a traced curve's fringe.
+                stroke = None
+                if cfg.strokes and shape.grad is None:
+                    from .strokes import fit_stroke
+                    stroke = fit_stroke(shape.full, cfg)
+                if stroke is not None:
+                    model = Mask.from_full(ndi.binary_erosion(stroke.full.to_full((H, W)), iterations=2))
+                else:
+                    tolerance = max(1, int(np.ceil(cfg.simplify+cfg.smooth)))
+                    model = (shape.draw or shape.full).dilated(tolerance, (H, W))
+            else:
+                model = Mask.from_full(ndi.binary_erosion(shape.full.to_full((H, W)), iterations=2))
+            painted_interiors[key] = model
+        return painted_interiors[key]
+
+    for child in seg.shapes:
+        if child.parent is None or child.children or child.grad is not None:
+            continue
+        parent = seg.shapes[child.parent]
+        if parent.grad is not None or parent.color != child.color or not contains(parent.full, child.full, 1.):
+            continue
+
+        def paints_over(ids):
+            for i in ids:
+                s = seg.shapes[i]
+                if (inter_area(s.full, child.full) or inter_area(painted_inside(s, earlier=True), child.full)
+                        or paints_over(s.children)):
+                    return True
+            return False
+
+        # A same-colour child can repaint an earlier completed sibling. It is
+        # redundant only when moving its visible ownership to the parent cannot
+        # expose that sibling. Restricted bleed is recomputed after regrouping.
+        earlier = parent.children[:parent.children.index(child.id)]
+        if paints_over(earlier):
+            continue
+        # Silhouette filling can retain raster residuals outside the primitive
+        # that will actually be emitted. Only merge an island safely inside that
+        # painted model; a boundary island may repair an imperfect parent fit.
+        if not contains(painted_inside(parent), child.full, 1.):
+            continue
+        visible = Mask.from_full(parent.vis.to_full((H, W)) | child.vis.to_full((H, W)))
+        shapes = [replace(s, vis=visible) if s.id == parent.id else s
+                  for s in seg.shapes if s.id != child.id]
+        return seg.rebuilt(shapes)
     groups: dict[tuple, list[Shape]] = {}
     for s in seg.shapes:
         if s.grad is None:

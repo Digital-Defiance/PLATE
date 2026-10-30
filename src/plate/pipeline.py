@@ -168,7 +168,9 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
         if node is not None:
             leaves[s.id] = node
     if cfg.strokes:
-        from .stages.strokes import fit_stroke
+        from .stages.strokes import fit_closed, fit_straight, fit_stroke
+        from .stages.complete import occludes
+        from .masks import touches
 
         def paint_ids(ids):
             for sid in ids:
@@ -177,6 +179,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
 
         rank = {sid: i for i, sid in enumerate(paint_ids(roots))}
         circles = []
+        paint_edges = {}
         for sid, node in leaves.items():
             if node.kind == "circle":
                 p = node.params
@@ -184,12 +187,39 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                 Prim("circle", p["cx"]*img.scale-.5, p["cy"]*img.scale-.5,
                                      p["r"]*img.scale, p["r"]*img.scale)))
         for sid, node in leaves.items():
-            if node.kind != "path" or node.evenodd or node.grad is not None:
+            if node.grad is not None or shapes[sid].is_background:
                 continue
-            stroke = fit_stroke(shapes[sid].full, cfg,
-                                [(mask, prim) for other, mask, prim in circles if rank[other] > rank[sid]])
+            closed = fit_closed(shapes[sid].full, cfg, img, shapes[sid].color,
+                                [shapes[other].vis for other in leaves if rank[other] > rank[sid]])
+            if closed is not None:
+                from .stages.primitives import normalize
+                pr = normalize(closed.prim)
+                node.kind, node.evenodd, node.d = pr.kind, False, ""
+                node.params = dict(cx=(pr.cx+.5)/img.scale, cy=(pr.cy+.5)/img.scale)
+                if pr.kind == "circle":
+                    node.params["r"] = pr.rx/img.scale
+                else:
+                    node.params.update(rx=pr.rx/img.scale, ry=pr.ry/img.scale, angle=pr.angle)
+                node.stroke_width, node.anchors = closed.width/img.scale, 4
+                shapes[sid].full = shapes[sid].draw = closed.full
+                shapes[sid].completed |= closed.completed
+                continue
+            if node.kind == "circle" or node.evenodd:
+                continue
+            covers = [(mask, prim) for other, mask, prim in circles if rank[other] > rank[sid]]
+            # Area-based ordering can put a large hub before its small needle.
+            # Try that sibling only with observed T-junction evidence, and change
+            # paint order only if the full visible stroke reconstruction succeeds.
+            straight_covers = covers + [(mask, prim) for other, mask, prim in circles
+                                        if rank[other] < rank[sid] and shapes[other].parent == shapes[sid].parent
+                                        and touches(shapes[sid].vis, mask, (H, W), 2)
+                                        and occludes(shapes[sid].vis, mask, (H, W))]
+            stroke = fit_straight(shapes[sid].full, cfg, img, shapes[sid].color, straight_covers)
+            if stroke is None and node.kind == "path":
+                stroke = fit_stroke(shapes[sid].full, cfg, covers)
             if stroke is None:
                 continue
+            node.kind, node.params, node.evenodd = "path", {}, False
             def number(value):
                 text = f"{value:.{cfg.path_precision}f}"
                 if "." in text:
@@ -208,6 +238,17 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
             node.anchors = len(curves)+1
             shapes[sid].full = shapes[sid].draw = stroke.full
             shapes[sid].completed |= stroke.completed
+            for mask in stroke.occluders:
+                for other, cover, _ in circles:
+                    if mask is cover and shapes[other].parent == shapes[sid].parent:
+                        paint_edges.setdefault(shapes[sid].parent, set()).add((sid, other))
+        for parent, edges in paint_edges.items():
+            ids = roots if parent is None else shapes[parent].children
+            ordered = order._toposort(ids, edges, shapes, stable=True)
+            if parent is None:
+                roots = ordered
+            else:
+                shapes[parent].children = ordered
     t3 = time.time()
 
     if cfg.remove_background:

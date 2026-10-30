@@ -47,7 +47,6 @@ CHALLENGES = {
         ssim_floor=0.96),
     "complex_instrument_panel": Challenge(
         "59 objects: three nested gauges, 27 strokes, title and connected status lights.",
-        gap="Panel routes are continuous strokes; target still requires 27 strokes and 59 objects.",
         ssim_floor=0.97),
     "complex_event_poster": Challenge(
         "44 objects: gradient disc behind type, ring, ribbon, strokes and repeated dots.",
@@ -63,7 +62,7 @@ CHALLENGES = {
         ssim_floor=0.97),
     "logo_root_seal": Challenge(
         "56 objects: organic leaves, 32 strokes, counter-cut trunk and outlined ROOT.",
-        gap="Tree/leaf/stroke objects merge or disappear: 52 objects and no editable strokes.",
+        gap="Tree/leaf/stroke objects merge or disappear: 52 objects, only 3 of 32 editable strokes.",
         ssim_floor=0.97),
 }
 
@@ -153,7 +152,7 @@ def assert_target(actual_svg, target_svg):
                  f"{label}: gradient fill kind differs from target")
         if want[wi].get("stroke"):
             _require(got[gi].get("stroke") is not None and got[gi].get("fill") == "none",
-                     f"{label}: must remain an editable open stroke")
+                     f"{label}: must remain an editable stroke")
             _require(abs(float(got[gi].get("stroke-width", "1")) -
                          float(want[wi].get("stroke-width"))) <= 1,
                      f"{label}: stroke width differs from target")

@@ -76,6 +76,8 @@ def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, grads: list, depth: in
         fill = f' fill="url(#{gid})"'
     else:
         fill = f' fill="{_hex(n.color)}"'
+    if n.stroke_width is not None and n.kind in ("circle", "ellipse"):
+        fill = f' fill="none" stroke="{_hex(n.color)}" stroke-width="{_num(n.stroke_width, prec)}"'
     p = n.params
     N = lambda v: _num(v, prec)
     if n.kind == "path":

@@ -89,7 +89,7 @@ def test_target_matcher_rejects_filled_stroke_outline():
               '</svg>')
     outline = target.replace('d="M20 50H80" fill="none" stroke="red" stroke-width="10"',
                              'd="M20 45H80V55H20Z" fill="red"')
-    with pytest.raises(TargetMismatch, match="open stroke"):
+    with pytest.raises(TargetMismatch, match="editable stroke"):
         assert_target(outline, target)
 
 

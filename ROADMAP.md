@@ -1,7 +1,7 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-29. Current verification: **150 passed, 7 expected structural gaps**.
-`STATUS.md` records measurements and all nine remaining challenge failures;
+Updated: 2026-10-29. Current verification: **199 passed, 6 expected structural gaps**.
+`STATUS.md` records measurements and all six remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
@@ -16,6 +16,9 @@ Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality w
 - [x] Geometry safety: score the full primitive footprint and validate completion containment before restoring observed pixels. Six regression cases in `tests/test_geometry_validation.py`; poster footer and storefront pavement stay rectangular. All eight original sample SVGs unchanged.
 - [x] Thin details and continuous branches: all 18 gauge ticks survive, both panel signal routes are continuous, and 3/5/7px curves remain attached to seeded heads. Repeated stable colours can seed a narrow line even when edge dilation removed every flat pixel; gradient ramps and explicit palettes are protected.
 - [x] First editable-stroke implementation: unbranched near-constant-width curves emit open paths with source-scaled width and round caps/joins. Endpoint continuation is restricted to supported later-painted circles. `stroked_route` now passes its independent target (15.5px fit within 16±1px, 4 objects, 25 total anchors). Disable with `--set strokes=false`.
+- [x] Straight round-cap recovery from paths and primitive approximations, using antialias/alpha coverage and competing rectangle/ellipse fits. Panel: all 18 ticks and four screw slots pass independent stroke contracts, **24/27 strokes**, anchors **303→259**, SSIM **0.9854→0.9862**. Patch solar cells, storefront paving joints and ROOT name rules also recover as strokes. Square ends, taper and genuine ellipses remain protected.
+- [x] Full instrument-panel target: **59 objects / 27 strokes / 249 anchors / SSIM 0.9864**. Recover the three hidden needle terminals using contact, relative T-junctions, free-cap fitting and visible-source validation. Apply paint constraints only for accepted fits; merge the redundant chassis island with safeguards for earlier overpainting. All other benchmark SVGs remain byte-identical to the preceding run.
+- [x] Complete thin closed circles/ellipses become native editable strokes. ROOT outer seal independently matches its target: **2→3 strokes, 610→559 anchors, SSIM 0.9806→0.9830**. Full-disc silhouettes, cutouts and thick/nonuniform rings are protected; interrupted loops remain open work.
 - [x] Shared gradients behind supported occluders when fragments independently complete to matching primitives. The badge passes its target: 5 objects, 1 full radial disc, 20 anchors, current SSIM 0.9924. Shared linear/radial fits, incompatible colours/geometries, unsupported gaps and source scaling have regressions.
 - [x] Pool disconnected free-boundary arcs and occluder components without joining their tangents. Same-colour siblings merge only after a supported shared primitive fit. `edge_crossing_type` now passes unchanged: 7 → 5 objects, 55 → 36 anchors, SSIM 0.9914 → 0.9931. Original samples and all VTracer outputs remain byte-identical.
 
@@ -25,7 +28,7 @@ Each change needs a focused regression, before/after tests, and rendered `plate 
 results. Retain VTracer as the control and keep target SVGs independent of PLATE output.
 
 1. [x] **Preserve isolated thin details during segmentation.** `stages/segment.py` now restores near-palette cores only in components without flat seeds, vetoing explained antialias blends. All 18 gauge ticks survive, with ≥80% coverage both in segmentation and emitted SVG. `tests/test_segment.py` protects several widths/orientations, speckles, transparency and false outlines. Existing circle-stack regression remains green.
-2. [ ] **Complete stroke coverage.** Open curved paths and continuous panel routes are implemented. Remaining: straight marks currently retained as live rects/polygons, closed strokes/rings, branched networks, and automatic inference of butt/square caps or other joins. The panel has 2 editable route strokes; its full target requires 27. Keep round-fit rejection for square-ended lettering and variable-width shapes, and verify Illustrator stroke editability.
+2. [ ] **Complete stroke coverage.** Round-capped straight marks, open curves, one aligned hidden straight terminal under a circular hub, and complete thin circular/elliptical loops are implemented. ROOT's outer seal passes independently: **3/32 strokes, 559 anchors**. The entire panel passes: **59 objects / 27 strokes**. Next: interrupted/merged loops (ROOT inner ring/ORBIT), opaque annulus/counter interpretation, branched networks, multiple/non-circular occluders and butt/square cap or join inference. Preserve filled discs, cutouts, square-ended lettering and variable-width shapes; verify Illustrator stroke editability.
 3. [ ] **Extend shared gradients to harder occlusions.** `gradient_badge` is fixed. The patch's detector omits outer/clamped bands and already absorbs its third crater into a gradient region; joining only the two gradient fragments leaves internal band edges in the fit. Recover coherent bands while retaining hard-edged craters, then use pooled free boundaries for the planet and recover the hull's linear gradient. Keep `twin_gradients` separate and `discrete_palette` at zero gradients. Conic/mesh gradients and focal-point fitting remain later work.
 4. [ ] **Extend completion to complex letters, bars and ribbons.** Disconnected contour pooling and flat-sibling merging are implemented; `edge_crossing_type` passes with a full disc and 5 objects. Patch/poster completion remains open, including candidate selection when unrelated objects share a palette colour. Preserve relative T-junctions and containment/hidden-area safeguards. Geometric completion can improve independently of OCR.
 5. [x] **Reduce chained-completion drift.** `occlusion_chain` passes: the back disc recovers to (145.1,160.1) r94.6 vs target (145,160) r95 (drift 3.5px→0.1px). Fix: `complete.evaluate` relaxes the occluder-coverage floors only for a primitive fit with RMS ≤ 0.5·tol, so the correct circle is no longer beaten by a boundary-hugging Bézier bridge. `overlap` <1px and `stack3` retained. Commit `ca92bbd`.
@@ -36,11 +39,12 @@ results. Retain VTracer as the control and keep target SVGs independent of PLATE
 Complex logo targets are now available, with fidelity checks active on both backgrounds:
 EMBER **51 target / 51 actual**, but shield full-silhouette IoU is only 0.8385;
 ORBIT **34 / 60**, with orbital/wordmark fragmentation; ROOT **56 / 52**, with
-**0 of 32** intended editable strokes recovered. Use these alongside the existing
+**3 of 32** intended editable strokes recovered. Use these alongside the existing
 scenes for completion, compound paths, gradient separation and stroke work.
 
-All four complex structural targets remain unmet: patch **45 target / 72 actual**,
-storefront **64 / 73**, panel **59 / 60**, poster **44 / 83**. Restoring details can
+The instrument panel is the first passing large composition (**59 / 59**, 27 strokes).
+Three complex scene targets remain unmet: patch **45 target / 72 actual**,
+storefront **64 / 73**, poster **44 / 83**. Restoring details can
 expose additional visible fragments; their completion/merging remains open. Better SSIM alone does
 not complete these tasks. See the current-gap table in `STATUS.md`.
 
@@ -59,11 +63,13 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 - [ ] Soft alpha edges/shadows: check light/dark backgrounds and preserve opacity rather than baking in a background colour.
 - [ ] Scale consistency: run the same authored logo at 1×/2×/4×; compare object recovery and source-coordinate geometry. Badge source scaling at a 400px working size passes; reducing work_size to 200 currently loses gradient detection before reconciliation (10 flat objects / 0 gradients).
 
-## P2 — AI / text
+## P2 — optional naming/grouping and text
 
-- [ ] Optional SAM-family segmenter for touching same-colour shapes and shaded masks (`stages/sam.py`, optional extra). Keep heavy ML dependencies out of core; verify against bench.
-- [ ] VLM object-merge suggestions before tracing (current integration names/groups output; it does not drive geometric reconstruction).
-- [ ] VLM preset selection (logo / illustration / lineart).
+Current architecture: classical CPU geometry, no GPU/heavy ML; VLM naming/grouping
+is optional and off by default. Earlier SAM, VLM geometry-merge and VLM preset
+ideas are parked, requiring Jessica's explicit change of direction before work.
+
+- [ ] Improve optional VLM naming/grouping quality and latency without changing geometry.
 - [ ] Text detection/grouping: preserve outlined letters in a named text group, optionally OCR. Use the existing interior-text and edge-crossing fixtures; fixture creation is no longer a prerequisite.
 
 ## P2 — product

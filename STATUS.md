@@ -1,6 +1,126 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 13, chained drift + compound-path topology fixed) · Version 0.0.1 · Tests: 150 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 16, thin closed strokes) · Version 0.0.1 · Tests: 199 passing, 6 expected feature gaps (`pytest -q`)
+
+## Sessions 14–16 checkpoint
+
+Jessica requested committing the accumulated straight-stroke, instrument-panel
+and closed-stroke work. This checkpoint includes those changes and their updated
+handoff, roadmap and regressions; verified again at **199 passed, 6 xfailed**.
+No push. Next diagnosed issue: unresolved opaque pixels in a 5px transparent circle
+borrow transparency during nearest-label filling, splitting one loop into four
+regions (219 opaque pixels lost). Preserve palette/antialias safeguards when fixing.
+
+## Thin closed strokes (session 16)
+
+- Added conservative circle/ellipse stroke recovery from complete silhouettes with
+  one hole. Fits use PNG coverage where available and true normal distance to an
+  ellipse (offset ellipses are not simply ellipses with enlarged axes). Require thin,
+  constant width, low local boundary residual and agreement of the whole footprint.
+  Emit native `<circle>`/`<ellipse>` with `fill="none"` and source-scaled width;
+  SVG metrics now count these strokes as well as open paths.
+- **ROOT outer seal matches its unchanged independent target as an 18px circle
+  stroke.** Total **2→3 of 32 strokes**, **610→559 anchors**, 52 objects unchanged.
+  White/dark SSIM **0.9806/0.9846→0.9830/0.9863**. Full ROOT target still fails.
+- Small boundary bites may complete only beneath observed later-painted shapes,
+  with at least 90% free boundary; `complete_hidden=false` disables this. Thick
+  rings, genuine cutouts, off-centre holes and nonuniform shapes remain protected.
+  A visible-only prototype incorrectly reinterpreted the panel's filled bezels;
+  the structural test caught it. Final fitting uses `Shape.full`, preserving the
+  entire hidden disc. Added an independent nested-disc regression.
+- Thirteen regressions cover circles, rotated ellipses, downscaling, target
+  silhouette/style/width, rendered fidelity, disable switches, small covered bites,
+  cutouts, thick/uneven rings and filled discs. **199 passed, 6 xfailed**, baseline
+  **186/6**. All eight original PLATE SVGs and all other challenge PLATE SVGs are
+  byte-identical to session 15; the complete instrument-panel target still passes.
+- Ran both benches and visually inspected ROOT plus all original sample renders.
+  Outputs `/tmp/plate-closed-final-{samples,challenges}`; metrics
+  `/tmp/plate-closed-final-metrics.json`; review sheets `plate-closed-ring.png` and
+  `plate-closed-original-samples.png` in this chat's visualization folder. VTracer
+  implementation is unchanged; ORBIT's control varied between repeated runs
+  (1473/3559 vs 1470/3745 objects/anchors), so control byte stability is not claimed.
+- Remaining: ROOT's interrupted/merged inner ring and tree networks; ORBIT's
+  interrupted orbits; opaque-background annulus/counter interpretation; thin
+  transparent features split during segmentation (a 5px circle splits into four
+  regions). Closed-stroke fitting does not reunite those fragments. HEAD remains
+  `0a0fddc`; sessions 14–16 are uncommitted. No push or target/golden changes.
+
+## Completed instrument panel (session 15)
+
+- **First large composition to pass its unchanged independent structural target:**
+  `complex_instrument_panel` now has **59 objects / 27 editable strokes / 249 anchors**.
+  Previous step: 60 / 24 / 259. White/dark SSIM **0.9862→0.9864**. All three needles
+  have full round-capped centrelines under their hubs, with correct paint order.
+- Hidden straight-terminal fitting requires actual contact, alignment, the existing
+  relative T-junction threshold (15°), a supported free cap, and a low-residual fit
+  to the unoccluded boundary. An offset of at most one working pixel accommodates
+  hub-fit error without bending the shaft. Visible core colours are checked against
+  source coverage and the hub/stroke blend, so small gaps do not become connections.
+- A larger hub can precede a smaller needle in area-based order. Earlier sibling
+  circles are considered only with observed T-junction evidence; pipeline adds
+  stable paint constraints **only after** the complete stroke fit succeeds. No
+  global reordering of rejected strokes or unrelated shapes is introduced.
+- Removed the extra 861px navy chassis island by merging its ownership into its
+  same-colour immediate parent. Require a leaf child inside the parent's painted
+  interior, and reject merging if earlier silhouettes, fitted primitives or traced
+  fringes need the child's later repaint. This protects pupils, transparent holes,
+  primitive-fit residuals and the original badge's navy repair strip.
+- Benchmarking caught unsafe initial merge/order variants that degraded badge and
+  noisy_badge. Those variants were corrected. Final verification: **all eight
+  original sample SVGs, all other challenge SVGs and every VTracer SVG are
+  byte-identical to session 14**. Only the panel changes. No target/golden edits.
+- `complete_hidden=false` now also prevents endpoint completion in both straight
+  and curved stroke fitters. Twenty-one new cases cover orientations, source
+  scaling, full target matching, appearance, 1/3/6px gaps, off-centre/taper rejection,
+  layer direction, disabling completion, parent islands and overpainting guards.
+  Suite **186 passed, 6 xfailed** (baseline **164/7**); panel gap marker removed.
+- Ran both benches and inspected the full panel, its isolated hidden needle
+  geometry, and all original sample renders. SVGs:
+  `/tmp/plate-hubs-final-{samples,challenges}`; metrics:
+  `/tmp/plate-hubs-final-metrics.json`. Review sheets in this chat's visualization
+  folder: `plate-completed-panel.png`, `plate-hubs-original-samples.png`.
+- HEAD remains `0a0fddc`; session 14 and 15 work is uncommitted. CPU-only classical
+  geometry and optional cosmetic VLM behaviour are unchanged.
+
+## Straight round strokes (session 14)
+
+- Added `strokes.fit_straight`: fit a capsule to subpixel foreground/background
+  coverage (or source alpha), using classical PCA + bounded least squares. Preserve
+  Lanczos overshoot when estimating the edge; a quantized pixel row must not distort
+  a reliable subpixel fit. Compare cap-local error with a square-ended rectangle
+  and overall fit with an ellipse. Require full-model mask agreement; subpixel
+  boundary differences are allowed only with a reliable low-residual source fit.
+- Pipeline tries straight recovery on primitive approximations as well as paths.
+  Gradients, circles, holes and backgrounds are excluded. Straight endpoints near
+  later-painted circles are conservatively left alone until their hidden geometry
+  can be fitted. Existing open-curve endpoint completion remains unchanged.
+- **Panel: 2→24 of 27 intended strokes**, including all 18 gauge ticks and four screw
+  slots, each passing its independent target's silhouette/style/width contract.
+  Anchors **303→259**, SSIM white/dark **0.9854→0.9862**. The three needles remain
+  incomplete beneath hubs; the separate 60-vs-59 object mismatch remains open.
+- Patch: **1→7 strokes**, **794→782 anchors**, SSIM unchanged **0.9815 / 0.9830**.
+  Storefront: **0→2 strokes**, **576→572 anchors**, **0.9738 / 0.9752** unchanged.
+  ROOT: **0→2 strokes**, **902→610 anchors**, SSIM **0.9784→0.9806** white,
+  **0.9836→0.9846** dark; its name rules are now two-anchor lines. Other logo
+  SVGs are unchanged. All seven full structural targets remain unmet.
+- Original samples: seven SVGs byte-identical. UI card's three pill-like marks
+  become strokes, preserving rounded caps previously flattened by snapping:
+  **24→14 anchors**, SSIM **0.9714→0.9788**. Primitive ratio drops to 40% because
+  strokes replace primitives; object count stays 5. Every VTracer SVG is unchanged.
+- Fourteen new tests cover short/rotated/transparent strokes, independent tick and
+  slot contracts, rejection of butt/square caps, ellipse/taper rejection, source
+  scaling and the disable switch. Full suite **164 passed, 7 xfailed** (baseline
+  **150/7**). No goldens or target SVGs changed. Palette-fixed synthetic fitting
+  tests isolate segmentation; discovery of fully antialiased unseeded colours
+  remains separate work (a tiny opaque 3px stroke can still be lost upstream).
+- Both benchmark folders rendered and inspected. SVGs:
+  `/tmp/plate-straight-final-{samples,challenges}`; comparison baseline:
+  `/tmp/plate-straight-before-{samples,challenges}`; metrics:
+  `/tmp/plate-straight-final-metrics.json`. Review sheets in this chat's visualization
+  folder: `plate-straight-strokes.png`, `plate-straight-original-samples.png`.
+- No commit/push requested or made; HEAD remains `0a0fddc`. Updated HANDOFF and
+  removed stale nine-gap counts. CPU-only classical geometry remains the invariant;
+  old AI geometry/preset experiments are explicitly parked in ROADMAP.
 
 ## Compound-path topology (session 13)
 
@@ -37,41 +157,42 @@ Last updated: 2026-10-29 (session 13, chained drift + compound-path topology fix
 ## Current remaining work — start here
 
 Geometry safety, thin-detail recovery and initial open-stroke support are complete.
-All 18 ticks survive; both panel routes are continuous editable strokes. The
+All 18 ticks and four screw slots are editable straight strokes; both panel routes
+are continuous editable curves, and all three needle endpoints are reconstructed.
+The full instrument-panel target passes (59 objects, 27 strokes). The
 independent `stroked_route`, `gradient_badge` and `edge_crossing_type` targets pass.
 The badge has one full radial disc behind its ribbon, and the lettering has one
 full disc behind its three letters. Three original complex logo fixtures are now
-generated and checked in the working tree (34–56 target objects). The nine strict expected failures below
+generated and committed (34–56 target objects). The six strict expected failures below
 remain open; they are desired structural targets, not pipeline crashes.
 Appearance/integrity checks remain active. Current scene SSIM: mission patch
-**0.9815**, storefront **0.9738**, instrument panel **0.9854**, poster **0.9715**.
+**0.9815**, storefront **0.9738**, instrument panel **0.9864**, poster **0.9715**.
 All four clear 0.95 on white and dark backgrounds. Current regression floors:
-patch/panel 0.97, storefront/poster 0.96. Structural targets remain unmet; historical
+patch/panel 0.97, storefront/poster 0.96. The other three scene targets remain unmet; historical
 sections below retain their earlier measurements.
 
 Implementation order (details and acceptance checks in `ROADMAP.md`):
 
-1. Extend stroke coverage beyond open curves: straight primitives/ticks, closed loops, branched networks and automatic cap/join inference. The panel currently has 2 of its 27 desired strokes.
+1. Extend thin closed-circle/ellipse recovery to interrupted loops (ROOT inner ring, ORBIT), branched networks, multiple/non-circular occluders and other cap/join styles. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
 3. Extend shared gradients to fragments without independently completed primitives; the mission patch remains split. Retain separate ramps/flat swatches.
-4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons and reduce chained-circle drift.
-5. Preserve holes/components, then refine corners, primitive selection and complex object recovery.
+4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons. Chained-circle drift is fixed.
+5. Extend hole/component preservation to overlapping rings and soft alpha; refine corners, primitive selection and complex object recovery. The perforated-plate target passes.
 6. Improve per-object failure diagnostics so partial progress is visible despite count mismatches.
 
 | Remaining challenge | Current failure / required target |
 | --- | --- |
-| `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
-| `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
-| `complex_instrument_panel` | 60 objects; ticks visible and both routes are editable strokes, but target 59 requires 27 strokes overall |
+| `complex_mission_patch` | 72 objects / 2 radial fragments / 7 strokes; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
+| `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8385; 2 of 7 editable strokes recovered |
 | `logo_orbit_wordmark` | 60 objects vs target 34; gradient/orbital emblem and outlined lettering fragment; 3 of 7 strokes |
-| `logo_root_seal` | 52 objects vs target 56; touching organic shapes merge and 0 of 32 strokes recovered |
+| `logo_root_seal` | 52 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
 real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy
 and request latency remain work. Other deferred items (palette pressure, soft
-alpha/shadows, scale consistency, optional SAM/text, product/export/release) remain
+alpha/shadows, scale consistency, text, product/export/release) remain
 tracked in `ROADMAP.md`.
 
 Session 7 (historical) changed documentation only: reconciled completed work, added the full

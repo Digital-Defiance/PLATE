@@ -1,4 +1,4 @@
-"""Conservative open, constant-width stroke recovery using classical geometry."""
+"""Conservative constant-width stroke recovery using classical geometry."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,12 +6,14 @@ from collections.abc import Sequence
 
 import numpy as np
 from scipy import ndimage as ndi
+from scipy.optimize import least_squares
 from scipy.spatial import cKDTree
 
 from ..bezier import bez, fit_open
 from ..config import Config
-from ..geometry import Prim
-from ..masks import Mask, crop_like
+from ..geometry import Prim, contours_xy, fit_circle, fit_ellipse, raster_prim, poly_area
+from ..masks import Mask, crop_like, touches
+from ..scene import Loaded
 
 
 @dataclass
@@ -20,6 +22,391 @@ class Stroke:
     width: float
     full: Mask
     completed: bool = False
+    occluders: tuple[Mask, ...] = ()
+
+
+@dataclass
+class ClosedStroke:
+    prim: Prim
+    width: float
+    full: Mask
+    completed: bool = False
+
+
+def _ellipse_distance(points, q):
+    """Signed Euclidean distance to an ellipse, near its boundary.
+
+    SVG expands an ellipse along its normals; adding width to its axes does not
+    describe that offset. Newton projection is stable here because candidates
+    are thin rings and their two observed boundaries stay near the centreline.
+    """
+    cx, cy, rx, ry, angle = q
+    c, s = np.cos(angle), np.sin(angle)
+    dx, dy = points[:, 0]-cx, points[:, 1]-cy
+    x, y = dx*c+dy*s, -dx*s+dy*c
+    t = np.arctan2(y/ry, x/rx)
+    for _ in range(8):
+        ct, st = np.cos(t), np.sin(t)
+        ex, ey = rx*ct-x, ry*st-y
+        first = ex*(-rx*st)+ey*(ry*ct)
+        second = (rx*st)**2+(ry*ct)**2-ex*rx*ct-ey*ry*st
+        t -= np.clip(first/np.maximum(second, 1e-6), -.25, .25)
+    distance = np.hypot(rx*np.cos(t)-x, ry*np.sin(t)-y)
+    return distance*np.where((x/rx)**2+(y/ry)**2 >= 1, 1, -1)
+
+
+def fit_closed(mask: Mask, cfg: Config, img=None, color=None, covers=()) -> ClosedStroke | None:
+    """Recover a thin circular/elliptical loop with two complete boundaries.
+
+    Thick annuli remain compound fills. Local residual and full-footprint checks
+    protect notches, off-centre holes and variable width, even when their total
+    area error is small. Small bites may be reconstructed only beneath observed
+    later-painted shapes; this is not an interrupted-arc completion algorithm.
+    """
+    if mask.area < 100 or ndi.label(mask.a, np.ones((3, 3)))[1] != 1:
+        return None
+    pad = 6
+    a = np.pad(mask.a, pad)
+    contours = contours_xy(a)
+    if len(contours) != 2 or min(abs(poly_area(c)) for c in contours) < 100:
+        return None
+    outer, inner = sorted(contours, key=lambda c: -abs(poly_area(c)))
+    circle_o, _, _ = fit_circle(outer)
+    circle_i, _, _ = fit_circle(inner)
+    # Avoid fitting large solid shapes and wide letter counters as strokes.
+    initial_width = (abs(poly_area(outer))-abs(poly_area(inner)))/len(outer)
+    if initial_width < 1.5 or initial_width > .15*circle_i.rx:
+        return None
+    ref = Mask(a, mask.y0-pad, mask.x0-pad)
+    covered = np.zeros(a.shape, bool)
+    xy_binary = np.rint(np.concatenate(contours)).astype(int)
+    if cfg.complete_hidden:
+        for cover in covers:
+            local = crop_like(cover, ref)
+            near = ndi.binary_dilation(local, iterations=2)
+            # A painted interior touching an entire inner edge is a counter,
+            # not evidence of a small object biting into the ring.
+            if np.mean(near[xy_binary[:, 1], xy_binary[:, 0]]) <= .1:
+                covered |= local
+    near_cover = ndi.binary_dilation(covered, iterations=2)
+    field = _coverage_field(a, mask, pad, img, color)
+    reference = a
+    if field is not None:
+        soft = contours_xy(field)
+        if len(soft) == 2:
+            contours = soft
+            reference = field >= .5
+    boundary = np.concatenate(contours)
+    xy = np.rint(boundary).astype(int)
+    free = ~near_cover[xy[:, 1], xy[:, 0]]
+    if free.mean() < .9:
+        return None
+    points = boundary[free]
+    sample = points[::max(1, len(points)//1600)]
+
+    def circle_distance(p, q):
+        return np.hypot(p[:, 0]-q[0], p[:, 1]-q[1])-q[2]
+
+    candidates = []
+    q0 = [(circle_o.cx+circle_i.cx)/2, (circle_o.cy+circle_i.cy)/2,
+          (circle_o.rx+circle_i.rx)/2, circle_o.rx-circle_i.rx]
+    if q0[3] > 1:
+        candidates.append(("circle", q0, circle_distance))
+    ellipse = fit_ellipse(outer)
+    if ellipse:
+        pr = ellipse[0]
+        q0 = [pr.cx, pr.cy, pr.rx-initial_width/2, pr.ry-initial_width/2,
+              np.deg2rad(pr.angle), initial_width]
+        if min(q0[2:4]) > 2:
+            candidates.append(("ellipse", q0, _ellipse_distance))
+    for kind, q0, distance in candidates:
+        # Keep the fit local to the complete observed loop, and widths positive.
+        span = np.array([2, 2, 3, 3] if kind == "circle" else [2, 2, 3, 3, .15, 3])
+        lower, upper = np.array(q0)-span, np.array(q0)+span
+        radii = slice(2, 3 if kind == "circle" else 4)
+        lower[radii] = np.maximum(lower[radii], .5)
+        lower[-1] = max(1., lower[-1])
+        fit = least_squares(lambda q: np.abs(distance(sample, q[:-1]))-q[-1]/2,
+                            q0, bounds=(lower, upper), max_nfev=80)
+        q, width = fit.x[:-1], fit.x[-1]
+        residual = np.abs(distance(points, q))-width/2
+        if np.sqrt(np.mean(residual**2)) > .35 or np.max(np.abs(residual)) > .85:
+            continue
+        radius = q[2] if kind == "circle" else min(q[2:4])
+        if width > .15*radius:
+            continue
+        yy, xx = np.indices(a.shape)
+        predicted = (np.abs(distance(np.c_[xx.ravel(), yy.ravel()], q)) <= width/2).reshape(a.shape)
+        # No cropping of a candidate's outer footprint: it must fit in our pad.
+        if predicted[:1].any() or predicted[-1:].any() or predicted[:, :1].any() or predicted[:, -1:].any():
+            continue
+        missing, extra = predicted & ~reference, reference & ~predicted
+        uncovered = missing & ~covered
+        if (np.count_nonzero((reference ^ predicted) & ~covered)/max(1, np.count_nonzero((reference | predicted) & ~covered)) > .06
+                or np.any(uncovered & ~ndi.binary_dilation(reference))
+                or np.any(extra & ~ndi.binary_dilation(predicted))):
+            continue
+        # Validate every observed boundary, including points near occluders that
+        # were excluded from fitting. Deviations there need actual cover pixels.
+        residual = np.abs(distance(boundary, q))-width/2
+        bad = np.abs(residual) > .85
+        if np.any(bad & ~near_cover[xy[:, 1], xy[:, 0]]):
+            continue
+        prim = Prim(kind, q[0]+ref.x0, q[1]+ref.y0, q[2],
+                    q[2] if kind == "circle" else q[3],
+                    0 if kind == "circle" else np.rad2deg(q[4]))
+        full = Mask(predicted, ref.y0, ref.x0)
+        return ClosedStroke(prim, width, full, bool(np.any(missing & covered & ~ndi.binary_dilation(reference))))
+    return None
+
+
+def _coverage_field(a, mask, pad, img, color):
+    """Recover a subpixel edge from foreground/background coverage when supported.
+
+    Binary masks can make short round and square caps identical. Keep the PNG's
+    antialias signal, including alpha, rather than deciding from those bits alone.
+    """
+    if img is None or color is None:
+        return None
+    h, w = a.shape
+    y0, x0 = mask.y0-pad, mask.x0-pad
+    ys, xs = max(0, y0), max(0, x0)
+    ye, xe = min(img.alpha.shape[0], y0+h), min(img.alpha.shape[1], x0+w)
+    if ye <= ys or xe <= xs:
+        return None
+    rgb, alpha = np.zeros((h, w, 3)), np.zeros((h, w))
+    rgb[ys-y0:ye-y0, xs-x0:xe-x0] = img.rgb[ys:ye, xs:xe]
+    alpha[ys-y0:ye-y0, xs-x0:xe-x0] = img.alpha[ys:ye, xs:xe]/255
+    # Sample beyond Lanczos' antialias/overshoot halo, not the immediate fringe.
+    ring = ndi.binary_dilation(a, iterations=pad) & ~ndi.binary_dilation(a, iterations=3)
+    if np.mean(alpha[ring] > .99) > .5:
+        colors, counts = np.unique(rgb[ring & (alpha > .99)], axis=0, return_counts=True)
+        if counts.max() < .35*counts.sum():
+            return None
+        background = colors[counts.argmax()]
+    else:
+        background = np.full(3, 255.) if np.mean(color) < 128 else np.zeros(3)
+    delta = np.array(color)-background
+    if delta @ delta < 100:
+        return None
+    projection = ((rgb-background) @ delta)/(delta @ delta)
+    # Lanczos overshoot can exceed the foreground/background endpoints. Measure
+    # colour consistency on the unclamped line so those pixels do not become holes.
+    residual = np.linalg.norm(rgb-(background+projection[..., None]*delta), axis=2)
+    coverage = np.clip(projection, 0, 1)*alpha*(residual <= 12)*ndi.binary_dilation(a, iterations=2)
+    return coverage
+
+
+def _line_distance(q, points, rounded):
+    cx, cy, angle, length, radius = q
+    axis = np.array([np.cos(angle), np.sin(angle)])
+    delta = points-[cx, cy]
+    along, across = delta @ axis, delta @ [-axis[1], axis[0]]
+    if rounded:
+        return np.hypot(np.maximum(abs(along)-length/2, 0), across)-radius
+    d = np.c_[abs(along)-length/2, abs(across)-radius]
+    return np.linalg.norm(np.maximum(d, 0), axis=1)+np.minimum(d.max(axis=1), 0)
+
+
+def _fit_hidden_line(points, ends, cover, circle, mask, pad, img, width):
+    """Fit free sides/cap while the other terminal stays under a supported hub."""
+    origin = np.array([mask.x0-pad, mask.y0-pad])
+    centre = np.array([circle.cx, circle.cy])-origin
+    # Only the far terminal is observed; do not fit the artificial cut along the hub.
+    ref = Mask(np.zeros(np.array(mask.a.shape)+2*pad, bool), mask.y0-pad, mask.x0-pad)
+    near = ndi.binary_dilation(crop_like(cover, ref), structure=np.ones((3, 3), bool), iterations=2)
+    ix = np.clip(np.round(points[:, 0]).astype(int), 0, near.shape[1]-1)
+    iy = np.clip(np.round(points[:, 1]).astype(int), 0, near.shape[0]-1)
+    free = points[~near[iy, ix]]
+    if len(free) < 12:
+        return None
+    far = max(ends, key=lambda p: np.linalg.norm(p-centre))
+    delta = far-centre
+    angle, length = np.arctan2(delta[1], delta[0]), np.linalg.norm(delta)
+
+    def model(parameters):
+        theta, span, radius, offset = parameters
+        axis = np.array([np.cos(theta), np.sin(theta)])
+        start = centre+np.array([-axis[1], axis[0]])*offset
+        return np.array([*(start+axis*span/2), theta, span, radius])
+
+    initial = [angle, length, width/2, 0]
+    lo = [angle-.2, max(1, length-2*width), .75, -1]
+    hi = [angle+.2, length+2*width, width, 1]
+    q = least_squares(lambda p: _line_distance(model(p), free, True), initial, bounds=(lo, hi)).x
+    fitted = model(q)
+    error = np.sqrt(np.mean(_line_distance(fitted, free, True)**2))
+    if error > .15:
+        return None
+    square = least_squares(lambda p: _line_distance(model(p), free, False), q, bounds=(lo, hi)).x
+    return fitted, model(square), free, error
+
+
+def fit_straight(mask: Mask, cfg: Config, img: Loaded | None = None, color=None,
+                 circles: Sequence[tuple[Mask, Prim]] = ()) -> Stroke | None:
+    """Recover a straight round-capped stroke with at least one visible cap.
+
+    Compete with square-ended rectangles and ellipses. A long rectangle's rounded
+    replacement may have excellent global IoU, so cap-local evidence is mandatory.
+    """
+    if mask.empty() or mask.area < 20:
+        return None
+    pad = 6
+    a = np.pad(mask.a, pad)
+    if (ndi.binary_fill_holes(a) != a).any() or ndi.label(a)[1] != 1:
+        return None
+    ys, xs = np.nonzero(a)
+    pixels = np.c_[xs, ys].astype(float)
+    centre = pixels.mean(axis=0)
+    _, vectors = np.linalg.eigh(np.cov(pixels.T))
+    axis = vectors[:, -1]
+    angle = np.arctan2(axis[1], axis[0])
+    delta = pixels-centre
+    length = float(np.ptp(delta @ axis)+1)
+    width = float(np.ptp(delta @ [-axis[1], axis[0]])+1)
+    if length < 2.5*width:
+        return None
+    contours = contours_xy(a)
+    if len(contours) != 1:
+        return None
+    coverage = _coverage_field(a, mask, pad, img, color)
+    cs = [] if coverage is None else contours_xy(coverage)
+    coverage_points = cs[0] if len(cs) == 1 else None
+    if (coverage_points is None and img is not None
+            and any(touches(mask, cover, img.alpha.shape, 2) for cover, _ in circles)):
+        # A hub fringe can leave a tiny detached coverage island. It is not part
+        # of the observed line; retain the dominant external contour only.
+        external = [c for c in cs if poly_area(c) >= .8*mask.area]
+        if len(external) == 1:
+            coverage_points = external[0]
+    points = contours[0] if coverage_points is None else coverage_points
+    lo = [centre[0]-width, centre[1]-width, angle-.3, .5, .75]
+    hi = [centre[0]+width, centre[1]+width, angle+.3, 2*length, width]
+    initial = [*centre, angle, max(1, length-width), width/2]
+    q = least_squares(lambda q: _line_distance(q, points, True), initial, bounds=(lo, hi)).x
+    fit_error = np.sqrt(np.mean(_line_distance(q, points, True)**2))
+    initial[3] = length
+    butt = least_squares(lambda q: _line_distance(q, points, False), initial, bounds=(lo, hi)).x
+    axis = np.array([np.cos(q[2]), np.sin(q[2])])
+    ends = q[:2] + np.array([-1, 1])[:, None]*axis*q[3]/2
+    global_ends = ends+[mask.x0-pad, mask.y0-pad]
+    contacts, blocked = [], False
+    for index, end in enumerate(global_ends):
+        for cover, circle in circles:
+            if np.linalg.norm(end-[circle.cx, circle.cy]) > circle.rx+2*q[4]+2:
+                continue
+            half = int(np.ceil(2*q[4]))+2
+            terminal = Mask(np.zeros((2*half+1, 2*half+1), bool),
+                            int(np.floor(end[1]))-half, int(np.floor(end[0]))-half)
+            if (ndi.binary_dilation(crop_like(mask, terminal), iterations=2)
+                    & crop_like(cover, terminal)).any():
+                blocked = True
+                outward = (end-global_ends[1-index])/max(np.linalg.norm(end-global_ends[1-index]), 1e-9)
+                delta = np.array([circle.cx, circle.cy])-end
+                across = abs(float(outward[0]*delta[1]-outward[1]*delta[0]))
+                if (img is not None and coverage_points is not None and delta @ outward > 0
+                        and across <= q[4] and circle.rx >= q[4]+1):
+                    from .complete import occludes
+                    if not occludes(mask, cover, img.alpha.shape):
+                        continue
+                    contacts.append((index, np.linalg.norm(delta), cover, circle))
+    hidden = None
+    if blocked:
+        if not cfg.complete_hidden or not contacts or len({c[0] for c in contacts}) != 1:
+            return None
+        _, _, cover, circle = min(contacts, key=lambda c: c[1])
+        result = _fit_hidden_line(points, ends, cover, circle, mask, pad, img, 2*q[4])
+        if result is None:
+            return None
+        q, butt, points, fit_error = result
+        hidden = cover, circle
+        axis = np.array([np.cos(q[2]), np.sin(q[2])])
+        ends = q[:2]+np.array([-1, 1])[:, None]*axis*q[3]/2
+
+    # Include the entire proposed capsule, including its width-search margin.
+    low = np.minimum([0, 0], np.floor(ends.min(axis=0)-q[4]-2)).astype(int)
+    high = np.maximum(a.shape[::-1], np.ceil(ends.max(axis=0)+q[4]+2)).astype(int)
+    if np.any(high-low > 2*np.array(a.shape[::-1])+4):
+        return None
+    reference = np.pad(a, ((-low[1], high[1]-a.shape[0]), (-low[0], high[0]-a.shape[1])))
+    yy, xx = np.indices(reference.shape)
+    grid = np.c_[xx.ravel()+low[0], yy.ravel()+low[1]]
+    best = None
+    # Do not distort a well-supported subpixel edge to match quantized region
+    # ownership. A near-half-covered diagonal row can flip an entire binary edge.
+    lengths = (-.4, -.2, 0, .2, .4) if coverage_points is None else (0,)
+    radii = (-.3, -.15, 0, .15, .3) if coverage_points is None else (0,)
+    for dl in lengths:
+        for dr in radii:
+            candidate_q = q.copy()
+            candidate_q[3] += dl
+            candidate_q[4] += dr
+            candidate = (_line_distance(candidate_q, grid, True) <= 0).reshape(reference.shape)
+            xor = int((candidate ^ reference).sum())
+            if best is None or xor < best[0]:
+                best = xor, candidate_q, candidate
+    xor, q, candidate = best
+    observed, visible = reference, candidate
+    occluded = np.zeros(reference.shape, bool)
+    if hidden is not None:
+        _, circle = hidden
+        occluded = raster_prim(circle, reference.shape, origin=(mask.x0-pad+low[0], mask.y0-pad+low[1]))
+        cover_ref = Mask(np.zeros(reference.shape, bool), mask.y0-pad+low[1], mask.x0-pad+low[0])
+        occluded |= crop_like(hidden[0], cover_ref)
+        observed, visible = reference & ~occluded, candidate & ~occluded
+        distances = _line_distance(q, grid, True).reshape(reference.shape)
+        # Check the entire exposed core, including pixels segmentation assigned
+        # to an antialiased end cap. Extending that cap across a gap would make
+        # partially covered pixels solid even if their binary label stayed equal.
+        exposed_core = (distances < -1) & ~occluded
+        if exposed_core.any():
+            field = np.pad(coverage, ((-low[1], high[1]-a.shape[0]), (-low[0], high[0]-a.shape[1])))
+            # The hub's antialias fringe may mix its colour with the stroke.
+            # A true background gap cannot be explained by that colour pair.
+            yy_c, xx_c = np.nonzero(hidden[0].a)
+            hub_rgb = img.rgb[yy_c+hidden[0].y0, xx_c+hidden[0].x0]
+            colors, counts = np.unique(hub_rgb, axis=0, return_counts=True)
+            hub_color = colors[counts.argmax()].astype(float)
+            d = np.array(color)-hub_color
+            sample = grid[exposed_core.ravel()]+[mask.x0-pad, mask.y0-pad]
+            x, y = sample[:, 0].astype(int), sample[:, 1].astype(int)
+            if (x.min() < 0 or y.min() < 0 or x.max() >= img.alpha.shape[1] or y.max() >= img.alpha.shape[0]):
+                return None
+            rgb = img.rgb[y, x].astype(float)
+            projection = (rgb-hub_color) @ d/max(float(d @ d), 1)
+            amount = np.clip(projection, 0, 1)
+            blend_error = np.linalg.norm(rgb-(hub_color+projection[:, None]*d), axis=1)
+            supported = (field[exposed_core] >= .85) | ((amount >= .15) & (blend_error <= 12))
+            if not supported.all() or (img.alpha[y, x] < 128).any():
+                return None
+    iou = (visible & observed).sum()/max(1, (visible | observed).sum())
+    if iou < .97:
+        # Reliable antialias contours can differ from the segmentation by one
+        # partially covered row. Permit only subpixel boundary differences.
+        distances = _line_distance(q, grid, True).reshape(reference.shape)
+        added = visible & ~reference
+        if (coverage_points is None or fit_error > .15 or distances[observed].max() > .75
+                or (added.any() and ndi.distance_transform_edt(~reference)[added].max() > 1.5)):
+            return None
+    rectangle = (_line_distance(butt, grid, False) <= 0).reshape(reference.shape)
+    if coverage_points is None and xor > (rectangle ^ reference).sum()+2:
+        return None
+    ellipse = fit_ellipse(points)
+    if ellipse and fit_error >= .8*ellipse[1]:
+        return None
+    cap_points = points[abs((points-q[:2]) @ axis) >= q[3]/2-q[4]/2]
+    if len(cap_points) < 6:
+        return None
+    round_error = np.sqrt(np.mean(_line_distance(q, cap_points, True)**2))
+    square_error = np.sqrt(np.mean(_line_distance(butt, cap_points, False)**2))
+    if round_error >= .8*square_error:
+        return None
+    ends = q[:2]+np.array([-1, 1])[:, None]*axis*q[3]/2+[mask.x0-pad, mask.y0-pad]
+    curve = np.linspace(ends[0], ends[1], 4)
+    full = Mask.from_full(candidate)
+    full.x0 += int(low[0])+mask.x0-pad
+    full.y0 += int(low[1])+mask.y0-pad
+    return Stroke([curve], float(2*q[4]), full, hidden is not None, (hidden[0],) if hidden else ())
 
 
 def _thin(mask):
@@ -155,7 +542,7 @@ def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (
         direction = points[end]-points[inner]
         direction /= max(np.linalg.norm(direction), 1e-9)
         choices = []
-        for cover, circle in circles:
+        for cover, circle in circles if cfg.complete_hidden else ():
             delta = np.array([circle.cx, circle.cy])-points[end]
             along = float(delta @ direction)
             across = abs(float(direction[0]*delta[1]-direction[1]*delta[0]))

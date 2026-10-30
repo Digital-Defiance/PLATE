@@ -23,7 +23,7 @@ from ..bezier import bez, resample_closed
 from ..config import Config
 from ..geometry import (Prim, fit_circle, fit_ellipse, fit_rect,
                         contours_xy, poly_area, raster_prim, SCALE, SHIFT)
-from ..masks import Mask
+from ..masks import Mask, crop_like
 from ..scene import Shape
 
 
@@ -169,6 +169,28 @@ def _component_junctions(contours, near, frame):
         out.extend(_junctions(contour, near[start:end], frame[start:end]))
         start = end
     return out
+
+
+def occludes(mask: Mask, cover: Mask, canvas: tuple[int, int]) -> bool:
+    """Relative T-junction evidence without requiring a completed primitive."""
+    y0, x0 = min(mask.y0, cover.y0)-3, min(mask.x0, cover.x0)-3
+    y1, x1 = max(mask.bbox[2], cover.bbox[2])+3, max(mask.bbox[3], cover.bbox[3])+3
+    ref = Mask(np.zeros((y1-y0, x1-x0), bool), y0, x0)
+    R, C = crop_like(mask, ref), crop_like(cover, ref)
+    rc, cc = _outlines(R), _outlines(C)
+    if not rc or not cc:
+        return False
+
+    def junctions(contours, neighbour):
+        p = np.vstack(contours)
+        x = np.clip(np.round(p[:, 0]).astype(int), 0, x1-x0-1)
+        y = np.clip(np.round(p[:, 1]).astype(int), 0, y1-y0-1)
+        near = ndi.binary_dilation(neighbour, structure=np.ones((3, 3), bool), iterations=2)
+        frame = ((p[:, 0]+x0 <= -.4) | (p[:, 1]+y0 <= -.4)
+                 | (p[:, 0]+x0 >= canvas[1]-.6) | (p[:, 1]+y0 >= canvas[0]-.6))
+        return _component_junctions(contours, near[y, x], frame)
+
+    return _occludes(junctions(rc, C), junctions(cc, R)) >= 15
 
 
 def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Completion | None:
