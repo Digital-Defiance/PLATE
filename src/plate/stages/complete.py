@@ -233,7 +233,7 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
     tol = max(0.9, 1.5 * cfg.snap_tolerance * np.sqrt(area))
     min_extra = max(10, int(0.004 * area))
 
-    def evaluate(P: np.ndarray, prim: Prim | None):
+    def evaluate(P: np.ndarray, prim: Prim | None, fit_quality: float = float("inf")):
         # Check the actual fitted model before restoring small raster residuals.
         # Once unioned with Rm, containment is tautological; accepting such a fit
         # could emit a primitive that drops a substantial part of the observation.
@@ -244,7 +244,19 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
         ne = int(extra.sum())
         if ne < min_extra:
             return None
-        if int((extra & Cm).sum()) < 0.9 * ne or int((extra & Cv).sum()) < 0.7 * ne:
+        # The recovered ("extra") region must lie under the shapes we claim hide R:
+        # this is what stops a shape merely sitting beside a neighbour from being
+        # "completed" into it. A clean primitive fit (low RMS, wide arc) is strong
+        # geometric evidence of the true silhouette, so when the occluder is a same-
+        # size neighbour that does not fully cover R's hidden half, a small sliver of
+        # the recovered area legitimately pokes past the occluder. Relax the
+        # occluder-coverage floor for a well-fit primitive; keep it strict for the
+        # Bézier bridge and weak fits (which otherwise win by hugging the occluder
+        # and emitting a drifted, undersized silhouette).
+        trusted = prim is not None and fit_quality >= 0.0 and fit_quality <= 0.5 * tol
+        cm_floor = 0.85 if trusted else 0.9
+        cv_floor = 0.65 if trusted else 0.7
+        if int((extra & Cm).sum()) < cm_floor * ne or int((extra & Cv).sum()) < cv_floor * ne:
             return None
         if P.sum() > (8 if prim is not None else 4) * area:
             return None
@@ -266,15 +278,15 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
     best: Completion | None = None
     r = fit_circle(F)
     if r[1] <= tol and r[2] >= np.deg2rad(100) and r[0].rx < 4 * max(H, W):
-        best = evaluate(raster_prim(r[0], shp), r[0])
+        best = evaluate(raster_prim(r[0], shp), r[0], r[1])
     if best is None and not cfg.snap_primitives is False:
         e = fit_ellipse(F)
         if e and e[1] <= tol and e[2] >= np.deg2rad(140) and max(e[0].rx, e[0].ry) < 4 * max(H, W):
-            best = evaluate(raster_prim(e[0], shp), e[0])
+            best = evaluate(raster_prim(e[0], shp), e[0], e[1])
     if best is None:
         q = fit_rect(F)
         if q and q[1] <= tol:
-            best = evaluate(raster_prim(q[0], shp), q[0])
+            best = evaluate(raster_prim(q[0], shp), q[0], q[1])
     if best is None and len(contours) == 1:
         poly = _bridge(cont, cls)
         if poly is not None and len(poly) > 8:

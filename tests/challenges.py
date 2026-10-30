@@ -29,8 +29,7 @@ CHALLENGES = {
         "One compound path with three transparent holes, plus an island.",
         gap="The plate path contains two connected components instead of one."),
     "occlusion_chain": Challenge(
-        "Recover three full circles behind successive occluders.",
-        gap="Chained completion drifts from the authored full-circle silhouettes."),
+        "Recover three full circles behind successive occluders."),
     "twin_gradients": Challenge("Two independent opposite ramps, each behind a solid dot."),
     "gradient_badge": Challenge(
         "One full radial disc underneath an edge-crossing ribbon."),
