@@ -4,6 +4,31 @@ Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This reco
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
+## ⟹ DIRECTION CHANGE (session 25): pivot from engine gaps to the hosted service
+
+Jessica has decided PLATE's next phase is a **donation-supported hosted PNG→SVG service**
+for her 501(c)(3), NOT continuing to close the remaining synthetic logo/scene gaps. The
+engine is considered **done-enough**: it produces excellent layered SVGs across 277 tests,
+and the remaining 7 strict-xfail gaps are the hard tail (same-colour organic separation,
+complex-scene gradients) with diminishing returns for the actual goal.
+
+- **The agreed service design is in `docs/SERVICE.md`.** Read it before doing service work.
+  Summary: classical converter as the service; free tier 7 conversions/day (full quality,
+  no watermark) + a no-account demo; recurring-donation supporter tier (via Stripe, already
+  set up) removes the daily limit; AI naming is a LATER supporter perk (carries compute
+  cost), not in the launch. Hosting: a managed container platform (Render/Fly) recommended.
+  Accounts: magic-link/OAuth. The engine stays the open-source MIT CPU-only core; the
+  service is a SEPARATE layer.
+- **Compliance boundary:** the donation-vs-subscription framing and receipt wording need the
+  nonprofit's tax/legal advisor's sign-off — build it framing-agnostic (see SERVICE.md).
+- The engine gap work below (ORBIT/ROOT/EMBER/complex scenes) is NOT abandoned, just
+  deprioritised. If anyone resumes it, the hard common blocker is same-colour separation.
+- Investigation note (session 25): EMBER's gap is NOT one fix — independent causes are
+  shield-field silhouette (0.84 IoU), gold stems merged with same-colour laurel leaves, and
+  2 whiskers + mouth fitting to only ~0.88 IoU (< the 0.95 stroke gate). Do not nudge the
+  0.95 IoU gate to grab a marginal whisker — it protects stroke acceptance across the whole
+  suite; the real issue there is curve-fit quality on short sharply-curved strokes.
+
 ## State at handover
 
 - **HEAD is `3ed2bd1`** (`feat: add PLATE identity as an independent tracing
