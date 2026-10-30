@@ -1,10 +1,37 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 18, mixed-content holes) · Version 0.0.1 · Tests: 213 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 19, stroked loops across crossings) · Version 0.0.1 · Tests: 216 passing, 6 expected feature gaps (`pytest -q`)
 
-## Mixed-content holes (session 18, uncommitted)
+## Stroked loops crossing other artwork (session 19)
 
-- **HEAD is `ebf8762`** (session 17); session 18 changes are uncommitted. Jessica
+- **HEAD is `c5762b2`.** On takeover, session 18's verified mixed-content-hole work
+  was committed (`632bb1c`); the commit-hang was diagnosed as the global
+  identity-prompt `pre-commit` hook (`core.hooksPath` → `~/.git-templates/hooks`,
+  an osascript GUI), bypassed with `-c hooks.skipidentityprompt=true` — NOT the
+  commit template; gpg signing works once the hook is skipped (see HANDOFF).
+- Closed the handover's primary ORBIT continuation item: the gold **front orbit**
+  now recovers as one editable stroked **ellipse** (width 6.06 vs target 6, rx/ry
+  190/62). `fit_closed` previously required every boundary sample < 0.85px, every
+  pixel within 1px, and ≥90% free boundary — all violated by a thin stroke threaded
+  through the badge ring/core/satellites/wordmark (~2% boundary smear up to 2.8px,
+  ~37% near later covers), even though its visible arcs over-determine the ellipse
+  (free-only fit RMS 0.26, footprint XOR 0.017). Three guarded relaxations, each
+  still backed by a strong independent gate: scattered-outlier boundary tolerance
+  (`_boundary_ok`: ≤5% and longest contiguous run ≤12 — a notch is a long run and
+  still fails), stray-pixel allowance within 3px up to 1% of the loop (XOR ≤ 0.06
+  still caps gross error), and free-boundary gate 0.9 → 0.5. Commits `7f0210c`
+  (feat) + `c5762b2` (tests).
+- ORBIT now emits **2 ellipses / 4 strokes** (was 1 / 3). **Its overall structural
+  gap stays OPEN** (strict xfail): still 60 objects vs target 34 — the mint **back
+  orbit** fragments into disconnected arcs (needs interrupted-arc completion, which
+  `fit_closed` explicitly does not do), and the wordmark/emblem still fragment.
+- Suite **216 passed, 6 xfailed** (213 + 3 new regressions). Panel stays 59/27,
+  ROOT 51/3, all eight original samples and the other challenges unchanged. No
+  target/golden edits.
+
+## Mixed-content holes (session 18, committed `632bb1c`)
+
+- Session 18 changes are now committed. Jessica
   requested wrapping up at 2% remaining usage. No commit/push this session.
 - Fixed `order._silhouettes` treating a hole as solid when opaque interior artwork
   occupied more than half of it. Preserve the whole hole when it has a clear
@@ -263,7 +290,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
-| `logo_orbit_wordmark` | 60 objects vs target 34; front-loop hole is preserved, but it remains a path; back orbit/lettering fragment; 3 of 7 strokes |
+| `logo_orbit_wordmark` | 60 objects vs target 34; front orbit now an editable stroked ellipse (4 strokes), but the mint back orbit fragments into arcs (needs interrupted-arc completion) and the wordmark/emblem fragment |
 | `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
