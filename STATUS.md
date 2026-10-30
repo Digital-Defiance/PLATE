@@ -1,11 +1,45 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 21, radial-gradient band recovery) · Version 0.0.1 · Tests: 237 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 22, crossed cream-highlight recovery) · Version 0.0.1 · Tests: 248 passing, 6 expected feature gaps (`pytest -q`)
 
-## Radial-gradient band recovery (session 21, uncommitted)
+## Crossed cream-highlight recovery (session 22)
 
-- **HEAD remains `72702cd`**. Sessions 20 and 21 are verified and uncommitted;
-  no commit/push requested or made this session.
+- Committed sessions 20–21 as `71f6740` at Jessica's request. This session's
+  crossed-curve source/tests are committed as `3c0a8e1`; this handoff update
+  accompanies them. No push.
+- **ORBIT's lower cream highlight now passes its unchanged full-stroke target**
+  together with the gold front orbit, including relative paint order. The curve's
+  rounded terminal is clipped by that loop; treating the cut edge as a free boundary
+  previously distorted the skeleton fit. Upper highlight remains split and filled.
+- Precompute independently accepted closed-stroke fits. `fit_crossed_curve` is a
+  fallback for a single unbranched, stable-width curve under a known later native
+  circle/ellipse stroke. Require exactly one exposed cap, ≥65% free boundary,
+  bounded cubic controls, free-edge RMS ≤0.35px/max ≤0.85px, exposed IoU ≥0.95,
+  local hidden area and no unsupported exposed extension. Source antialias edges
+  retain flat-cap corners lost by binary ownership; the regression rejects a butt
+  cap that initially fooled the binary fit. Ordinary stroke thresholds unchanged.
+- **ORBIT: 5→6 of 7 editable strokes, 357→352 anchors**, still 45 vs 34 objects.
+  White/dark SSIM **.9843/.9922→.9844/.9923**; SVG **17,388→17,218 bytes**.
+  Eleven new cases cover the real logo, full curve/width at 1×/2× source resolution,
+  flat caps, taper, both disable switches, detached covers and 1/3/6px exposed gaps.
+  Baseline **237 passed/6 xfailed**; final **248 passed/6 xfailed**.
+- Both benches rendered and inspected: `/tmp/plate-crossed-{samples,challenges}`;
+  baseline `/tmp/plate-crossed-before-{samples,challenges}`; metrics
+  `/tmp/plate-crossed-metrics.json`; tests `/tmp/plate-session22-final-tests.txt`.
+  All eight original and fourteen other challenge PLATE SVGs are byte-identical.
+  Targets/goldens/VTracer code unchanged. Review sheets in this chat's visualization
+  folder: `plate-crossed-highlight.png`, `plate-crossed-original-samples.png`.
+- Next: compound navy badge/monogram (eight/three substantial regions), the split
+  upper cream highlight, and ambiguous gradient patches. This fallback cannot pool
+  disconnected curves, infer two hidden caps or repair unknown paint order. An opaque
+  ring's separate background-colour counter can still prevent native loop recovery;
+  that existing counter/ordering gap is outside this change. ROOT's touching inner
+  ring/leaves and mission-patch clamped gradients remain open.
+
+## Radial-gradient band recovery (session 21; committed in session 22)
+
+- Historical checkpoint: HEAD was `72702cd`; sessions 20–21 were uncommitted
+  then. They are now committed as `71f6740` (session 22). No push.
 - Extend an existing radial-gradient seed to disconnected source bands only when
   an affine RGB/radius model explains each band's spatial colour variation better
   than a flat fill. Eroded source samples reject constant foreground details and
@@ -41,11 +75,11 @@ Last updated: 2026-10-30 (session 21, radial-gradient band recovery) · Version 
   shares colour with leaves and needs decomposition; mission-patch bands/craters
   and linear hull remain unresolved.
 
-## Interrupted ellipse recovery (session 20, uncommitted)
+## Interrupted ellipse recovery (session 20; committed in session 22)
 
-- **HEAD remains `72702cd`**; new source, tests and docs are uncommitted. On takeover
-  the front orbit was already a stroked ellipse, so work proceeded to the mint back
-  orbit. No commit/push requested or made this session.
+- Historical checkpoint: HEAD was `72702cd`; the new source, tests and docs were
+  uncommitted then (now `71f6740`, session 22). On takeover the front orbit was
+  already a stroked ellipse, so work proceeded to the mint back orbit. No push.
 - Added `stages/loops.py`: pool two long, curved, same-colour sibling leaf arcs
   with matching widths. Require relative T-junction evidence at both terminals
   of each arc, a shared ellipse fit to separate free contours, and actual foreign
@@ -355,7 +389,7 @@ sections below retain their earlier measurements.
 
 Implementation order (details and acceptance checks in `ROADMAP.md`):
 
-1. Recover ORBIT's two cream highlight strokes and ROOT's inner ring joined to leaves; extend to non-sibling/non-leaf fragments, branched networks and other cap/join styles. Both ORBIT orbital ellipses now pass. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
+1. Recover ORBIT's split upper cream highlight (lower now passes) and ROOT's inner ring joined to leaves; extend to non-sibling/non-leaf fragments, branched networks and other cap/join styles. Both ORBIT orbital ellipses now pass. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
 3. Extend the affine radial-band recovery beyond supported circular silhouettes to clamped/nonlinear ramps and the mission patch. Preserve hard-edged craters, separate ramps and flat swatches.
 4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons. Chained-circle drift is fixed.
@@ -368,7 +402,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
-| `logo_orbit_wordmark` | 45 objects vs target 34; full radial core and both orbital ellipses recovered, 5/7 strokes; compound badge/monogram, ambiguous patches and cream highlights remain |
+| `logo_orbit_wordmark` | 45 objects vs target 34; full radial core and both orbital ellipses recovered, 6/7 strokes; compound badge/monogram, ambiguous patches and upper cream highlight remain |
 | `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image

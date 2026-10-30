@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-30 (session 21, radial-gradient band recovery)
+# PLATE handover — 2026-10-30 (session 22, crossed cream-highlight recovery)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -6,20 +6,50 @@ rendering.
 
 ## State at handover
 
-- **HEAD is `72702cd`** (session-19 handoff docs). Sessions 20–21 are verified but
-  **UNCOMMITTED**: `pipeline.py`, new `stages/loops.py`, `scene.py`,
-  `stages/gradient.py`, `stages/order.py`, new `tests/test_interrupted_loops.py`,
-  new `tests/test_gradient_bands.py`, plus status/roadmap/README/challenge docs.
+- Sessions 20–21 are committed as **`71f6740`**. Session 22's crossed-curve source
+  and tests are committed as **`3c0a8e1`**; this documentation is committed
+  with the handoff. Use `git log -3 --oneline` for the latest documentation commit.
 - Recent lineage: `a2579f0` (session-19 docs) ← `c5762b2` (session-19 tests) ←
   `7f0210c` (session-19 feat: stroked loops across crossings) ← `ea4330e` (docs) ←
   `632bb1c` (session 18, mixed-content holes) ← `ebf8762` (session 17) ←
   `a56c13e` (sessions 14–16) ← `0a0fddc`.
 - No push. Commit/push only when Jessica asks.
-- **Tests: 237 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **Tests: 248 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
 
-## Radial-gradient band recovery (session 21, uncommitted)
+## Crossed cream-highlight recovery (session 22)
+
+- ORBIT's **lower cream highlight** is now an editable full cubic stroke beneath
+  the gold orbit. Both unchanged targets pass together, including paint order.
+  **5→6 strokes, 357→352 anchors**, still 45 vs target 34 objects. White/dark
+  SSIM **.9843/.9922→.9844/.9923**; SVG **17,388→17,218 bytes**.
+- `pipeline.py` precomputes native closed-loop fits before open-curve conversion.
+  `strokes.fit_crossed_curve` runs only after ordinary fits fail, using independently
+  accepted later-painted circle/ellipse stroke masks. Exactly one cap must remain
+  exposed; stable-width topology, ≥65% free contour, bounded cubic/width fit,
+  free-edge residuals, ≥95% visible IoU and local hidden-area checks constrain it.
+  No paint reordering or broad T-junction relaxation. It cannot infer both hidden
+  ends, pool fragments, or repair unknown paint order.
+- A flat-cap regression initially fooled the binary fit. Source antialias contours
+  preserve those corners and now veto it. Existing `_flat_terminal` defaults are
+  unchanged; the fallback uses separate binary/source tolerances. Eleven cases
+  cover the actual logo, full silhouette/width at 1×/2×, flat caps, taper, switches,
+  detached covers and 1/3/6px exposed gaps. **248 passed, 6 xfailed** (baseline 237/6).
+- All eight original and fourteen other challenge PLATE SVGs remain byte-identical.
+  Targets/goldens/VTracer code unchanged. Rendered/inspected both benches in
+  `/tmp/plate-crossed-{samples,challenges}`; comparison baseline
+  `/tmp/plate-crossed-before-{samples,challenges}`; metrics `/tmp/plate-crossed-metrics.json`;
+  tests `/tmp/plate-session22-final-tests.txt`. Review sheets in this chat's visual
+  folder: `plate-crossed-highlight.png`, `plate-crossed-original-samples.png`.
+- Next: compound navy badge/monogram and split upper cream arc. The upper arc has
+  a large visible fragment plus a small one near a crossing; it needs supported
+  open-curve pooling before the new one-component fallback can help. Opaque ring
+  counters can still block native-loop discovery or order a cover too early; do
+  not infer a new ordering from colour/proximity alone. ROOT decomposition and
+  mission-patch gradients remain open.
+
+## Radial-gradient band recovery (session 21; committed in session 22)
 
 - ORBIT's disconnected bands now share **one complete native radial circle**.
   **57→45 objects, 500→357 anchors**, retaining **5 strokes / 1 gradient**.
@@ -48,7 +78,7 @@ rendering.
   stay separate. General nonlinear/clamped/elliptical gradients and the mission
   patch remain open. No commit or push made.
 
-## Interrupted ellipse recovery (session 20, uncommitted)
+## Interrupted ellipse recovery (session 20; committed in session 22)
 
 - ORBIT's mint **back orbit** now matches its unchanged independent ellipse target.
   Two large arcs establish the geometry; two small matching fragments rejoin it.
@@ -128,14 +158,14 @@ log and read the tail.)
 
 ## Immediate continuation
 
-1. Review/commit sessions 20–21 when Jessica requests it. ORBIT now has **45 vs
-   target 34 objects**, five of seven strokes. Its full radial circle and both
+1. Sessions 20–22 are committed. ORBIT now has **45 vs target 34 objects**,
+   six of seven strokes. Its full radial circle and both
    orbital ellipses pass independently and together; keep all six full gaps active.
 2. Recover ORBIT's compound navy badge and monogram. The source-visible ownership
    probe still finds **eight badge-ring regions** and **three monogram regions**
    (≥3% of each target object's visible pixels). The wordmark itself does not show
    substantial splitting. Small ambiguous gradient patches also remain separate.
-3. Recover the two cream highlight arcs as editable strokes. ROOT remains 51 vs
+3. Pool/recover the split upper cream highlight; the lower arc now passes. ROOT remains 51 vs
    56 objects and 3/32 strokes; its inner mint ring shares colour with leaves and
    requires decomposition, beyond sibling-leaf pooling.
 4. Extend shared gradients to the mission patch's clamped bands/craters and linear
@@ -363,11 +393,11 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
 | `complex_storefront` | 73 objects / 2 strokes; target 64, repeated windows/awning/lettering merge or fragment |
 | `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
-| `logo_orbit_wordmark` | 45 objects vs 34; full radial core and both orbital ellipses recovered, 5/7 strokes; compound emblem, ambiguous patches and cream highlights remain |
+| `logo_orbit_wordmark` | 45 objects vs 34; full radial core and both orbital ellipses recovered, 6/7 strokes; compound emblem, ambiguous patches and upper cream highlight remain |
 | `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
 
-The next stroke work includes ROOT's touching ring/leaves and ORBIT's cream
-highlights; logos need 7/7/32 strokes and recover 2/5/3. The panel's 27 strokes are complete.
+The next stroke work includes ROOT's touching ring/leaves and ORBIT's split upper
+highlight; logos need 7/7/32 strokes and recover 2/6/3. The panel's 27 strokes are complete.
 Then address branched networks, other cap/join styles and non-circular/multiple
 occluders. `stages/strokes.py` contains straight/open-curve and complete closed-loop recovery.
 

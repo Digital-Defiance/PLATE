@@ -40,7 +40,7 @@ holes rather than a background colour painted over the artwork.
 | Logo | PNG / desired SVG | Target → actual objects | Target → actual strokes | SSIM white / dark |
 | --- | --- | --- | --- | --- |
 | EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 2 | 0.9663 / 0.9683 |
-| ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 45 | 7 → 5 | 0.9843 / 0.9922 |
+| ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 45 | 7 → 6 | 0.9844 / 0.9923 |
 | ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 51 | 32 → 3 | 0.9830 / 0.9867 |
 
 EMBER exercises a faceted animal silhouette, four transparent shield cutouts,
@@ -59,8 +59,10 @@ remains filled. The back orbit pools four visible fragments into one ellipse,
 reducing total anchors from 539 to 500. Source-validated radial-band recovery then
 restores one full gradient circle, reducing 57 objects/500 anchors to **45/357**.
 The core and both orbits pass together, including paint order. Compound navy badge/
-monogram regions and small ambiguous patches still fragment; the two cream
-highlights remain filled paths. ROOT's inner
+monogram regions and small ambiguous patches still fragment. The lower cream
+highlight now independently matches its full stroke beneath the gold orbit,
+reducing anchors **357→352** and reaching **6/7 strokes**. The upper highlight
+remains split and filled. ROOT's inner
 ring and merged tree networks remain unresolved. All three full logo targets
 remain strict expected failures.
 
