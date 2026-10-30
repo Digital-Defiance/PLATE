@@ -104,8 +104,9 @@ e.g. `{"simplify": 2.0, "max_colors": 8}` — and those levers apply just to tha
    → nested Illustrator groups.
 3. **Occlusion + amodal completion** — a relative T-junction test decides which neighbour hides which
    shape; the hidden outline is reconstructed (circle/ellipse/rect fit, otherwise a tangent-continuous
-   Bézier bridge). Gradient fragments with matching completed primitives can share one refitted
-   ramp and full silhouette, after fresh occlusion and colour checks.
+   Bézier bridge). Primitive fits pool free arcs from separate components. Same-colour fragments
+   can reunite when their union passes geometric and occlusion checks; matching completed gradient
+   fragments can share one refitted ramp and full silhouette.
 4. **Paint order** — topological sort bottom-to-top, with a small restricted bleed under later shapes
    to avoid hairline seams.
 5. **Primitive snapping** — circle, ellipse, rect, rounded rect, polygon (≤14 vertices), ring
@@ -154,7 +155,11 @@ refresh with `PLATE_UPDATE_GOLDEN=1`).
 Independent PNG/desired-SVG challenges check hidden geometry, holes, gradients, stroke width and
 paint order. The `stroked_route` target now passes as one open stroke behind its endpoint circles.
 `gradient_badge` also passes with one full radial disc beneath its ribbon.
-Seven desired structural targets remain expected failures; ordinary fidelity/integrity checks stay
+`edge_crossing_type` passes with one full disc behind all three letters.
+Three complex logo fixtures add an EMBER fox crest, ORBIT wordmark and ROOT tree seal,
+with independently authored SVG targets and transparent PNGs. Regenerate with
+`python scripts/make_logo_challenges.py`; see `docs/challenges.md` for current failures.
+Nine desired structural targets remain expected failures; ordinary fidelity/integrity checks stay
 active. Stroke detection uses only existing numpy/scipy dependencies; `--set strokes=false` disables
 it. Automatic recovery currently targets open curved paths with round caps/joins; closed/branched
 strokes and inference of other cap/join styles remain work. Metrics and per-image stats include

@@ -1,6 +1,6 @@
 # Authored PNG → SVG challenges
 
-These twelve scenes begin as independently authored SVGs in
+These fifteen scenes begin as independently authored SVGs in
 [`samples/challenges/`](../samples/challenges/). Rasterizing each at 4× resolution
 and downsampling produces its PNG input. The `.target.svg` is the desired editable
 output, authored independently of PLATE. It is never refreshed from pipeline output.
@@ -14,14 +14,14 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Gap: plate path has a stray second component, despite correct holes and 2 objects | 0.9902 |
 | [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Gap: back circle centre drifts ≈3.5px; full silhouette IoU ≈0.946 | 0.9852 |
 | [Twin gradients](../samples/challenges/twin_gradients.png) | [Target](../samples/challenges/twin_gradients.target.svg): two separate rectangles with opposite linear gradients, two overlaid circles, background | Pass; 5 objects, 2 gradients | 0.9882 |
-| [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Pass: 5 objects, 1 full radial disc, 20 anchors | 0.9922 |
-| [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Gap: disc fragments; 7 objects instead of 5 | 0.9914 |
+| [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Pass: 5 objects, 1 full radial disc, 20 anchors | 0.9924 |
+| [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Pass: 5 objects, full disc and correct paint order, 36 anchors | 0.9931 |
 | [Discrete palette](../samples/challenges/discrete_palette.png) | [Target](../samples/challenges/discrete_palette.target.svg): eight hard-edged, flat rectangles + background; zero gradients | Pass; 9 rectangles | 0.9963 |
 | [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Pass: one 15.5px open stroke (16±1px contract), full hidden endpoints, 4 objects | 0.9913 |
 
 All eight currently clear an SSIM floor of 0.95 on **both white and dark backgrounds**.
-That does not imply that the editable structure is correct: the edge-crossing type
-still splits its underlying disc despite SSIM 0.9914.
+That does not imply that the editable structure is correct: the back circle in the
+occlusion chain still drifts despite SSIM 0.9852.
 
 ## Complex compositions
 
@@ -29,6 +29,38 @@ Four larger scenes combine the interactions above. Their targets use **44–64
 objects**, with fixed geometry and custom outlined lettering: no installed fonts,
 external assets, or model generation are needed. Every target object has visible
 pixels; none is included solely as a completely hidden authoring artefact.
+
+## Complex logos
+
+Three original logo fixtures add identity artwork beyond the large scene layouts.
+Their target geometry is authored in `scripts/make_logo_challenges.py`, without
+fonts or external images. All inputs have transparency; cutouts are actual alpha
+holes rather than a background colour painted over the artwork.
+
+| Logo | PNG / desired SVG | Target → actual objects | Target → actual strokes | SSIM white / dark |
+| --- | --- | --- | --- | --- |
+| EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 2 | 0.9662 / 0.9678 |
+| ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 60 | 7 → 3 | 0.9787 / 0.9846 |
+| ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 52 | 32 → 0 | 0.9784 / 0.9836 |
+
+EMBER exercises a faceted animal silhouette, four transparent shield cutouts,
+12 laurel leaves, thin whiskers, ribbon layering and outlined lettering. Its
+matching object count conceals a shield silhouette IoU of only 0.8385.
+ORBIT exercises a shaded core behind a compound monogram, crossing closed orbital
+strokes, satellites, lettering and motion lines. ROOT exercises organic curves,
+touching branches/roots, 15 leaf silhouettes and veins, a transparent trunk counter
+and closed circular strokes. All three retain strict structural gaps; appearance
+floors remain active at 0.96 for EMBER and 0.97 for ORBIT/ROOT on both backgrounds.
+
+`tests/test_logo_assets.py` protects the inventories, transparent negative spaces
+and exact supersampled SVG/PNG pairing. Regenerate only from the authored targets
+or generator, never PLATE's output:
+
+```sh
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python scripts/make_logo_challenges.py
+```
+
+## Complex composition baseline
 
 The table below records the initial baseline, before the geometry validation fix.
 
@@ -93,11 +125,12 @@ self-contained vector artwork, and all nine transparent cutouts.
    occlusion checks. The badge now passes. The mission patch still needs pooled
    free-boundary completion before its planet fragments can merge. Independent
    opposite ramps and discrete palette swatches remain unchanged negative controls.
-5. **Complete across multiple edge-crossing occluders.** Keep the relative T-junction
-   test, but pool supported free-boundary fragments and score a shared primitive
-   against all visible pixels and inferred occluders. Retain genuine holes; reject
-   geometry added outside supported occlusion. Start with the small text/gradient
-   controls before requiring whole complex scenes to pass.
+5. **Complete across multiple edge-crossing occluders—implemented for the lettering target.**
+   Free primitive-boundary samples and T-junction evidence now include all external
+   contours, with tangent calculations kept within each component. Same-colour flat
+   siblings may share a full primitive after containment/occlusion checks. The disc
+   behind three letters now passes. Complex patch/poster recovery remains open;
+   retain genuine holes and reject geometry outside supported occlusion.
 
 Diagnostic sweeps before the geometry fix: patch `max_colors=16/32/64` all produce 55 objects, zero gradients,
 SSIM 0.9628. Panel `denoise=0` still produces 37 objects and SSIM 0.9665; disabling
@@ -180,7 +213,7 @@ were reviewed/refreshed for subpixel circle fits and reconnected lettering.
 - Valid unique IDs, resolved gradient references, no embedded raster fallback.
 - Appearance against the PNG on two backgrounds, regardless of structural gap status.
 
-Eight remaining structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
+Nine remaining structural gaps use **strict xfail**, limited to `TargetMismatch`. Pipeline
 crashes and fidelity regressions still fail normally. A fully met target produces
 XPASS and fails the suite until its gap marker is removed. Do not replace the target
 SVG with today's output to make a test pass.

@@ -1,13 +1,15 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 10, shared gradients across supported occlusion) · Version 0.0.1 · Tests: 126 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 12, complex logos and handover) · Version 0.0.1 · Tests: 148 passing, 9 expected feature gaps (`pytest -q`)
 
 ## Current remaining work — start here
 
 Geometry safety, thin-detail recovery and initial open-stroke support are complete.
 All 18 ticks survive; both panel routes are continuous editable strokes. The
-independent `stroked_route` and `gradient_badge` targets pass. The badge now has
-one full radial disc behind its ribbon. The seven strict expected failures below
+independent `stroked_route`, `gradient_badge` and `edge_crossing_type` targets pass.
+The badge has one full radial disc behind its ribbon, and the lettering has one
+full disc behind its three letters. Three original complex logo fixtures are now
+generated and checked in the working tree (34–56 target objects). The nine strict expected failures below
 remain open; they are desired structural targets, not pipeline crashes.
 Appearance/integrity checks remain active. Current scene SSIM: mission patch
 **0.9815**, storefront **0.9738**, instrument panel **0.9854**, poster **0.9715**.
@@ -20,7 +22,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 1. Extend stroke coverage beyond open curves: straight primitives/ticks, closed loops, branched networks and automatic cap/join inference. The panel currently has 2 of its 27 desired strokes.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
 3. Extend shared gradients to fragments without independently completed primitives; the mission patch remains split. Retain separate ramps/flat swatches.
-4. Complete shapes behind edge-crossing letters/ribbons and reduce chained-circle drift.
+4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons and reduce chained-circle drift.
 5. Preserve holes/components, then refine corners, primitive selection and complex object recovery.
 6. Improve per-object failure diagnostics so partial progress is visible despite count mismatches.
 
@@ -28,11 +30,13 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | --- | --- |
 | `perforated_plate` | Blue path has 2 connected components; require 1, with all 3 holes and the separate gold island preserved |
 | `occlusion_chain` | Back circle drifts ≈3.5px, full-silhouette IoU ≈0.946; recover all authored circles accurately |
-| `edge_crossing_type` | 7 objects; require 5, including a full disc behind the three outlined letters |
 | `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
 | `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_instrument_panel` | 60 objects; ticks visible and both routes are editable strokes, but target 59 requires 27 strokes overall |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
+| `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8385; 2 of 7 editable strokes recovered |
+| `logo_orbit_wordmark` | 60 objects vs target 34; gradient/orbital emblem and outlined lettering fragment; 3 of 7 strokes |
+| `logo_root_seal` | 52 objects vs target 56; touching organic shapes merge and 0 of 32 strokes recovered |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
 real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy
@@ -43,6 +47,75 @@ tracked in `ROADMAP.md`.
 Session 7 (historical) changed documentation only: reconciled completed work, added the full
 remaining queue, corrected stale gradient/VLM/text-fixture/Git notes, and retained
 earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed**.
+
+## Complex logos and handover (session 12)
+
+- Finished three original, deterministic logo designs, each with independently
+  authored `.target.svg` and a transparent RGBA PNG rendered at 4× then downsampled.
+  Files are in `samples/challenges/`; `scripts/make_logo_challenges.py` regenerates
+  them without fonts, external assets, models or PLATE output. The images are done;
+  the next agent does not need image-generation capability.
+- **EMBER:** 800×960 fox crest, faceted face, 12 laurel leaves, four true shield
+  cutouts, layered ribbon and outlined lettering; **51 objects / 7 strokes**.
+- **ORBIT:** 1200×480 wordmark, off-centre radial gradient, compound monogram,
+  crossing orbital ellipses, satellites, motion lines and small details;
+  **34 objects / 1 gradient / 7 strokes**.
+- **ROOT:** 900×900 tree seal, 15 organic leaves and veins, branches/roots,
+  counter-cut trunk, closed circular strokes and outlined name;
+  **56 objects / 32 strokes**, zero gradients.
+- Pipeline baseline, white/dark SSIM: EMBER **0.9662 / 0.9678** (51 objects,
+  472 anchors); ORBIT **0.9787 / 0.9846** (60 / 617); ROOT **0.9784 / 0.9836**
+  (52 / 902). All structural targets remain unmet as specified in the current
+  table. New fidelity floors: EMBER 0.96, ORBIT/ROOT 0.97, active on both backgrounds.
+- Added the three strict structural gaps and nine artwork checks for exact target
+  inventory, portable vector assets, dimensions, transparent negative spaces and
+  pixel-identical target/PNG pairing. Full suite **148 passed, 9 xfailed**
+  (baseline **133/6**). Existing targets and pipeline code were not changed this session.
+- Ran `plate bench samples/challenges -o /tmp/plate-logo-bench` with VTracer intact.
+  Inputs were visually reviewed together in `plate-complex-logos.png` in this
+  chat's visualization folder. Baseline JSON: `/tmp/plate-logos/baseline.json`.
+- Prepared `HANDOFF.md` with exact state, reproduction commands, pending changes
+  and priorities. No new commit or push. Previous completion work and all new logo
+  assets remain uncommitted; current HEAD is `4da8ab0`.
+
+## Disconnected boundaries and flat fragments (session 11)
+
+- Committed the verified shared-gradient work as `4da8ab0`
+  (`fix: merge compatible gradient fragments behind occluders`), as requested.
+  No push. This session's new completion work remains uncommitted.
+- `complete.try_complete` previously kept only the largest outline of each shape
+  and occluder. It now pools free points from all external contours, preserving
+  per-component tangent/junction calculations and the relative 15° test. Hole
+  contours are excluded by winding. Bézier bridging stays restricted to one
+  contour; separate contours are never joined by an invented tangent segment.
+- `order.merge_fragments` proposes same-colour flat siblings as one object only
+  when the union passes primitive fitting, visible containment and hidden-area
+  support. `Segmentation.rebuilt` centralizes ID/ownership rebuilding and clears
+  stale tree/completion fields. Pipeline recomputes order after each accepted merge.
+- **`edge_crossing_type` now passes its unchanged independent target:** 7 → **5
+  objects**, 55 → **36 anchors**, 2 → **3 live primitives**, one complete cyan disc
+  behind all three letters. SSIM **0.9914 → 0.9931** on white and dark backgrounds.
+  The badge also improves **0.9922 → 0.9924** by fitting both visible arcs.
+- Six new regression cases cover a disc visible in four arcs, disconnected
+  occluder pieces, full paint order after merging, unsupported gaps, a visible
+  outlier and the completion switch. Full suite **133 passed, 6 xfailed**
+  (baseline **126/7**). No target SVGs or goldens changed.
+- Ran both original/challenge benchmarks. Rendered the lettering output and its
+  isolated underlying geometry, plus all eight original samples. Only the
+  lettering and gradient-badge PLATE SVGs change; every other output, including
+  VTracer, is byte-identical. Review sheets: `plate-fragment-completion.png` and
+  `plate-fragment-original-samples.png` in this chat's visualization folder.
+  SVGs: `/tmp/plate-fragments-{samples,challenges}`.
+- Mission-patch diagnosis: several omitted outer bands are actual gradient pixels
+  despite sharing palette colours with craters. The third crater at (515,470) is
+  already absorbed into a detected gradient. Simple colour-based growth would
+  lose object boundaries; band recovery must preserve flat crater silhouettes.
+  Pooling only the two detected gradient fragments still fails safely. Patch
+  remains **72 objects / 2 radial fragments / SSIM 0.9815**; full target is open.
+- Additional conservative limitation: a thin flat bar split by a perpendicular
+  cover can be rejected because primitive rasterization adds perimeter pixels
+  outside the cover. Track pixel-boundary evaluation in `ROADMAP.md`; hidden-area
+  and containment thresholds were not relaxed to force a merge.
 
 ## Shared gradients across supported occlusion (session 10)
 
@@ -74,7 +147,7 @@ earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed
   fragments). Joint free-boundary completion and the hull's linear gradient remain
   open. A 200px badge working-size probe produces 10 flat objects / 0 gradients
   before reconciliation; track this under resolution consistency rather than claim
-  gradient recovery at every scale. Other seven structural gaps remain as above.
+  gradient recovery at every scale. These were the seven structural gaps at that session.
 
 ## Continuous curves and editable strokes (session 9)
 
