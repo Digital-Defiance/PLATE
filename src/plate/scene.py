@@ -34,6 +34,7 @@ class Shape:
     label: str = ""              # semantic hint from VLM/SAM
     is_background: bool = False
     grad: GradientFill | None = None  # smooth-ramp fill (linear/radial), None = flat
+    verified_prim: Prim | None = None  # source-validated gradient completion, retained on reindex
 
 
 @dataclass

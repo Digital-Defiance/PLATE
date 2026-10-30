@@ -8,7 +8,7 @@ output, authored independently of PLATE. It is never refreshed from pipeline out
 This complements the existing controls, some of which deliberately pin current
 behaviour. Here the target remains the goal even when PLATE currently fails it.
 
-| Scene / input | Desired SVG | Verified result (2026-10-29) | White-background SSIM |
+| Scene / input | Desired SVG | Verified result (2026-10-30) | White-background SSIM |
 | --- | --- | --- | --- |
 | [Nested dial](../samples/challenges/nested_dial.png) | [Target](../samples/challenges/nested_dial.target.svg): background + seven full circles; nested housing, bezel, face, hub and three repeated markers | Pass; 8 objects | 0.9916 |
 | [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Pass: one plate component, three holes, separate island; 2 objects | 0.9943 |
@@ -40,7 +40,7 @@ holes rather than a background colour painted over the artwork.
 | Logo | PNG / desired SVG | Target → actual objects | Target → actual strokes | SSIM white / dark |
 | --- | --- | --- | --- | --- |
 | EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 2 | 0.9663 / 0.9683 |
-| ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 60 | 7 → 3 | 0.9812 / 0.9882 |
+| ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 45 | 7 → 5 | 0.9843 / 0.9922 |
 | ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 51 | 32 → 3 | 0.9830 / 0.9867 |
 
 EMBER exercises a faceted animal silhouette, four transparent shield cutouts,
@@ -53,12 +53,16 @@ and closed circular strokes. All three retain strict structural gaps; appearance
 floors remain active at 0.96 for EMBER and 0.97 for ORBIT/ROOT on both backgrounds.
 ROOT's outer seal now independently matches its target as an editable 18px circle
 stroke; total anchors are now 522 after alpha-contour repair (previously 610).
-ORBIT's three motion curves also match their independent stroke targets, while
-its square-ended descriptor U remains filled. ROOT's interrupted inner ring and
-merged tree networks remain unresolved, as do ORBIT's interrupted orbital loops.
-ORBIT's front loop now preserves one hole despite the opaque artwork inside it;
-its isolated geometry IoU improves from .1503 to .8630. It remains a compound path,
-with gradient-crossing edge errors preventing editable ellipse recovery.
+ORBIT's three motion curves and both orbital ellipses match their independent
+stroke targets, including the orbital paint order; the square-ended descriptor U
+remains filled. The back orbit pools four visible fragments into one ellipse,
+reducing total anchors from 539 to 500. Source-validated radial-band recovery then
+restores one full gradient circle, reducing 57 objects/500 anchors to **45/357**.
+The core and both orbits pass together, including paint order. Compound navy badge/
+monogram regions and small ambiguous patches still fragment; the two cream
+highlights remain filled paths. ROOT's inner
+ring and merged tree networks remain unresolved. All three full logo targets
+remain strict expected failures.
 
 `tests/test_logo_assets.py` protects the inventories, transparent negative spaces
 and exact supersampled SVG/PNG pairing. Regenerate only from the authored targets

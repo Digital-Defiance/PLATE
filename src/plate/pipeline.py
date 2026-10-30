@@ -11,6 +11,7 @@ from .config import Config
 from .bezier import is_flat
 from .geometry import GradientFill, GradientStop, Prim
 from .imageio import load_image
+from .masks import Mask
 from .scene import Loaded, Node, Segmentation, Shape
 from .stages import emit, name, order
 from .stages.primitives import snap, snap_ring
@@ -43,6 +44,20 @@ def _convert_grad(grad: GradientFill, P, S) -> GradientFill:
         radius=None if grad.radius is None else S(grad.radius),
         focal=pt(grad.focal),
     )
+
+
+def _closed_node(node, shape, stroke, scale):
+    from .stages.primitives import normalize
+    pr = normalize(stroke.prim)
+    node.kind, node.evenodd, node.d = pr.kind, False, ""
+    node.params = dict(cx=(pr.cx+.5)/scale, cy=(pr.cy+.5)/scale)
+    if pr.kind == "circle":
+        node.params["r"] = pr.rx/scale
+    else:
+        node.params.update(rx=pr.rx/scale, ry=pr.ry/scale, angle=pr.angle)
+    node.stroke_width, node.anchors = stroke.width/scale, 4
+    shape.full = shape.draw = stroke.full
+    shape.completed |= stroke.completed
 
 
 def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
@@ -153,6 +168,42 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
             break
         seg = merged
         roots = order.build(seg, transparent, cfg)
+    loop_fits = {}
+    if cfg.strokes and cfg.complete_hidden:
+        from .stages.loops import recover
+        while (loop := recover(seg, roots, img, cfg)) is not None:
+            ids = set(loop.ids)
+            visible = np.isin(seg.rid, loop.ids)
+            vis = Mask.from_full(visible)
+            first = seg.shapes[loop.ids[0]]
+            joint = Shape(first.id, first.color, vis, vis)
+            seg = seg.rebuilt([joint if s.id == first.id else s for s in seg.shapes
+                               if s.id == first.id or s.id not in ids])
+            roots = order.build(seg, transparent, cfg)
+            loop_fits[vis] = loop.stroke
+        # Every foreign observed region under a restored loop must paint above
+        # it. Lift descendants to sibling constraints, preserving other order.
+        edges = {}
+        for s in seg.shapes:
+            if s.vis not in loop_fits:
+                continue
+            stroke = loop_fits[s.vis]
+            s.full = s.draw = stroke.full
+            s.completed = True
+            owners = set(np.unique(seg.rid[stroke.full.to_full((H, W))])) - {-1, s.id}
+            for other in owners:
+                above = seg.shapes[other]
+                while above.parent != s.parent and above.parent is not None:
+                    above = seg.shapes[above.parent]
+                if above.parent == s.parent and above.id != s.id:
+                    edges.setdefault(s.parent, set()).add((s.id, above.id))
+        for parent, constraints in edges.items():
+            ids = roots if parent is None else seg.shapes[parent].children
+            ordered = order._toposort(ids, constraints, seg.shapes, stable=True)
+            if parent is None:
+                roots = ordered
+            else:
+                seg.shapes[parent].children = ordered
     t2 = time.time()
     shapes = seg.shapes
 
@@ -166,6 +217,8 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     for s in shapes:
         node = _leaf(s, (H, W), cfg, img.scale)
         if node is not None:
+            if s.vis in loop_fits:
+                _closed_node(node, s, loop_fits[s.vis], img.scale)
             leaves[s.id] = node
     if cfg.strokes:
         from .stages.strokes import fit_closed, fit_straight, fit_stroke
@@ -187,22 +240,12 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                 Prim("circle", p["cx"]*img.scale-.5, p["cy"]*img.scale-.5,
                                      p["r"]*img.scale, p["r"]*img.scale)))
         for sid, node in leaves.items():
-            if node.grad is not None or shapes[sid].is_background:
+            if node.grad is not None or shapes[sid].is_background or node.stroke_width is not None:
                 continue
             closed = fit_closed(shapes[sid].full, cfg, img, shapes[sid].color,
                                 [shapes[other].vis for other in leaves if rank[other] > rank[sid]])
             if closed is not None:
-                from .stages.primitives import normalize
-                pr = normalize(closed.prim)
-                node.kind, node.evenodd, node.d = pr.kind, False, ""
-                node.params = dict(cx=(pr.cx+.5)/img.scale, cy=(pr.cy+.5)/img.scale)
-                if pr.kind == "circle":
-                    node.params["r"] = pr.rx/img.scale
-                else:
-                    node.params.update(rx=pr.rx/img.scale, ry=pr.ry/img.scale, angle=pr.angle)
-                node.stroke_width, node.anchors = closed.width/img.scale, 4
-                shapes[sid].full = shapes[sid].draw = closed.full
-                shapes[sid].completed |= closed.completed
+                _closed_node(node, shapes[sid], closed, img.scale)
                 continue
             if node.kind == "circle" or node.evenodd:
                 continue

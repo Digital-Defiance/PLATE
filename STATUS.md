@@ -1,6 +1,84 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 19, stroked loops across crossings) · Version 0.0.1 · Tests: 216 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 21, radial-gradient band recovery) · Version 0.0.1 · Tests: 237 passing, 6 expected feature gaps (`pytest -q`)
+
+## Radial-gradient band recovery (session 21, uncommitted)
+
+- **HEAD remains `72702cd`**. Sessions 20 and 21 are verified and uncommitted;
+  no commit/push requested or made this session.
+- Extend an existing radial-gradient seed to disconnected source bands only when
+  an affine RGB/radius model explains each band's spatial colour variation better
+  than a flat fill. Eroded source samples reject constant foreground details and
+  noisy matching-colour craters. Require a shared circular free boundary (RMS
+  ≤0.5px, ≥270° coverage), local relative T-junction evidence, and observed foreign
+  paint over the inferred hidden interior. Unsupported gaps and incompatible ramps
+  remain separate. Both gradient/completion disable switches are respected.
+- `Shape.verified_prim` preserves the source-validated full circle through ownership
+  reindexing and ordering. Observed gradient openings in a foreground ring remain
+  holes when the gradient is the same ancestor on both sides; a distinct child
+  repaint still permits the underlying full disc. Clear stale filled primitives
+  when reopening those holes. Native circle/gradient and both orbital ellipse
+  targets pass together, including topology and relative paint order.
+- **ORBIT: 57→45 objects, 500→357 anchors**, retaining all five editable strokes
+  and one gradient. White/dark SSIM **.9816/.9889→.9843/.9922**. SVG bytes
+  **24,755→17,388**. The gradient is now one complete editable radial circle;
+  tiny ambiguous patches remain separate. Full target stays a strict xfail (34/7).
+- Nine new regressions: clean/noisy flat craters, incompatible ramps, uncovered
+  gaps, both disable switches, actual ORBIT gradient/orbits, and ancestor-vs-child
+  hole ownership. Baseline **228 passed/6 xfailed**; final **237 passed/6 xfailed**.
+  All eight original PLATE sample SVGs and fourteen other challenge PLATE SVGs are
+  byte-identical to the session-20 baseline. Targets/goldens/VTracer code unchanged.
+- Both benches rendered and inspected: `/tmp/plate-core-{samples,challenges}`;
+  baseline `/tmp/plate-core-before-{samples,challenges}`; metrics
+  `/tmp/plate-core-metrics.json`; final test log `/tmp/plate-core-final-tests.txt`.
+  Review sheets in this chat's visualization folder: `plate-gradient-core.png`
+  and `plate-core-original-samples.png`. `_grow_radial_bands` is deliberately
+  limited to an existing affine radial seed and circular silhouette; nonlinear,
+  clamped and general elliptical ramps remain work.
+- Next: compound navy badge/monogram recovery (eight and three substantial visible
+  regions respectively), two cream highlight strokes, and small ambiguous patches.
+  The wordmark itself did not show substantial splitting. ROOT's inner ring still
+  shares colour with leaves and needs decomposition; mission-patch bands/craters
+  and linear hull remain unresolved.
+
+## Interrupted ellipse recovery (session 20, uncommitted)
+
+- **HEAD remains `72702cd`**; new source, tests and docs are uncommitted. On takeover
+  the front orbit was already a stroked ellipse, so work proceeded to the mint back
+  orbit. No commit/push requested or made this session.
+- Added `stages/loops.py`: pool two long, curved, same-colour sibling leaf arcs
+  with matching widths. Require relative T-junction evidence at both terminals
+  of each arc, a shared ellipse fit to separate free contours, and actual foreign
+  artwork covering the inferred hidden sections. Reattach small matching fragments
+  only after the large arcs establish geometry. Preserve disjoint visible ownership
+  when rebuilding segmentation; apply stable paint constraints for the recovered loop.
+- Source coverage/alpha validates the exposed core, including collinear Lanczos
+  overshoot on already-owned pixels. This rejects 1/3/6px openings that could fit
+  within binary edge tolerance. Background-matching gaps, incompatible centres and
+  widths are rejected. `strokes=false` and `complete_hidden=false` disable pooling.
+- **ORBIT back orbit now independently matches its authored stroked ellipse.**
+  Four visible mint fragments become one object. Both back/front ellipses pass
+  full silhouette, width, topology and relative paint-order checks. Total:
+  **60→57 objects, 4→5 editable strokes, 539→500 anchors**; white/dark SSIM
+  **.9812/.9882→.9816/.9889**. Full ORBIT target remains a strict expected failure
+  (target 34 objects/7 strokes). ROOT remains 51 objects/3 strokes.
+- Twelve new regressions cover rotation, 2× source scaling with downsampling,
+  reindexed ownership, disable switches, narrow transparent gaps, background gaps,
+  incompatible arcs, and both ORBIT loop contracts. **228 passed, 6 xfailed**
+  (baseline **216/6**). All eight original PLATE sample SVGs and fourteen other
+  challenge PLATE SVGs are byte-identical. Targets/goldens/VTracer code unchanged.
+- Both benches rendered and inspected: `/tmp/plate-pooled-final-{samples,challenges}`;
+  comparison baseline `/tmp/plate-pooled-before-{samples,challenges}`;
+  metrics `/tmp/plate-pooled-final-metrics.json`. Review sheets
+  `plate-pooled-orbit.png`, `plate-pooled-original-samples.png` in this chat's
+  visualization folder. The baseline was generated with only the new recovery
+  stage disabled, preserving the session-19 front-orbit fitter.
+- Next: ORBIT's gradient core and compound navy shapes are the main remaining
+  fragmentation. A source-visible ownership probe found at least 12 substantial
+  regions in the gradient core, eight in the badge ring and three in the monogram.
+  The wordmark did not show substantial splitting in that probe. Its two cream
+  highlights also remain filled paths. ROOT's inner ring touches same-colour leaves
+  and needs decomposition; this conservative sibling-leaf merge cannot split it.
 
 ## Stroked loops crossing other artwork (session 19)
 
@@ -277,9 +355,9 @@ sections below retain their earlier measurements.
 
 Implementation order (details and acceptance checks in `ROADMAP.md`):
 
-1. Extend thin closed-circle/ellipse recovery to interrupted loops (ROOT inner ring, ORBIT), branched networks, multiple/non-circular occluders and other cap/join styles. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
+1. Recover ORBIT's two cream highlight strokes and ROOT's inner ring joined to leaves; extend to non-sibling/non-leaf fragments, branched networks and other cap/join styles. Both ORBIT orbital ellipses now pass. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
-3. Extend shared gradients to fragments without independently completed primitives; the mission patch remains split. Retain separate ramps/flat swatches.
+3. Extend the affine radial-band recovery beyond supported circular silhouettes to clamped/nonlinear ramps and the mission patch. Preserve hard-edged craters, separate ramps and flat swatches.
 4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons. Chained-circle drift is fixed.
 5. Extend hole/component preservation to overlapping rings and soft alpha; refine corners, primitive selection and complex object recovery. The perforated-plate target passes.
 6. Improve per-object failure diagnostics so partial progress is visible despite count mismatches.
@@ -290,7 +368,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
-| `logo_orbit_wordmark` | 60 objects vs target 34; front orbit now an editable stroked ellipse (4 strokes), but the mint back orbit fragments into arcs (needs interrupted-arc completion) and the wordmark/emblem fragment |
+| `logo_orbit_wordmark` | 45 objects vs target 34; full radial core and both orbital ellipses recovered, 5/7 strokes; compound badge/monogram, ambiguous patches and cream highlights remain |
 | `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image

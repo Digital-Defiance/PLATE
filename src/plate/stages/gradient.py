@@ -233,7 +233,7 @@ def merge_occluded(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
     """
     from .complete import try_complete
 
-    if not cfg.complete_hidden:
+    if not cfg.complete_hidden or not cfg.gradients:
         return seg
     H, W = seg.rid.shape
     candidates = [s for s in seg.shapes if s.grad is not None and s.completed and s.prim is not None]
@@ -288,6 +288,116 @@ def merge_occluded(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
             # order.build must derive them afresh from the new visible ownership.
             shapes = [joint if s.id == a.id else s for s in seg.shapes if s.id != b.id]
             return seg.rebuilt(shapes)
+    return _grow_radial_bands(seg, img, cfg)
+
+
+def _grow_radial_bands(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
+    """Recover disconnected bands of an affine radial ramp around an existing seed.
+
+    Colour agreement alone cannot merge objects: a common circular silhouette,
+    observed occlusion and coverage of every inferred interior pixel must agree.
+    Constant-colour foreground details never supply gradient-band evidence.
+    """
+    from scipy import ndimage as ndi
+    from ..geometry import GradientStop, GradientFill, contours_xy, fit_circle
+    from .complete import occludes
+
+    H, W = seg.rid.shape
+    limit = min(5., cfg.grad_max_residual*255)
+    samples = {}
+    excluded = {s.id for s in seg.shapes if s.parent is None and s.sil.area >= .6*H*W}
+    for s in seg.shapes:
+        if s.id in excluded:
+            continue
+        interior = ndi.binary_erosion(np.pad(s.vis.a, 1), iterations=2)[1:-1, 1:-1]
+        y, x = np.nonzero(interior)
+        if len(y) < 12:
+            continue
+        take = np.linspace(0, len(y)-1, min(2048, len(y))).astype(int)
+        p = np.c_[x[take]+s.vis.x0, y[take]+s.vis.y0]
+        c = img.rgb[p[:, 1], p[:, 0]].astype(float)
+        _, counts = np.unique(c, axis=0, return_counts=True)
+        if counts.max() >= .3*len(c) or np.sqrt(np.mean((c-c.mean(axis=0))**2)) < .7:
+            continue
+        samples[s.id] = p, c
+
+    def affine(points, colors):
+        fitted, _ = fit_radial_gradient(points, colors)
+        if fitted.center is None:
+            return None
+        radius = np.linalg.norm(points-fitted.center, axis=1)
+        if np.ptp(radius) < 8:
+            return None
+        design = np.c_[np.ones(len(radius)), radius]
+        coef = np.linalg.lstsq(design, colors, rcond=None)[0]
+        if np.sqrt(np.mean((design @ coef-colors)**2)) > limit:
+            return None
+        return np.asarray(fitted.center), coef
+
+    for seed in seg.shapes:
+        if seed.grad is None or seed.grad.kind != 'radial' or seed.id not in samples:
+            continue
+        model = affine(*samples[seed.id])
+        if model is None:
+            continue
+        center, coef = model
+        ids = {seed.id}
+        for s in seg.shapes:
+            if s.grad is not None or s.id not in samples:
+                continue
+            p, c = samples[s.id]
+            predicted = np.c_[np.ones(len(p)), np.linalg.norm(p-center, axis=1)] @ coef
+            # The radial field must explain spatial colour variation better
+            # than a flat fill. Small noise in a matching foreground crater
+            # must not turn it into a gradient band merely because RGB is close.
+            variation = np.sqrt(np.mean((c-c.mean(axis=0))**2))
+            if np.sqrt(np.mean((predicted-c)**2)) <= min(limit, .8*variation):
+                ids.add(s.id)
+        if len(ids) < 3:
+            continue
+        p = np.vstack([samples[sid][0] for sid in sorted(ids)])
+        c = np.vstack([samples[sid][1] for sid in sorted(ids)])
+        shared = affine(p, c)
+        if shared is None:
+            continue
+        center, coef = shared
+        if any(np.sqrt(np.mean((np.c_[np.ones(len(pp)), np.linalg.norm(pp-center, axis=1)] @ coef-cc)**2))
+               > min(limit, .8*np.sqrt(np.mean((cc-cc.mean(axis=0))**2)))
+               for pp, cc in (samples[sid] for sid in ids)):
+            continue
+        observed = np.isin(seg.rid, list(ids))
+        foreign = (seg.rid >= 0) & ~np.isin(seg.rid, list(ids | excluded))
+        near = ndi.binary_dilation(foreign, iterations=2)
+        free = []
+        for contour in contours_xy(observed):
+            xy = np.rint(contour).astype(int)
+            free.append(contour[~near[xy[:, 1], xy[:, 0]]])
+        boundary = np.vstack(free)
+        if len(boundary) < 40:
+            continue
+        primitive, residual, coverage = fit_circle(boundary)
+        if residual > .5 or coverage < 1.5*np.pi or primitive.rx >= 2*max(H, W):
+            continue
+        silhouette = raster_prim(primitive, (H, W))
+        extra = silhouette & ~observed
+        if (np.count_nonzero(observed & ~silhouette) > .01*observed.sum()
+                or np.count_nonzero(extra & foreign) < .95*max(1, extra.sum())
+                or np.any(extra & ~foreign & ndi.binary_erosion(silhouette, iterations=2))):
+            continue
+        vis = Mask.from_full(observed)
+        if not any(s.id not in ids | excluded and touches(vis, s.vis, (H, W), 2)
+                   and occludes(vis, s.vis, (H, W)) for s in seg.shapes):
+            continue
+        radius = float(np.linalg.norm(np.array([primitive.cx, primitive.cy])-center)+primitive.rx+1)
+        endpoints = np.array([coef[0], coef[0]+radius*coef[1]])
+        if endpoints.min() < 0 or endpoints.max() > 255:
+            continue
+        grad = GradientFill('radial', [GradientStop(0., tuple(np.round(endpoints[0]).astype(int))),
+                                      GradientStop(1., tuple(np.round(endpoints[1]).astype(int)))],
+                            center=tuple(center), radius=radius)
+        joint = Shape(seed.id, _stopcurve_color(grad, .5), vis, vis, grad=grad, verified_prim=primitive)
+        shapes = [joint if s.id == seed.id else s for s in seg.shapes if s.id == seed.id or s.id not in ids]
+        return seg.rebuilt(shapes)
     return seg
 
 

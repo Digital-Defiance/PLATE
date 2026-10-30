@@ -48,6 +48,10 @@ def _silhouettes(shapes: list[Shape], transparent: np.ndarray) -> None:
                     a = a & ~comp
         s.sil = Mask(a, y0, x0)
         s.full = Mask(a.copy(), y0, x0)
+        if s.verified_prim is not None:
+            model = raster_prim(s.verified_prim, transparent.shape) | s.vis.to_full(transparent.shape)
+            s.sil = s.full = Mask.from_full(model)
+            s.prim, s.completed = s.verified_prim, True
 
 
 def _assign_parents(shapes: list[Shape]) -> None:
@@ -197,6 +201,29 @@ def build(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> list[int]:
     H, W = transparent.shape
     _silhouettes(shapes, transparent)
     _assign_parents(shapes)
+    # A unified gradient can be visible on both sides of a foreground ring.
+    # Its centre is ancestor paint, not a separate child that will repaint a
+    # hole-filled foreground disc. Preserve those observed gradient openings.
+    reopened = False
+    for s in shapes:
+        if s.parent is None or shapes[s.parent].grad is None or s.verified_prim is not None:
+            continue
+        parent = crop_like(shapes[s.parent].vis, s.vis)
+        holes, count = ndi.label(s.vis.filled().a & ~s.vis.a)
+        keep = s.full.a.copy()
+        opened = False
+        for k in range(1, count+1):
+            hole = holes == k
+            if ndi.binary_erosion(hole & parent, iterations=2).any():
+                ref = Mask(hole, s.vis.y0, s.vis.x0)
+                keep &= ~crop_like(ref, s.full)
+                reopened = True
+                opened = True
+        s.full = s.sil = Mask(keep, s.full.y0, s.full.x0)
+        if opened:
+            s.prim, s.completed = None, False
+    if reopened:
+        _assign_parents(shapes)
     roots: list[int] = []
 
     groups: dict[int | None, list[int]] = {}
@@ -209,6 +236,11 @@ def build(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> list[int]:
             for rid in sorted(sib, key=lambda i: shapes[i].sil.area):
                 R = shapes[rid]
                 C = [shapes[o] for o in sib if o != rid and touches(R.sil, shapes[o].sil, (H, W), 2)]
+                if R.verified_prim is not None:
+                    for c in C:
+                        if inter_area(R.full, c.vis) >= 6:
+                            edges.add((rid, c.id))
+                    continue
                 if not C:
                     continue
                 comp = try_complete(R, C, H, W, cfg)
