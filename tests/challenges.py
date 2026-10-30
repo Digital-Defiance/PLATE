@@ -33,8 +33,7 @@ CHALLENGES = {
         gap="Chained completion drifts from the authored full-circle silhouettes."),
     "twin_gradients": Challenge("Two independent opposite ramps, each behind a solid dot."),
     "gradient_badge": Challenge(
-        "One full radial disc underneath an edge-crossing ribbon.",
-        gap="The ribbon splits the radial disc into two gradient objects."),
+        "One full radial disc underneath an edge-crossing ribbon."),
     "edge_crossing_type": Challenge(
         "Recover the full disc behind three outlined block letters.",
         gap="Edge-crossing letters fragment the underlying disc (7 objects vs 5)."),
@@ -51,7 +50,7 @@ CHALLENGES = {
         ssim_floor=0.96),
     "complex_instrument_panel": Challenge(
         "59 objects: three nested gauges, 27 strokes, title and connected status lights.",
-        gap="Panel ticks survive, but strokes remain filled silhouettes and routes are fragmented.",
+        gap="Panel routes are continuous strokes; target still requires 27 strokes and 59 objects.",
         ssim_floor=0.97),
     "complex_event_poster": Challenge(
         "44 objects: gradient disc behind type, ring, ribbon, strokes and repeated dots.",

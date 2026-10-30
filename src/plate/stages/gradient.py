@@ -1,20 +1,25 @@
 """Gradient detection: merge thin flat bands that form one smooth ramp.
 
-Runs BETWEEN segment() and order.build(). segment() posterizes a smooth colour ramp
+detect() runs between segment() and order.build(). segment() posterizes a smooth colour ramp
 (a shaded sphere, a gradient background) into many thin flat bands, one Shape per
 palette step. This stage finds maximal sets of adjacent thin bands that together are
 one smooth linear/radial ramp, replaces each confident set with a single Shape, and
 attaches a GradientFill descriptor. Conservative: when unsure, leave bands as-is.
+
+After ordering, merge_occluded() can reconcile fragments whose independently
+completed primitives agree, then refit their original pixels as one gradient.
 
 The returned Segmentation has a re-indexed (id == index) shapes list and a rebuilt rid
 map; palette rides through unchanged.
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 
 from ..config import Config
-from ..geometry import fit_linear_gradient, fit_radial_gradient
+from ..geometry import fit_linear_gradient, fit_radial_gradient, raster_prim
 from ..masks import Mask, touches
 from ..scene import Loaded, Segmentation, Shape
 from . import segment as _segment
@@ -197,6 +202,99 @@ def _stopcurve_color(grad, t: float) -> tuple[int, int, int]:
     return tuple(int(round(v)) for v in rgb)
 
 
+def _reindex(shapes: list[Shape], seg: Segmentation) -> Segmentation:
+    """Rebuild disjoint visible ownership after merging objects."""
+    new_rid = np.full(seg.rid.shape, -1, np.int32)
+    for i, s in enumerate(shapes):
+        s.id = i
+        full = s.vis.to_full(seg.rid.shape)
+        assert np.all(new_rid[full] == -1), "gradient: overlapping survivor regions"
+        new_rid[full] = i
+    return Segmentation(rid=new_rid, shapes=shapes, palette=seg.palette)
+
+
+def _predict(grad, points: np.ndarray) -> np.ndarray:
+    """Evaluate a working-coordinate gradient, including its endpoint clamping."""
+    if grad.kind == "linear":
+        axis = np.subtract(grad.end, grad.start)
+        u = (points - grad.start) @ axis / max(float(axis @ axis), 1e-12)
+    else:
+        u = np.linalg.norm(points - grad.center, axis=1) / max(grad.radius, 1e-12)
+    offsets = [stop.offset for stop in grad.stops]
+    colors = np.array([stop.rgb for stop in grad.stops])
+    return np.column_stack([np.interp(u, offsets, colors[:, c]) for c in range(3)])
+
+
+def merge_occluded(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
+    """Join one pair only when occlusion, full geometry and a shared ramp agree.
+
+    Run after ordering/completion. Two fragments independently completed to the
+    same primitive are evidence for one hidden object. A fresh completion of their
+    union must still pass the relative T-junction and hidden-area tests; a colour
+    fit cannot invent a bridge. Rebuild order after a merge before trying another.
+    """
+    from .complete import try_complete
+
+    if not cfg.complete_hidden:
+        return seg
+    H, W = seg.rid.shape
+    candidates = [s for s in seg.shapes if s.grad is not None and s.completed and s.prim is not None]
+    models = {s.id: raster_prim(s.prim, (H, W)) for s in candidates}
+
+    def agrees(a, b):
+        return (a & b).sum() >= .97 * (a | b).sum()
+
+    for i, a in enumerate(candidates):
+        for b in candidates[i + 1:]:
+            if a.parent != b.parent or a.prim.kind != b.prim.kind or a.grad.kind != b.grad.kind:
+                continue
+            if not agrees(models[a.id], models[b.id]):
+                continue
+            vis = Mask.from_full(a.vis.to_full((H, W)) | b.vis.to_full((H, W)))
+            sil = vis.filled()
+            sil = Mask(sil.a & (seg.rid[sil.y0:sil.bbox[2], sil.x0:sil.bbox[3]] >= 0), sil.y0, sil.x0)
+            joint = Shape(a.id, a.color, vis, sil, sil=sil)
+            covers = [s for s in seg.shapes if s.id not in (a.id, b.id) and s.parent == a.parent
+                      and touches(sil, s.sil, (H, W), 2)]
+            completion = try_complete(joint, covers, H, W, cfg)
+            if completion is None or completion.prim is None:
+                continue
+            model = raster_prim(completion.prim, (H, W))
+            if not all(agrees(model, models[s.id]) for s in (a, b)):
+                continue
+
+            # Check each fragment as well as the pooled fit so a small inconsistent
+            # one cannot disappear into the residual of its larger neighbour.
+            samples = []
+            for s in (a, b):
+                ys, xs = np.nonzero(s.vis.to_full((H, W)))
+                idx = np.random.default_rng(0).choice(len(xs), min(len(xs), GRAD_FIT_SAMPLES // 2), replace=False)
+                samples.append((np.c_[xs[idx], ys[idx]], img.rgb[ys[idx], xs[idx]].astype(float)))
+            points = np.vstack([p for p, _ in samples])
+            colors = np.vstack([c for _, c in samples])
+            fitter = fit_linear_gradient if a.grad.kind == "linear" else fit_radial_gradient
+            grad, residual = fitter(points, colors)
+            if residual > cfg.grad_max_residual:
+                continue
+            valid = True
+            for s, (p, c) in zip((a, b), samples):
+                separate = float(np.sqrt(np.mean((_predict(s.grad, p) - c) ** 2)) / 255)
+                shared = float(np.sqrt(np.mean((_predict(grad, p) - c) ** 2)) / 255)
+                if shared > min(cfg.grad_max_residual, separate + .01):
+                    valid = False
+            if not valid:
+                continue
+            joint.color = _stopcurve_color(grad, .5)
+            joint.grad = grad
+            # All tree/completion fields belong to the old segmentation. The next
+            # order.build must derive them afresh from the new visible ownership.
+            shapes = [joint if s.id == a.id else s for s in seg.shapes if s.id != b.id]
+            fresh = [replace(s, full=s.vis, sil=None, parent=None, children=[], prim=None,
+                             completed=False, draw=None, bleed=0., is_background=False) for s in shapes]
+            return _reindex(fresh, seg)
+    return seg
+
+
 def detect(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
     """Merge groups of thin flat bands that form one smooth ramp into a single Shape
     carrying a GradientFill. Returns a NEW Segmentation with a re-indexed shapes list
@@ -218,14 +316,4 @@ def detect(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
         if s.id not in claimed:
             survivors.append(s)
 
-    new_rid = np.full((H, W), -1, np.int32)
-    new_shapes: list[Shape] = []
-    for i, s in enumerate(survivors):
-        s.id = i                                # strict id == index invariant
-        full = s.vis.to_full((H, W))
-        ys, xs = np.nonzero(full)
-        # regions are disjoint: no pixel is ever assigned to two different survivor ids
-        assert np.all(new_rid[ys, xs] == -1), "gradient.detect: overlapping survivor regions"
-        new_rid[ys, xs] = i
-        new_shapes.append(s)
-    return Segmentation(rid=new_rid, shapes=new_shapes, palette=seg.palette)
+    return _reindex(survivors, seg)

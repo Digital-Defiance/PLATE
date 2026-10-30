@@ -1,13 +1,14 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 9, continuous curves and editable strokes) · Version 0.0.1 · Tests: 114 passing, 8 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 10, shared gradients across supported occlusion) · Version 0.0.1 · Tests: 126 passing, 7 expected feature gaps (`pytest -q`)
 
 ## Current remaining work — start here
 
 Geometry safety, thin-detail recovery and initial open-stroke support are complete.
 All 18 ticks survive; both panel routes are continuous editable strokes. The
-independent `stroked_route` target passes. The eight strict expected failures below
-remain open; they are desired structural targets, not nine crashing pipeline tests.
+independent `stroked_route` and `gradient_badge` targets pass. The badge now has
+one full radial disc behind its ribbon. The seven strict expected failures below
+remain open; they are desired structural targets, not pipeline crashes.
 Appearance/integrity checks remain active. Current scene SSIM: mission patch
 **0.9815**, storefront **0.9738**, instrument panel **0.9854**, poster **0.9715**.
 All four clear 0.95 on white and dark backgrounds. Current regression floors:
@@ -18,7 +19,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 
 1. Extend stroke coverage beyond open curves: straight primitives/ticks, closed loops, branched networks and automatic cap/join inference. The panel currently has 2 of its 27 desired strokes.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
-3. Fit shared gradients across supported occluders; retain separate ramps/flat swatches.
+3. Extend shared gradients to fragments without independently completed primitives; the mission patch remains split. Retain separate ramps/flat swatches.
 4. Complete shapes behind edge-crossing letters/ribbons and reduce chained-circle drift.
 5. Preserve holes/components, then refine corners, primitive selection and complex object recovery.
 6. Improve per-object failure diagnostics so partial progress is visible despite count mismatches.
@@ -27,7 +28,6 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | --- | --- |
 | `perforated_plate` | Blue path has 2 connected components; require 1, with all 3 holes and the separate gold island preserved |
 | `occlusion_chain` | Back circle drifts ≈3.5px, full-silhouette IoU ≈0.946; recover all authored circles accurately |
-| `gradient_badge` | 6 objects / 2 gradient discs; require 5 objects / 1 full radial disc under the ribbon |
 | `edge_crossing_type` | 7 objects; require 5, including a full disc behind the three outlined letters |
 | `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
 | `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
@@ -43,6 +43,38 @@ tracked in `ROADMAP.md`.
 Session 7 (historical) changed documentation only: reconciled completed work, added the full
 remaining queue, corrected stale gradient/VLM/text-fixture/Git notes, and retained
 earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed**.
+
+## Shared gradients across supported occlusion (session 10)
+
+- Committed the previously verified thin-detail/curve/stroke work as `03a133f`
+  (`feat: recover thin curves and editable SVG strokes`), as requested. No push.
+- Added a post-order reconciliation pass in `stages/gradient.py`. Gradient fragments
+  must independently complete to matching primitives (≥0.97 full-model IoU), then
+  their union must pass fresh relative T-junction, containment and hidden-area
+  checks. A pooled fit uses original RGB pixels; each fragment must retain its
+  colour fit within the configured residual and 0.01 of its independent fit.
+  Rebuild IDs, ownership and all order/completion fields after each accepted merge.
+- **`gradient_badge` now passes its independent target**, unchanged: 6 → **5 objects**,
+  2 → **1 radial gradient**, 24 → **20 anchors**. Recovered circle in source SVG
+  coordinates: centre ≈(200.23, 180.09), radius ≈134.73 versus (200, 180), 135.
+  White/dark SSIM **0.9922** (previous duplicate-disc output 0.9936); the structural
+  improvement has a small fidelity tradeoff. The full-silhouette/paint-order
+  contract passes at native size and with a 2× source reduced to 400 working pixels.
+- Eleven new regressions cover the target/source scaling, shared linear/radial
+  ramps, incompatible colours/geometries, unsupported gaps and completion disabled.
+  Promoted the badge from strict xfail; suite **126 passed, 7 xfailed** (baseline
+  **114/8**). No target SVGs or goldens changed.
+- Ran `plate bench samples` and `plate bench samples/challenges`; rendered and
+  inspected the badge and all original sample SVGs. Every other benchmark SVG,
+  including VTracer controls, is byte-identical to the previous verified run.
+  Review: `plate-shared-gradient.png` and `plate-gradient-original-samples.png`
+  in this chat's visualization folder; SVGs in `/tmp/plate-gradient-{samples,challenges}`.
+- Remaining: mission-patch planet fragments have no individually completed
+  primitives, so this merge correctly leaves them unchanged (72 objects, 2 radial
+  fragments). Joint free-boundary completion and the hull's linear gradient remain
+  open. A 200px badge working-size probe produces 10 flat objects / 0 gradients
+  before reconciliation; track this under resolution consistency rather than claim
+  gradient recovery at every scale. Other seven structural gaps remain as above.
 
 ## Continuous curves and editable strokes (session 9)
 

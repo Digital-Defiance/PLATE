@@ -144,6 +144,14 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     t1 = time.time()
     transparent = seg.rid == -1
     roots = order.build(seg, transparent, cfg)
+    if cfg.gradients:
+        from .stages.gradient import merge_occluded
+        while True:
+            merged = merge_occluded(seg, img, cfg)
+            if merged is seg:
+                break
+            seg = merged
+            roots = order.build(seg, transparent, cfg)
     t2 = time.time()
     shapes = seg.shapes
 

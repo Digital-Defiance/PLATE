@@ -14,14 +14,14 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Gap: plate path has a stray second component, despite correct holes and 2 objects | 0.9902 |
 | [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Gap: back circle centre drifts ≈3.5px; full silhouette IoU ≈0.946 | 0.9852 |
 | [Twin gradients](../samples/challenges/twin_gradients.png) | [Target](../samples/challenges/twin_gradients.target.svg): two separate rectangles with opposite linear gradients, two overlaid circles, background | Pass; 5 objects, 2 gradients | 0.9882 |
-| [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Gap: 6 objects / 2 gradient discs instead of 5 objects / 1 disc | 0.9936 |
+| [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Pass: 5 objects, 1 full radial disc, 20 anchors | 0.9922 |
 | [Edge-crossing type](../samples/challenges/edge_crossing_type.png) | [Target](../samples/challenges/edge_crossing_type.target.svg): full circle behind three outlined block letters, plus background | Gap: disc fragments; 7 objects instead of 5 | 0.9914 |
 | [Discrete palette](../samples/challenges/discrete_palette.png) | [Target](../samples/challenges/discrete_palette.target.svg): eight hard-edged, flat rectangles + background; zero gradients | Pass; 9 rectangles | 0.9963 |
 | [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Pass: one 15.5px open stroke (16±1px contract), full hidden endpoints, 4 objects | 0.9913 |
 
 All eight currently clear an SSIM floor of 0.95 on **both white and dark backgrounds**.
-That does not imply that the editable structure is correct: the badge's duplicate
-discs are a particularly clear example.
+That does not imply that the editable structure is correct: the edge-crossing type
+still splits its underlying disc despite SSIM 0.9914.
 
 ## Complex compositions
 
@@ -87,11 +87,12 @@ self-contained vector artwork, and all nine transparent cutouts.
    caps/joins after visible-mask validation. The route target now passes. Existing
    live primitives stay primitives; closed/branched strokes and automatic inference
    of other cap/join styles remain open. `--set strokes=false` disables detection.
-4. **Fit gradients jointly across occlusion.** Gradient candidates currently require
-   connected visible bands and are fitted before occlusion analysis. Test linking
-   compatible fragments separated by an established occluder, fitting one model,
-   then recovering one silhouette. Preserve independent opposite ramps and discrete
-   palette swatches as negative controls.
+4. **Fit gradients jointly across occlusion—implemented for matching completed primitives.**
+   After connected-band detection and ordering, compatible fragments may share a
+   refitted ramp when their completed geometry agrees and their union passes fresh
+   occlusion checks. The badge now passes. The mission patch still needs pooled
+   free-boundary completion before its planet fragments can merge. Independent
+   opposite ramps and discrete palette swatches remain unchanged negative controls.
 5. **Complete across multiple edge-crossing occluders.** Keep the relative T-junction
    test, but pool supported free-boundary fragments and score a shared primitive
    against all visible pixels and inferred occluders. Retain genuine holes; reject
@@ -101,9 +102,9 @@ self-contained vector artwork, and all nine transparent cutouts.
 Diagnostic sweeps before the geometry fix: patch `max_colors=16/32/64` all produce 55 objects, zero gradients,
 SSIM 0.9628. Panel `denoise=0` still produces 37 objects and SSIM 0.9665; disabling
 primitive snapping gives 37 objects and SSIM 0.9660. These are evidence against a
-simple palette-size or denoising preset fix. Detailed causal work remains; the
-gradient/occlusion changes above are proposed approaches rather than implemented
-solutions. These sweeps predate the segmentation fallback described above.
+simple palette-size or denoising preset fix. Joint completion for the complex scenes
+remains open; the conservative shared-gradient implementation fixes the small badge.
+These sweeps predate the segmentation fallback described above.
 
 ### Geometry validation results (2026-10-29)
 

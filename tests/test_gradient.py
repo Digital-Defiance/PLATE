@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import pytest
 
 from plate.config import Config
 from plate.geometry import GRAD_STOPS, fit_linear_gradient, fit_radial_gradient
@@ -22,6 +23,116 @@ def test_complex_poster_keeps_gradient_when_recovering_thin_branches():
     from plate import pipeline
     path = Path(__file__).resolve().parents[1] / "samples/challenges/complex_event_poster.png"
     assert pipeline.run(path, Config()).stats["gradients"] >= 1
+
+
+@pytest.mark.parametrize("source_scale,work_size", [(1, 1536), (2, 400)])
+def test_occluded_gradient_badge_is_one_full_disc(tmp_path, source_scale, work_size):
+    from pathlib import Path
+    from plate import pipeline
+    from plate.raster import have_renderer
+    from challenges import assert_target
+    from PIL import Image
+    from xml.etree import ElementTree as ET
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    path = directory / "gradient_badge.png"
+    if source_scale != 1:
+        with Image.open(path) as image:
+            image = image.resize((400 * source_scale, 360 * source_scale), Image.Resampling.NEAREST)
+            path = tmp_path / "scaled-badge.png"
+            image.save(path)
+    result = pipeline.run(path, Config(work_size=work_size))
+    assert result.stats["shapes"] == 5
+    assert result.stats["gradients"] == 1
+    disc, = [s for s in result.shapes if s.grad is not None]
+    assert disc.completed and disc.prim.kind == "circle"
+    scale = result.loaded.scale
+    assert abs((disc.prim.cx + .5) / scale - 200 * source_scale) < source_scale
+    assert abs((disc.prim.cy + .5) / scale - 180 * source_scale) < source_scale
+    assert abs(disc.prim.rx / scale - 135 * source_scale) < source_scale
+    if have_renderer():
+        target = ET.fromstring((directory / "gradient_badge.target.svg").read_text())
+        target.set("width", str(400 * source_scale))
+        target.set("height", str(360 * source_scale))
+        assert_target(result.svg, ET.tostring(target, encoding="unicode"))
+
+
+def _occluded_disc(kind="radial", incompatible=False, shifted=False, uncovered=False):
+    """Independent analytic ramp samples on two arcs separated by a solid ribbon."""
+    from plate.geometry import Prim, raster_prim
+    from plate.stages import order
+    H, W = 160, 180
+    y, x = np.mgrid[:H, :W]
+    disc = raster_prim(Prim("circle", 90, 80, 55, 55), (H, W))
+    lower = raster_prim(Prim("circle", 102 if shifted else 90, 80, 55, 55), (H, W))
+    cover = np.zeros((H, W), bool)
+    cover[65:95, 20:160] = True
+    parts = [disc & (y < 65), lower & (y >= 95)]
+    if not uncovered:
+        parts.append(cover)
+    parts.append(~np.logical_or.reduce(parts))
+    u = np.hypot(x - 90, y - 80) / 55 if kind == "radial" else x / W
+    rgb = np.full((H, W, 3), 255, np.uint8)
+    colors = np.stack([230 - 100*u, 200 - 80*u, 150 + 10*u], axis=2).clip(0, 255).astype(np.uint8)
+    rgb[parts[0] | parts[1]] = colors[parts[0] | parts[1]]
+    if incompatible:
+        rgb[parts[1]] = 255 - rgb[parts[1]]
+    if not uncovered:
+        rgb[cover] = (30, 60, 120)
+    rid = np.full((H, W), -1, np.int32)
+    shapes = []
+    for i, part in enumerate(parts):
+        mask = Mask.from_full(part)
+        shape = Shape(i, tuple(int(v) for v in rgb[part].mean(axis=0)), mask, mask)
+        if i < 2:
+            ys, xs = np.nonzero(part)
+            fit = fit_radial_gradient if kind == "radial" else fit_linear_gradient
+            shape.grad, _ = fit(np.c_[xs, ys], rgb[part].astype(float))
+        shapes.append(shape)
+        rid[part] = i
+    seg = Segmentation(rid, shapes, np.zeros((1, 3), np.uint8))
+    img = Loaded(rgb, np.full((H, W), 255, np.uint8), (W, H), 1.)
+    order.build(seg, rid < 0, Config())
+    return seg, img
+
+
+@pytest.mark.parametrize("kind", ["linear", "radial"])
+def test_shared_gradient_refits_pixels_and_rebuilds_ownership(kind):
+    from plate.stages import gradient, order
+    seg, img = _occluded_disc(kind=kind)
+    old_owned = seg.rid >= 0
+    out = gradient.merge_occluded(seg, img, Config())
+    assert len(out.shapes) == len(seg.shapes) - 1
+    assert out.palette is seg.palette
+    assert np.array_equal(out.rid >= 0, old_owned)
+    assert [s.id for s in out.shapes] == list(range(len(out.shapes)))
+    for s in out.shapes:
+        assert np.array_equal(out.rid == s.id, s.vis.to_full(out.rid.shape))
+        assert s.parent is None and s.children == [] and s.prim is None
+    order.build(out, out.rid < 0, Config())
+    disc, = [s for s in out.shapes if s.grad is not None]
+    assert disc.grad.kind == kind and disc.completed
+    assert abs(disc.prim.rx - 55) < 1
+    assert disc.full.area > disc.vis.area
+
+
+@pytest.mark.parametrize("kind", ["linear", "radial"])
+@pytest.mark.parametrize("problem", ["incompatible", "shifted", "uncovered"])
+def test_shared_gradient_rejects_incompatible_fragments(kind, problem):
+    from plate.geometry import Prim
+    from plate.stages.gradient import merge_occluded
+    seg, img = _occluded_disc(kind=kind, **{problem: True})
+    if problem == "uncovered":
+        # Even matching model hints must be checked against current occlusion.
+        for s in seg.shapes[:2]:
+            s.completed = True
+            s.prim = Prim("circle", 90, 80, 55, 55)
+    assert merge_occluded(seg, img, Config()) is seg
+
+
+def test_shared_gradient_respects_completion_switch():
+    from plate.stages.gradient import merge_occluded
+    seg, img = _occluded_disc()
+    assert merge_occluded(seg, img, Config(complete_hidden=False)) is seg
 
 
 # --------------------------------------------------------------------------- helpers
