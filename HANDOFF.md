@@ -1,104 +1,131 @@
-# PLATE handover — 2026-10-29
+# PLATE handover — 2026-10-29 (session 13)
 
-Read `AGENTS.md`, `STATUS.md`, then `ROADMAP.md`. This file records the immediate
-handover state. Jessica asked for complex logo fixtures and another handover;
-both are prepared. **The logo images are finished on disk. No image-generation
-service or ability is needed to continue.**
+Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
+the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
+rendering.
 
-## Finished logo assets
+## State at handover
 
-All live in `samples/challenges/`, as transparent PNG + independently authored
-desired `.target.svg` pairs:
+- **HEAD: `7aa28ae`** (`docs: record compound-path topology fix (perforated_plate)`), branch `main`.
+- **Working tree is CLEAN.** Everything is committed and GPG-signed. There is NO
+  pending uncommitted work this time (unlike the previous handover).
+- **Tests: 150 passed, 7 xfailed** (strict expected structural gaps). Run with the
+  renderer on:
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
+- No push. Commit/push only when Jessica asks (she asked for the commits below).
 
-- `logo_ember_crest`: 800×960, 51 objects, 7 strokes. Faceted fox, shield with four
-  true cutouts, 12 laurel leaves, layered ribbon and outlined EMBER.
-- `logo_orbit_wordmark`: 1200×480, 34 objects, one radial gradient, 7 strokes.
-  Compound monogram, crossing orbital ellipses, satellites and ORBIT/STUDIO lettering.
-- `logo_root_seal`: 900×900, 56 objects, 32 strokes, no gradients. Organic tree,
-  15 leaves/veins, branches/roots, counter-cut trunk, circular strokes and ROOT.
+## What changed this session (all committed)
 
-Generator: `scripts/make_logo_challenges.py` (reuses `Scene` and the custom glyphs
-from `scripts/make_complex_scenes.py`). It authors SVGs, renders at 4×, downsamples
-with Lanczos and preserves alpha. No fonts, external assets or PLATE output.
-Do not overwrite targets with generated pipeline SVGs to make tests pass.
+First, the previous handover's verified-but-uncommitted work was committed as-is:
+- `572983c` pool disconnected contours + merge flat fragments in completion (`edge_crossing_type` 7→5 objects).
+- `f8a901c` three original logo challenge fixtures (EMBER/ORBIT/ROOT) + asset tests.
+- `db027fe` docs for the above + `HANDOFF.md`.
 
-Preview already visually reviewed:
-`/Users/jessica/.codex/visualizations/2026/10/29/01a1897a-34f5-7170-b9dc-01807c8b7ce2/plate-complex-logos.png`
+Then two structural gaps were closed (each a root-cause fix, verified no-regression):
 
-## Verification and current failures
+1. **`occlusion_chain` — chained-completion drift** (`ca92bbd`).
+   The back disc completed via a Bézier bridge and drifted to (141.5,160.5) r93.1
+   vs target (145,160) r95, because `complete.try_complete`'s occluder-coverage gate
+   rejected the correct circle fit (RMS 0.25, 226° arc) at 89.6% vs the 90% floor —
+   a disc hidden by a same-size neighbour legitimately recovers a ~10% sliver past
+   the occluder. `evaluate()` now takes the fit residual and relaxes the coverage
+   floors (Cm 0.90→0.85, Cv 0.70→0.65) ONLY for a primitive with RMS ≤ 0.5·tol; the
+   bridge and weak fits keep strict floors, so shapes still cannot complete into mere
+   neighbours. Back disc now (145.1,160.1) r94.6, drift 3.5px→0.1px.
 
-Full suite after logo integration: **148 passed, 9 strict expected structural gaps**.
-Integrity and fidelity tests remain active for expected gaps. Tests require the
-render extra/libcairo for silhouette matching. Local mock HTTP-server tests need
-sandbox escalation in this environment; that has been approved routinely.
+2. **`perforated_plate` — compound-path topology** (`ccd6188`).
+   `order._silhouettes` hole-filled a shape and removed only transparent pixels, so a
+   genuine perforation containing a floating OPAQUE island (the middle hole holds a
+   gold disc) kept the island's footprint as the plate colour — a stray 749px
+   component. Now each hole-filled region is checked before transparency removal:
+   a predominantly-transparent region (>50%) is a real perforation and is re-opened
+   in full (island pixels dropped with it); mostly-opaque regions (a shape genuinely
+   sitting behind another, e.g. a background under on-top shapes) stay filled so
+   paint-order coverage is unchanged. Blue plate: 2 components → 1, three holes kept.
 
-| Logo | Actual / desired objects | Actual / desired strokes | SSIM white / dark | First structural failure |
-| --- | --- | --- | --- | --- |
-| EMBER | 51 / 51 | 2 / 7 | 0.9662 / 0.9678 | shield full-silhouette IoU 0.8385 |
-| ORBIT | 60 / 34 | 3 / 7 | 0.9787 / 0.9846 | fragmented emblem/lettering |
-| ROOT | 52 / 56 | 0 / 32 | 0.9784 / 0.9836 | merged/lost organic shapes and strokes |
+Both promoted from strict xfail. `overlap` stays <1px, `stack3` ordering/anchors
+unchanged, donut evenodd ring intact, all eight original sample SVGs byte-identical.
 
-The other six gaps: perforated plate topology; chained-circle drift; complex
-mission patch, storefront, instrument panel and event poster. See STATUS's top
-table for current numbers. New logo fidelity floors: EMBER 0.96, ORBIT/ROOT 0.97.
-Nine asset checks protect exact target inventories, dimensions, portable vectors,
-true transparency and pixel-identical PNG/SVG pairing.
+## Remaining 7 gaps (all strict xfail; promote only when the independent target is met)
 
-Bench ran with plain VTracer preserved:
-`/tmp/plate-logo-bench/` and `/tmp/plate-logo-bench.txt`.
-Detailed logo-only baseline: `/tmp/plate-logos/baseline.json`.
-Temporary artifacts may disappear; source PNGs/SVGs and this note are in the repo.
+Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 
-## Git and existing uncommitted work
+| Challenge | Gap |
+| --- | --- |
+| `complex_instrument_panel` | 60 objects / 2 strokes; target 59 with **27 editable strokes** (straight marks, closed loops, branched nets, cap/join inference) |
+| `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, craters preserved |
+| `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
+| `complex_storefront` | 73 objects; target 64, repeated windows/awning/lettering merge or fragment |
+| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8385; 2/7 strokes |
+| `logo_orbit_wordmark` | 60 objects vs 34; orbital emblem + wordmark fragment; 3/7 strokes |
+| `logo_root_seal` | 52 vs 56 objects; touching same-colour organics merge; 0/32 strokes |
 
-HEAD: **`4da8ab0 fix: merge compatible gradient fragments behind occluders`**.
-Previous commit: `03a133f feat: recover thin curves and editable SVG strokes`.
-No push. No commit was requested in the logo turn, so keep current work uncommitted
-until Jessica asks. Inspect `git status`; do not discard any pending changes.
+The single biggest lever across these is **stroke coverage** (ROADMAP P1 #2):
+panel needs 27 strokes and has 2; logos need 7/7/32 and recover 2/3/0. Straight
+marks currently stay as live rects/polygons; closed/branched strokes are unimplemented.
+`stages/strokes.py` is where open-curve stroke recovery lives today.
 
-Pending work includes the prior session's verified completion implementation:
+## Architectural decisions made with Jessica this session (IMPORTANT — honour these)
 
-- `complete.py` pools external contours of disconnected shapes/occluders; relative
-  T-junctions are computed within each contour, never across component boundaries.
-  Bézier bridging remains restricted to one contour.
-- `order.merge_fragments` rejoins flat same-colour siblings only after supported
-  primitive, containment and hidden-area checks. `Segmentation.rebuilt` reindexes
-  ownership and clears stale ordering/completion fields. Pipeline reruns ordering.
-- `edge_crossing_type` was promoted to passing unchanged: 7→5 objects, 55→36 anchors,
-  SSIM 0.9914→0.9931. Badge SSIM 0.9922→0.9924. Original sample SVGs and all VTracer
-  outputs were byte-identical; no target or golden refreshes.
-- Tests: `tests/test_fragment_completion.py` and an added geometry regression.
-- New logo generator, six PNG/SVG files, `tests/test_logo_assets.py`, challenge
-  registrations and updated README/ROADMAP/STATUS/docs are also pending.
+- **PLATE stays a CLASSICAL engine. It must run fully, correctly and deterministically
+  with NO LM Studio, NO GPU, and NO heavy ML deps.** This is a hard invariant.
+- **AI (LM Studio VLM) stays optional and cosmetic**: semantic names + grouping only,
+  off by default (`vlm_url=""`), graceful fallback. It never touches geometry. Keep it
+  that way. The ONE place a model could ever earn a geometric role is the provable
+  "no signal" cases (splitting two touching same-colour shapes; merging posterized
+  fragments that are semantically one object) — and only if a classical approach
+  stalls. Do not force AI into segmentation/completion.
+- **CPU only for now.** Jessica is interested in "use whatever hardware is available
+  (CUDA/Metal/CPU)" for a future hosted converter, but explicitly chose to stick to
+  CPU for now. Do NOT add GPU code. If revisited: build a device-capability layer with
+  a guaranteed CPU fallback and within-tolerance CPU-parity tests, and PROFILE first —
+  most of the hot path (contours, occlusion logic, Schneider fitting, VTracer) is
+  branchy CPU code that does not move to GPU profitably; only palette assignment and
+  bulk fits are GPU-shaped.
 
-## Next work
+## Gotchas you will hit
 
-1. Use the new logos to test stroke/compound-path/completion changes. ROOT exposes
-   missing closed strokes, thin veins and touching same-colour branches. EMBER
-   demonstrates why correct object counts alone are insufficient.
-2. Mission-patch gradient recovery needs coherent outer/clamped bands **and crater
-   preservation**. The third crater at (515,470) is already absorbed into a detected
-   gradient; simple colour-based growth would erase hard-edged objects. Joining
-   only the two detected gradients still fails safely. Current patch: 72 objects,
-   2 radial fragments instead of a radial planet plus linear hull, SSIM 0.9815.
-3. A thin bar split by a perpendicular cover can fail completion because rasterized
-   perimeter pixels dominate hidden-area checks. Fix pixel-boundary evaluation
-   before relaxing any containment/occlusion thresholds.
-4. Per-object challenge diagnostics remain useful: the matcher currently stops on
-   object-count errors, concealing partial progress. Keep targets independent.
+- **System `python3` is 3.9 — too old.** Always use `.venv/bin/python` / `.venv/bin/pytest`
+  (Python 3.11). `pip install -e ".[dev,render]"` is already done.
+- **Rendering needs libcairo via a dyld shim on macOS.** The `plate` CLI self-handles it
+  (re-exec with `DYLD_FALLBACK_LIBRARY_PATH`). But when you call the library directly in
+  a script or run `pytest`, PREFIX with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`,
+  or `have_renderer()` is False and all SSIM/silhouette checks silently skip.
+- **git commits hang unless you bypass the commit template.** `commit.template` is set to
+  `~/.stCommitMsg` and blocks non-interactive commits in this shell (symptom: the commit
+  command hangs/times out and HEAD does not move). Commit with:
+  `GIT_EDITOR=true git -c commit.template= -c core.editor=true -c gpg.program=/tmp/gpg-batch.sh commit -F <msgfile>`
+  where `/tmp/gpg-batch.sh` is a wrapper: `#!/bin/sh` + `exec /opt/homebrew/bin/gpg --batch --no-tty "$@"`.
+  GPG signing is ENABLED (`commit.gpgsign=true`); default gpg blocks on pinentry, so the
+  `--batch --no-tty` wrapper is required. Do NOT change git config; these are per-invocation `-c` flags.
+- **`try_complete` is imported by name into `order.py`, `gradient.py`.** Monkeypatching
+  `complete.try_complete` won't intercept those call sites; patch `order.try_complete` etc.
+- **`tests/challenges.py` strict-xfail contract:** a gap that starts passing causes a strict
+  XPASS that FAILS the suite until you remove its `gap=` marker. That is intended — it forces
+  you to consciously promote a fixed gap. Never edit a `.target.svg` to match pipeline output.
 
-Illustrator import and a real-image corpus remain unverified. Real LM Studio
-naming/grouping was verified earlier; do not repeat the stale AGENTS environment
-claim that only mocks have ever run. No core heavy ML dependency should be added.
+## Verification discipline (from AGENTS.md)
+
+1. `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q` green before and after.
+2. For any pipeline change, also `plate bench samples` AND `plate bench samples/challenges`,
+   confirm the eight original samples stay byte-identical (or record the fidelity delta
+   honestly), and render/inspect changed SVGs. Never remove the plain-VTracer baseline (`baseline.py`).
+3. Add a regression test for every fix. When a gap closes, promote it (remove the `gap=`).
 
 ## Commands
 
 ```sh
 cd /Volumes/Code/PLATE
 DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q
-DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python scripts/make_logo_challenges.py
-DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/plate bench samples/challenges -o /tmp/plate-logo-bench
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/plate bench samples -o /tmp/plate-bench
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/plate bench samples/challenges -o /tmp/plate-challenge-bench
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/plate doctor   # deps + LM Studio
 ```
 
-Run pytest before and after changes. For pipeline changes also benchmark original
-`samples/` and inspect rendered SVGs. Never remove the plain-VTracer baseline.
+## Still unverified (need a human / real inputs)
+
+- **Illustrator import** (`docs/illustrator-checklist.md`): do top-level `<g>` become named
+  layers, are circles/rects/gradients live and editable? Oldest open P0.
+- **Real-world corpus**: gather 10–20 logos/clipart/scans into `samples/real/`, `plate bench`.
+- Real LM Studio naming/grouping IS verified (qwen/qwen3.8-27b); naming accuracy (left/right
+  eye) and ~6s/shape latency remain open. Do not repeat the stale "mock only" claim.
