@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="logo-title logo-description">
+  <title id="logo-title">PLATE — registration P</title>
+  <desc id="logo-description">A solid P with a transparent counter. A registration cross marks the upper right. Custom outlined letters spell PLATE.</desc>
+  <g id="front-plate" data-name="Front Plate" inkscape:groupmode="layer" inkscape:label="Front Plate">
+    <path id="front-plate-P" d="M96 300V60H206C265 60 302 97 302 148S265 236 206 236H152V300Z M166 148a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#16343b" fill-rule="evenodd" />
+  </g>
+  <g id="registration" data-name="Registration" inkscape:groupmode="layer" inkscape:label="Registration">
+    <circle id="registration-ring" cx="313" cy="69" r="13" fill="none" stroke="#16343b" stroke-width="3" />
+    <path id="registration-horizontal" d="M293 69H333" fill="none" stroke="#16343b" stroke-width="3" stroke-linecap="round" />
+    <path id="registration-vertical" d="M313 49V89" fill="none" stroke="#16343b" stroke-width="3" stroke-linecap="round" />
+  </g>
+  <g id="wordmark" data-name="Wordmark" inkscape:groupmode="layer" inkscape:label="Wordmark">
+    <path id="letter-P" d="M0 100V0H44C69 0 84 15 84 38S69 76 44 76H24V100Z M24 22V54H42C54 54 60 48 60 38S54 22 42 22Z" fill="#16343b" fill-rule="evenodd" transform="translate(400 133) scale(1.55)" />
+    <path id="letter-L" d="M102 0H126V78H174V100H102Z" fill="#16343b" fill-rule="evenodd" transform="translate(400 133) scale(1.55)" />
+    <path id="letter-A" d="M186 100L221 0H247L282 100H257L251 81H217L211 100Z M224 60H244L234 28Z" fill="#16343b" fill-rule="evenodd" transform="translate(400 133) scale(1.55)" />
+    <path id="letter-T" d="M281 0H369V22H337V100H313V22H281Z" fill="#16343b" fill-rule="evenodd" transform="translate(400 133) scale(1.55)" />
+    <path id="letter-E" d="M387 0H461V22H411V39H455V60H411V78H461V100H387Z" fill="#16343b" fill-rule="evenodd" transform="translate(400 133) scale(1.55)" />
+  </g>
+</svg>

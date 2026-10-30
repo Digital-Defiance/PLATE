@@ -1,6 +1,6 @@
 # Authored PNG → SVG challenges
 
-These fifteen scenes begin as independently authored SVGs in
+These sixteen scenes begin as independently authored SVGs in
 [`samples/challenges/`](../samples/challenges/). Rasterizing each at 4× resolution
 and downsampling produces its PNG input. The `.target.svg` is the desired editable
 output, authored independently of PLATE. It is never refreshed from pipeline output.
@@ -20,8 +20,27 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | [Stroked route](../samples/challenges/stroked_route.png) | [Target](../samples/challenges/stroked_route.target.svg): one open path with editable 16px stroke, two endpoint circles, background | Pass: one 15.5px open stroke (16±1px contract), full hidden endpoints, 4 objects | 0.9913 |
 
 All eight now pass their independent structural targets and clear SSIM 0.95 on
-**both white and dark backgrounds**. The other three compositions and three complex logos
+**both white and dark backgrounds**. The other three compositions, three complex logos and PLATE identity
 still have structural gaps despite passing their appearance floors; the instrument panel now passes.
+
+## PLATE identity
+
+The [registration-P logo](../assets/brand/README.md) is also an independent challenge:
+[PNG](../samples/challenges/logo_plate.png) ·
+[desired SVG](../samples/challenges/logo_plate.target.svg). It is the exact primary
+brand master, not a simplified test drawing. Three offset, counter-cut P plates,
+five custom outlined letters and three registration strokes make **11 objects**.
+The plates share a truly transparent circular counter.
+
+Initial PLATE result: **11 objects, 125 anchors, 1/3 editable strokes**, SSIM
+**0.9906 / 0.9956** on white/dark. The count matches, but the back P's full-silhouette
+IoU is **0.1387**: hidden compound geometry is not reconstructed, the registration
+mark merges, and some square corners round off. The intended hidden contours are
+an aspirational authoring contract, not uniquely identifiable from the raster.
+The structural test is a strict expected failure; integrity and fidelity ≥0.98
+remain active. Plain VTracer yields 333 objects / 824 anchors / white SSIM 0.9337.
+`scripts/make_plate_brand.py` regenerates brand assets and the fixture together;
+tests keep their SVG and PNG files byte-identical and protect the holes/plate topology.
 
 ## Complex compositions
 

@@ -20,6 +20,9 @@ typical auto-tracer produces, PLATE reconstructs the *editable structure* of the
 
 By Digital Defiance (501(c)(3)). MIT licensed.
 
+The [PLATE logo](assets/brand/README.md) doubles as a tracing challenge: its layered
+P, transparent counters and registration strokes test the structure PLATE recovers.
+
 > **Status (v0.0.1):** working classical engine; the real-LM-Studio VLM path is validated (naming +
 > semantic grouping against a live vision model). Linear/radial gradients and conservative
 > strokes are implemented. Illustrator import/editability still needs the import checklist.

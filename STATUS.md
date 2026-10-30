@@ -1,6 +1,37 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 23, fragmented cream-highlight recovery) · Version 0.0.1 · Tests: 270 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 24, PLATE identity and tracing fixture) · Version 0.0.1 · Tests: 277 passing, 7 expected feature gaps (`pytest -q`)
+
+## PLATE identity and tracing fixture (session 24)
+
+- Designed the **registration P**: three offset teal/vermilion/ink compound P
+  plates with a shared transparent circular counter, a fine registration mark,
+  and original outlined PLATE lettering. Authored directly as editable SVG;
+  no font dependency, external artwork or generated raster geometry.
+- Brand assets in `assets/brand/`: primary and reversed lockups, square symbol,
+  monochrome lockup/symbol, transparent PNGs, preview and usage notes. Named
+  layers retain the full plates. Illustrator import remains unverified.
+  `scripts/make_plate_brand.py` regenerates these plus the exact same primary
+  artwork as `samples/challenges/logo_plate.{png,target.svg}`. PNGs use 4×
+  supersampling and Lanczos. Existing assets/targets/goldens remain unchanged.
+- Desired **11 objects / 3 strokes**. Current result **11 objects / 125 anchors /
+  1 stroke**, SSIM **0.9906 white / 0.9956 dark**. Rear P shapes remain strips
+  (back full-silhouette IoU **0.1387**); the registration mark merges and some
+  square corners round off. This aspirational hidden-geometry contract cannot
+  be uniquely inferred from the raster. New strict structural xfail records the
+  gap; SVG integrity and ≥0.98 fidelity on both backgrounds remain active.
+  VTracer control: **333 objects / 824 anchors / white SSIM 0.9337**.
+- Tests protect exact brand/fixture identity, authored object/stroke inventory,
+  independent SVG/PNG pairing, complete plate topology, layers and transparent
+  icon/P/A counters. Baseline **270 passed / 6 xfailed**; final **277 / 7**.
+  Tests require the documented cairo environment; the sandbox cannot bind the
+  mock VLM's localhost server, so the full suite uses approved expanded access.
+- Ran both benches: `/tmp/plate-brand-{samples,challenges}`. Rendered and
+  inspected the brand presentation and source/PLATE comparison
+  (`/tmp/plate-brand/comparison.png`); report `/tmp/plate-brand/logo_plate.report.html`.
+  No pipeline edits. Branding and handover committed together at Jessica's
+  request; use `git log -1 --oneline` for the commit. No push. Session 23's
+  separate recovery commit is `2aa79bc`; its work remains intact.
 
 ## Fragmented cream-highlight recovery (session 23)
 

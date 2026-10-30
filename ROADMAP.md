@@ -1,7 +1,7 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-30. Current verification: **270 passed, 6 expected structural gaps**.
-`STATUS.md` records measurements and all six remaining challenge failures;
+Updated: 2026-10-30. Current verification: **277 passed, 7 expected structural gaps**.
+`STATUS.md` records measurements and all seven remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
@@ -11,7 +11,7 @@ Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality w
 - [x] Classical pipeline, primitives, containment/completion, named layers, CLI, metrics, bench/report and VTracer comparison.
 - [x] Real LM Studio naming/grouping run, beyond mocks; earlier hardware run used `qwen/qwen3.8-27b`. Naming quality and latency remain open below.
 - [x] Linear/radial gradient detection and live SVG gradient fills. `shaded`: 5 objects, 1 radial gradient, SSIM 0.9557. Complex occluded gradients remain open.
-- [x] Fixture infrastructure: 15 current-behaviour controls and 15 PNG/desired-SVG challenges, including four compositions with 44–64 objects and three original complex logos with 34–56 objects. Generators: `scripts/make_controls.py`, `scripts/make_challenges.py`, `scripts/make_complex_scenes.py`, `scripts/make_logo_challenges.py`.
+- [x] Fixture infrastructure: 15 current-behaviour controls and 16 PNG/desired-SVG challenges, including four compositions with 44–64 objects, three original complex logos with 34–56 objects, and the actual 11-object PLATE identity. Generators: `scripts/make_controls.py`, `scripts/make_challenges.py`, `scripts/make_complex_scenes.py`, `scripts/make_logo_challenges.py`, `scripts/make_plate_brand.py`.
 - [x] Interior-text control (`t5_text_on_shape`) and edge-crossing lettering challenge (`edge_crossing_type`). Both pass; semantic text grouping/OCR remain open.
 - [x] Geometry safety: score the full primitive footprint and validate completion containment before restoring observed pixels. Six regression cases in `tests/test_geometry_validation.py`; poster footer and storefront pavement stay rectangular. All eight original sample SVGs unchanged.
 - [x] Thin details and continuous branches: all 18 gauge ticks survive, both panel signal routes are continuous, and 3/5/7px curves remain attached to seeded heads. Repeated stable colours can seed a narrow line even when edge dilation removed every flat pixel; gradient ramps and explicit palettes are protected.

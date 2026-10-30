@@ -64,6 +64,10 @@ CHALLENGES = {
         "56 objects: organic leaves, 32 strokes, counter-cut trunk and outlined ROOT.",
         gap="Tree/leaf/stroke objects merge or disappear: 51 objects, only 3 of 32 editable strokes.",
         ssim_floor=0.97),
+    "logo_plate": Challenge(
+        "The PLATE identity: three full counter-cut P plates, five outlined letters, three registration strokes.",
+        gap="Count matches 11, but hidden P plates remain strips (back-plate IoU 0.1387), and only 1 of 3 registration strokes recovers.",
+        ssim_floor=0.98),
 }
 
 DRAWABLE = {"rect", "circle", "ellipse", "path", "polygon", "polyline", "line"}

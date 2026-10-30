@@ -1,20 +1,21 @@
-"""Keep the original complex logo inputs paired with their independent targets."""
+"""Keep the original logo inputs paired with their independent targets."""
 import io
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import numpy as np
 import pytest
+from challenges import _mask, _topology, drawables, local
 from PIL import Image
 
 from plate.raster import have_renderer
-from challenges import drawables, local
 
 DIRECTORY = Path(__file__).resolve().parents[1] / "samples/challenges"
 LOGOS = [
     ("ember_crest", (800, 960), 51, 0, 7),
     ("orbit_wordmark", (1200, 480), 34, 1, 7),
     ("root_seal", (900, 900), 56, 0, 32),
+    ("plate", (1200, 400), 11, 0, 3),
 ]
 
 
@@ -40,6 +41,7 @@ def test_logo_artwork_contract(name, size, objects, gradients, strokes):
     ("ember_crest", [(400, 59), (122, 150), (678, 150), (400, 739)]),
     ("orbit_wordmark", [(215, 84), (371, 240), (215, 396), (59, 240)]),
     ("root_seal", [(450, 455), (450, 460), (450, 475)]),
+    ("plate", [(206, 148), (465, 192), (763, 203)]),
 ])
 def test_logo_negative_spaces_are_transparent(name, points):
     with Image.open(DIRECTORY / f"logo_{name}.png") as image:
@@ -57,3 +59,26 @@ def test_logo_png_matches_authored_svg(name):
     with Image.open(DIRECTORY / f"logo_{name}.png") as image, Image.open(io.BytesIO(png)) as high:
         expected = high.convert("RGBA").resize(image.size, Image.Resampling.LANCZOS)
         assert np.array_equal(np.asarray(image), np.asarray(expected))
+
+
+def test_plate_brand_is_the_challenge():
+    """Exercise the actual public identity, rather than a simplified substitute."""
+    brand = DIRECTORY.parents[1] / "assets/brand"
+    assert (brand / "plate-logo.svg").read_bytes() == (DIRECTORY / "logo_plate.target.svg").read_bytes()
+    assert (brand / "plate-logo.png").read_bytes() == (DIRECTORY / "logo_plate.png").read_bytes()
+
+
+def test_plate_targets_are_complete_plates_with_real_holes():
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    root = ET.fromstring((DIRECTORY / "logo_plate.target.svg").read_text())
+    by_id = {e.get("id"): e for e in drawables(root)}
+    for name in ("back-plate-P", "middle-plate-P", "front-plate-P"):
+        mask = _mask(root, by_id[name])
+        assert _topology(mask) == (1, 1)
+        assert not mask[148, 206]
+        # Fully authored stem and bowl, including portions hidden in the logo.
+        assert mask.sum() > 23000
+    labels = [e.get("{http://www.inkscape.org/namespaces/inkscape}label")
+              for e in root if local(e) == "g"]
+    assert labels == ["Back Plate", "Middle Plate", "Front Plate", "Registration", "Wordmark"]

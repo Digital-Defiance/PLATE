@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-30 (session 23, fragmented cream-highlight recovery)
+# PLATE handover — 2026-10-30 (session 24, identity and tracing fixture)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -6,9 +6,9 @@ rendering.
 
 ## State at handover
 
-- Session 23 recovery source/tests and this handoff are committed together.
-  Use `git log -1 --oneline` for the recovery commit (base was `7300232`).
-  Separate PLATE branding changes present at commit time were left uncommitted.
+- Session 24 identity, fixture, tests and handover are committed together at
+  Jessica's request. Use `git log -1 --oneline` for the branding commit.
+- Session 23 recovery is committed as **`2aa79bc`** (base `7300232`).
 - Sessions 20–21 are committed as **`71f6740`**. Session 22's crossed-curve source
   and tests are committed as **`3c0a8e1`**; session-22 docs are `7300232`.
 - Recent lineage: `a2579f0` (session-19 docs) ← `c5762b2` (session-19 tests) ←
@@ -16,9 +16,38 @@ rendering.
   `632bb1c` (session 18, mixed-content holes) ← `ebf8762` (session 17) ←
   `a56c13e` (sessions 14–16) ← `0a0fddc`.
 - No push. Commit/push only when Jessica asks.
-- **Tests: 270 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **Tests: 277 passed, 7 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
+
+## PLATE registration-P identity (session 24)
+
+- Jessica requested a logo that also tests PLATE, then requested handover and
+  commit with 4% usage remaining. Stop design iteration here; no pipeline changes.
+- `assets/brand/plate-preview.png` shows the current design: three offset
+  teal/vermilion/ink P plates, a shared transparent circular counter, a fine
+  registration mark and original outlined lettering. SVG/PNG assets include
+  primary/reversed lockups, square mark and simplified monochrome versions.
+  `assets/brand/README.md` records usage, regeneration and measurements.
+- `scripts/make_plate_brand.py` authors the vectors and 4× supersampled PNGs.
+  Brand master and `samples/challenges/logo_plate.{png,target.svg}` are exact
+  byte-identical pairs. All 13 regenerated SVG/PNG artifacts match byte-for-byte.
+- Desired **11 objects / 3 strokes**. PLATE currently emits **11 / 125 anchors /
+  1 stroke**, SSIM **0.9906 white / 0.9956 dark**. Back P silhouette IoU is only
+  **0.1387**: it remains visible strips. Registration strokes merge and some
+  square corners round. Arbitrary hidden compound geometry is not uniquely
+  identifiable from the raster; keep this an aspirational authoring target.
+- The new structural contract is a strict expected failure. Integrity and
+  SSIM ≥0.98 on both backgrounds stay active; asset tests protect inventory,
+  transparent counters, complete plate topology, named layers and master/fixture
+  identity. Existing targets/goldens and all pipeline code remain unchanged.
+- Both benches ran: `/tmp/plate-brand-{samples,challenges}`. Source/trace render
+  inspected at `/tmp/plate-brand/comparison.png`; HTML report is
+  `/tmp/plate-brand/logo_plate.report.html`. VTracer control remains intact:
+  **333 objects / 824 anchors / white SSIM 0.9337**.
+- Baseline **270 passed / 6 xfailed**, final **277 / 7**; changed Python files
+  pass Ruff. The mock VLM requires expanded localhost access for full pytest.
+  Illustrator import is still unverified. No push requested or performed.
 
 ## Fragmented cream-highlight recovery (session 23)
 

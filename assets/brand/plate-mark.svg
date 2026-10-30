@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="312" height="312" viewBox="40 36 312 312" role="img" aria-labelledby="logo-title logo-description">
+  <title id="logo-title">PLATE — registration P</title>
+  <desc id="logo-description">Three offset printing plates form a P with a shared transparent counter. A registration cross marks the upper right.</desc>
+  <g id="back-plate" data-name="Back Plate" inkscape:groupmode="layer" inkscape:label="Back Plate">
+    <path id="back-plate-P" d="M64 332V92H174C233 92 270 129 270 180S233 268 174 268H120V332Z M166 148a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#45a995" fill-rule="evenodd" />
+  </g>
+  <g id="middle-plate" data-name="Middle Plate" inkscape:groupmode="layer" inkscape:label="Middle Plate">
+    <path id="middle-plate-P" d="M80 316V76H190C249 76 286 113 286 164S249 252 190 252H136V316Z M166 148a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#f0784a" fill-rule="evenodd" />
+  </g>
+  <g id="front-plate" data-name="Front Plate" inkscape:groupmode="layer" inkscape:label="Front Plate">
+    <path id="front-plate-P" d="M96 300V60H206C265 60 302 97 302 148S265 236 206 236H152V300Z M166 148a40 40 0 1 0 80 0a40 40 0 1 0 -80 0Z" fill="#16343b" fill-rule="evenodd" />
+  </g>
+  <g id="registration" data-name="Registration" inkscape:groupmode="layer" inkscape:label="Registration">
+    <circle id="registration-ring" cx="313" cy="69" r="13" fill="none" stroke="#f0784a" stroke-width="3" />
+    <path id="registration-horizontal" d="M293 69H333" fill="none" stroke="#f0784a" stroke-width="3" stroke-linecap="round" />
+    <path id="registration-vertical" d="M313 49V89" fill="none" stroke="#f0784a" stroke-width="3" stroke-linecap="round" />
+  </g>
+</svg>
