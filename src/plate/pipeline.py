@@ -60,6 +60,28 @@ def _closed_node(node, shape, stroke, scale):
     shape.completed |= stroke.completed
 
 
+def _stroke_node(node, shape, stroke, scale, precision):
+    node.kind, node.params, node.evenodd = "path", {}, False
+    def number(value):
+        text = f"{value:.{precision}f}"
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return "0" if text in ("-0", "") else text
+    curves = [(c+.5)/scale for c in stroke.curves]
+    start = curves[0][0]
+    parts = [f"M{number(start[0])} {number(start[1])}"]
+    for curve in curves:
+        if is_flat(curve):
+            parts.append(f"L{number(curve[3, 0])} {number(curve[3, 1])}")
+        else:
+            parts.append("C"+" ".join(number(v) for v in curve[1:].ravel()))
+    node.d = "".join(parts)
+    node.stroke_width = stroke.width/scale
+    node.anchors = len(curves)+1
+    shape.full = shape.draw = stroke.full
+    shape.completed |= stroke.completed
+
+
 def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
     mask = shape.draw or shape.full
     if mask.empty():
@@ -169,6 +191,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
         seg = merged
         roots = order.build(seg, transparent, cfg)
     loop_fits = {}
+    curve_fits = {}
     if cfg.strokes and cfg.complete_hidden:
         from .stages.loops import recover
         while (loop := recover(seg, roots, img, cfg)) is not None:
@@ -181,16 +204,32 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                if s.id == first.id or s.id not in ids])
             roots = order.build(seg, transparent, cfg)
             loop_fits[vis] = loop.stroke
+        from .stages.curves import recover as recover_curve
+        while (curve := recover_curve(seg, roots, img, cfg, loop_fits)) is not None:
+            ids = set(curve.ids)
+            vis = Mask.from_full(np.isin(seg.rid, curve.ids))
+            first = seg.shapes[curve.ids[0]]
+            joint = Shape(first.id, first.color, vis, vis)
+            seg = seg.rebuilt([joint if s.id == first.id else s for s in seg.shapes
+                               if s.id == first.id or s.id not in ids])
+            roots = order.build(seg, transparent, cfg)
+            curve_fits[vis] = curve.stroke
+        completed_fits = {**loop_fits, **curve_fits}
         # Every foreign observed region under a restored loop must paint above
         # it. Lift descendants to sibling constraints, preserving other order.
         edges = {}
         for s in seg.shapes:
-            if s.vis not in loop_fits:
+            if s.vis not in completed_fits:
                 continue
-            stroke = loop_fits[s.vis]
+            stroke = completed_fits[s.vis]
             s.full = s.draw = stroke.full
             s.completed = True
-            owners = set(np.unique(seg.rid[stroke.full.to_full((H, W))])) - {-1, s.id}
+            if s.vis in curve_fits:
+                # Only the validated loop hides this open curve. Raster fringes
+                # touching earlier artwork must not create new occluder edges.
+                owners = {o.id for o in seg.shapes if o.vis in stroke.occluders}
+            else:
+                owners = set(np.unique(seg.rid[stroke.full.to_full((H, W))])) - {-1, s.id}
             for other in owners:
                 above = seg.shapes[other]
                 while above.parent != s.parent and above.parent is not None:
@@ -219,6 +258,8 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
         if node is not None:
             if s.vis in loop_fits:
                 _closed_node(node, s, loop_fits[s.vis], img.scale)
+            elif s.vis in curve_fits:
+                _stroke_node(node, s, curve_fits[s.vis], img.scale, cfg.path_precision)
             leaves[s.id] = node
     if cfg.strokes:
         from .stages.strokes import fit_closed, fit_straight, fit_stroke, fit_crossed_curve
@@ -283,25 +324,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                     stroke = fit_crossed_curve(shapes[sid].vis, cfg, overlays, img, shapes[sid].color)
             if stroke is None:
                 continue
-            node.kind, node.params, node.evenodd = "path", {}, False
-            def number(value):
-                text = f"{value:.{cfg.path_precision}f}"
-                if "." in text:
-                    text = text.rstrip("0").rstrip(".")
-                return "0" if text in ("-0", "") else text
-            curves = [(c+.5)/img.scale for c in stroke.curves]
-            start = curves[0][0]
-            parts = [f"M{number(start[0])} {number(start[1])}"]
-            for curve in curves:
-                if is_flat(curve):
-                    parts.append(f"L{number(curve[3, 0])} {number(curve[3, 1])}")
-                else:
-                    parts.append("C"+" ".join(number(v) for v in curve[1:].ravel()))
-            node.d = "".join(parts)
-            node.stroke_width = stroke.width/img.scale
-            node.anchors = len(curves)+1
-            shapes[sid].full = shapes[sid].draw = stroke.full
-            shapes[sid].completed |= stroke.completed
+            _stroke_node(node, shapes[sid], stroke, img.scale, cfg.path_precision)
             for mask in stroke.occluders:
                 for other, cover, _ in circles:
                     if mask is cover and shapes[other].parent == shapes[sid].parent:

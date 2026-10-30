@@ -58,7 +58,7 @@ CHALLENGES = {
         ssim_floor=0.96),
     "logo_orbit_wordmark": Challenge(
         "34 objects: gradient core, interlocking orbital strokes, compound monogram and wordmark.",
-        gap="The radial core and both orbits recover, but compound emblem regions and ambiguous patches leave 45 objects instead of 34.",
+        gap="The radial core and all seven strokes recover, but compound emblem regions and ambiguous patches leave 44 objects instead of 34.",
         ssim_floor=0.97),
     "logo_root_seal": Challenge(
         "56 objects: organic leaves, 32 strokes, counter-cut trunk and outlined ROOT.",

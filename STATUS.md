@@ -1,6 +1,47 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 22, crossed cream-highlight recovery) · Version 0.0.1 · Tests: 248 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 23, fragmented cream-highlight recovery) · Version 0.0.1 · Tests: 270 passing, 6 expected feature gaps (`pytest -q`)
+
+## Fragmented cream-highlight recovery (session 23)
+
+- Recovery source/tests/docs committed together at Jessica's request (base
+  `7300232`; use `git log -1 --oneline` for the resulting commit). Added
+  `stages/curves.py`, changed `pipeline.py`, added `tests/test_fragmented_curves.py`
+  and narrowed the lower-highlight selector now that two cream strokes exist.
+  Separate PLATE branding changes were left uncommitted. No push.
+- **All seven ORBIT strokes now pass together with its radial core**, including
+  native geometry, widths, topology and paint order against unchanged targets.
+  The split upper cream highlight (one long arc + one tiny exposed cap) becomes
+  one complete editable cubic. **45→44 objects, 6→7 strokes, 352→345 anchors**.
+  White/dark SSIM **.9844/.9923→0.9846/0.9925**; SVG **17,218→16,860 bytes**.
+- Merge only same-colour sibling leaves under an independently fitted later native
+  closed stroke. Measure width only on sections clear of the crossing, constrain a
+  shared cubic using both fragments' free boundaries, and require a nearby remote
+  cap, tight residuals, ≥95% exposed IoU, source-backed exposed cores and a short
+  hidden area. Unsupported gaps, flat caps, unrelated dots, mismatched colour/
+  parentage and earlier/unproved loops are rejected. Rebuild/reindex disjoint
+  observed ownership and share ordinary open-stroke SVG emission.
+- Render review caught a layering regression: generic foreign-owner constraints
+  treated navy antialias fringes as occluders. The pooled curve now constrains only
+  its explicitly validated gold loop. New assertions keep both cream highlights
+  above the navy monogram. Fidelity improves after this correction.
+- **22 new cases** include all seven real-logo strokes/core, an independent synthetic
+  full curve, flat caps/dots/offsets, disable switches, sibling/colour/paint-model
+  guards, and 1/3/6px exposed gaps both away from and beside the crossing (opaque
+  and transparent). Baseline **248 passed/6 xfailed**; final **270 passed/6 xfailed**.
+  All eight original and fourteen other challenge PLATE SVGs remain byte-identical;
+  targets/goldens/VTracer code unchanged. Full ORBIT target remains a strict xfail
+  (34 objects); correct stroke count alone does not satisfy it.
+- Both benches rendered/inspected: `/tmp/plate-fragment-{samples,challenges}`;
+  baseline `/tmp/plate-fragment-before-{samples,challenges}`; metrics
+  `/tmp/plate-fragment-metrics.json`; final tests `/tmp/plate-session23-final2-tests.txt`.
+  Review sheets in this chat's visualization folder: `plate-fragment-highlight.png`
+  and `plate-fragment-original-samples.png`.
+- Next: compound navy badge/monogram (eight/three substantial visible regions),
+  ambiguous radial patches, ROOT's touching inner ring/leaves and mission-patch
+  clamped bands/craters/linear hull. This new pooling supports a long arc plus a
+  small cap under a known later loop; two long disconnected curves, arbitrary
+  occluders, unknown ordering and branching still need separate evidence/work.
 
 ## Crossed cream-highlight recovery (session 22)
 
@@ -389,7 +430,7 @@ sections below retain their earlier measurements.
 
 Implementation order (details and acceptance checks in `ROADMAP.md`):
 
-1. Recover ORBIT's split upper cream highlight (lower now passes) and ROOT's inner ring joined to leaves; extend to non-sibling/non-leaf fragments, branched networks and other cap/join styles. Both ORBIT orbital ellipses now pass. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
+1. ORBIT's seven intended strokes now pass; recover ROOT's inner ring joined to leaves and EMBER's missing strokes; extend to non-sibling/non-leaf fragments, branched networks and other cap/join styles. Both ORBIT orbital ellipses now pass. Preserve full discs under nested objects and opaque counters. The panel's 27 strokes and full object contract pass.
 2. Recover hairlines/fully antialiased colours without stable cores; repeated stable new colours and seeded-head curves are already supported.
 3. Extend the affine radial-band recovery beyond supported circular silhouettes to clamped/nonlinear ramps and the mission patch. Preserve hard-edged craters, separate ramps and flat swatches.
 4. Extend the implemented contour pooling/flat-fragment merging to complex letters/ribbons. Chained-circle drift is fixed.
@@ -402,7 +443,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
-| `logo_orbit_wordmark` | 45 objects vs target 34; full radial core and both orbital ellipses recovered, 6/7 strokes; compound badge/monogram, ambiguous patches and upper cream highlight remain |
+| `logo_orbit_wordmark` | 44 objects vs target 34; full radial core and all 7/7 strokes recovered; compound badge/monogram and ambiguous patches remain |
 | `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image

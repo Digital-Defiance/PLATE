@@ -11,7 +11,7 @@ from plate import pipeline
 from plate.config import Config
 from plate.raster import have_renderer
 from plate.stages.strokes import fit_crossed_curve
-from challenges import assert_target
+from challenges import assert_target, _mask
 
 
 def _crossed(tmp_path, problem=None, scale=1):
@@ -45,8 +45,9 @@ def test_orbit_lower_highlight_is_an_editable_full_stroke():
     actual = ET.fromstring(result.svg)
     target = ET.parse(directory/'logo_orbit_wordmark.target.svg').getroot()
     wanted = [e for e in target.iter() if e.get('id') in ('lower-light-arc', 'front-orbit')]
+    lower = _mask(target, next(e for e in wanted if e.get('id') == 'lower-light-arc'))
     got = [e for e in actual.iter() if (e.get('stroke') == '#e9bc59' and e.tag.endswith('ellipse'))
-           or e.get('stroke') == '#f5edda']
+           or (e.get('stroke') == '#f5edda' and (_mask(actual, e) & lower).sum() > 100)]
     assert len(got) == len(wanted) == 2
     actual[:] = got
     target[:] = wanted

@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-30 (session 22, crossed cream-highlight recovery)
+# PLATE handover — 2026-10-30 (session 23, fragmented cream-highlight recovery)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -6,17 +6,50 @@ rendering.
 
 ## State at handover
 
+- Session 23 recovery source/tests and this handoff are committed together.
+  Use `git log -1 --oneline` for the recovery commit (base was `7300232`).
+  Separate PLATE branding changes present at commit time were left uncommitted.
 - Sessions 20–21 are committed as **`71f6740`**. Session 22's crossed-curve source
-  and tests are committed as **`3c0a8e1`**; this documentation is committed
-  with the handoff. Use `git log -3 --oneline` for the latest documentation commit.
+  and tests are committed as **`3c0a8e1`**; session-22 docs are `7300232`.
 - Recent lineage: `a2579f0` (session-19 docs) ← `c5762b2` (session-19 tests) ←
   `7f0210c` (session-19 feat: stroked loops across crossings) ← `ea4330e` (docs) ←
   `632bb1c` (session 18, mixed-content holes) ← `ebf8762` (session 17) ←
   `a56c13e` (sessions 14–16) ← `0a0fddc`.
 - No push. Commit/push only when Jessica asks.
-- **Tests: 248 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **Tests: 270 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
+
+## Fragmented cream-highlight recovery (session 23)
+
+- **All seven ORBIT strokes plus the radial core pass together** against the
+  unchanged independent targets, including silhouette/topology/width/paint order.
+  The upper cream arc's long fragment and tiny exposed cap become one editable
+  full cubic. **45→44 objects, 6→7 strokes, 352→345 anchors**. White/dark SSIM
+  **.9844/.9923→0.9846/0.9925**, SVG **17,218→16,860 bytes**. Full ORBIT remains
+  a strict xfail (target 34 objects); compound navy geometry still fragments.
+- `stages/curves.py` pools only same-colour sibling leaves beneath a proven later
+  native closed stroke. Exclude clipped sections from width estimates; fit both
+  free boundaries to a bounded cubic. Require a nearby small cap, tight residuals,
+  ≥95% exposed IoU, source-backed exposed cores and ≤30% hidden model area (also
+  bounded by 3×width²). Reject holes/branches, unsupported gaps, unrelated dots,
+  mismatched parents/colours, flat caps and earlier/unproved loops.
+- `pipeline.py` rebuilds disjoint observed ownership, restores accepted fits and
+  shares `_stroke_node` with ordinary open curves. A render check caught a real
+  ordering regression: inferred edge pixels touched earlier navy shapes. The new
+  curve now adds constraints only for its validated gold-loop occluder, via
+  `Stroke.occluders`; both highlights are explicitly tested above the monogram.
+- **270 passed, 6 xfailed** (baseline 248/6), with 22 new cases. Original eight and
+  fourteen other challenge PLATE SVGs remain byte-identical. No target/golden/
+  VTracer changes. Both benches rendered/inspected in
+  `/tmp/plate-fragment-{samples,challenges}`; baseline
+  `/tmp/plate-fragment-before-{samples,challenges}`; metrics `/tmp/plate-fragment-metrics.json`;
+  tests `/tmp/plate-session23-final2-tests.txt`. Review sheets in this chat's visual
+  folder: `plate-fragment-highlight.png`, `plate-fragment-original-samples.png`.
+- Scope: one long visible arc plus a small exposed cap under a known later loop.
+  Two long fragments, arbitrary covers, unknown ordering and networks remain open.
+  Next: navy badge/monogram and ambiguous gradient patches; ROOT decomposition and
+  mission-patch gradients remain open. Recovery committed at Jessica's request; no push.
 
 ## Crossed cream-highlight recovery (session 22)
 
@@ -158,15 +191,14 @@ log and read the tail.)
 
 ## Immediate continuation
 
-1. Sessions 20–22 are committed. ORBIT now has **45 vs target 34 objects**,
-   six of seven strokes. Its full radial circle and both
-   orbital ellipses pass independently and together; keep all six full gaps active.
+1. Sessions 20–23 recovery work is committed. ORBIT
+   now has **44 vs target 34 objects**, all seven intended strokes. Its full radial
+   circle and seven strokes pass together; keep all six full gaps active.
 2. Recover ORBIT's compound navy badge and monogram. The source-visible ownership
    probe still finds **eight badge-ring regions** and **three monogram regions**
    (≥3% of each target object's visible pixels). The wordmark itself does not show
    substantial splitting. Small ambiguous gradient patches also remain separate.
-3. Pool/recover the split upper cream highlight; the lower arc now passes. ROOT remains 51 vs
-   56 objects and 3/32 strokes; its inner mint ring shares colour with leaves and
+3. Both ORBIT highlights now pass. ROOT remains 51 vs 56 objects and 3/32 strokes; its inner mint ring shares colour with leaves and
    requires decomposition, beyond sibling-leaf pooling.
 4. Extend shared gradients to the mission patch's clamped bands/craters and linear
    hull without absorbing foreground details. The new affine radial-circle method
@@ -393,11 +425,11 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
 | `complex_storefront` | 73 objects / 2 strokes; target 64, repeated windows/awning/lettering merge or fragment |
 | `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
-| `logo_orbit_wordmark` | 45 objects vs 34; full radial core and both orbital ellipses recovered, 6/7 strokes; compound emblem, ambiguous patches and upper cream highlight remain |
+| `logo_orbit_wordmark` | 44 objects vs 34; full radial core and all 7/7 strokes recovered; compound emblem and ambiguous patches remain |
 | `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
 
-The next stroke work includes ROOT's touching ring/leaves and ORBIT's split upper
-highlight; logos need 7/7/32 strokes and recover 2/6/3. The panel's 27 strokes are complete.
+The next stroke work includes ROOT's touching ring/leaves and EMBER's missing
+strokes; logos need 7/7/32 strokes and recover 2/7/3. The panel's 27 strokes are complete.
 Then address branched networks, other cap/join styles and non-circular/multiple
 occluders. `stages/strokes.py` contains straight/open-curve and complete closed-loop recovery.
 

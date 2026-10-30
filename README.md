@@ -117,7 +117,8 @@ e.g. `{"simplify": 2.0, "max_colors": 8}` — and those levers apply just to tha
    use PNG antialias coverage and compete with rectangle/ellipse models. Complete thin loops can
    become stroked circles/ellipses; matching interrupted arcs can reunite when both terminals
    have occlusion evidence and hidden sections are covered. A short curve clipped by a known later
-   loop can retain its full round cap through a constrained free-boundary fit. Gradient fills, junctions and uncertain
+   loop can retain its full round cap through a constrained free-boundary fit. A long arc and small
+   exposed cap can reunite when a shared curve and observed crossing explain their gap. Gradient fills, junctions and uncertain
    stroke fits retain their existing form; filled discs and genuine cutouts are protected.
 7. **Names** — classical ("Navy circle") or, if a VLM is configured, semantic names and groups from a
    local vision model. Output carries `id`, `data-name`, and `inkscape:label` so names survive import
@@ -173,9 +174,9 @@ terminal hidden under an aligned circular hub. The full instrument-panel target 
 **59 objects, all 27 strokes, 249 anchors**. ROOT's outer seal is an editable circle stroke;
 its total is now **522 anchors** (3/32 strokes), after repairing transparent contours.
 Thin 5px circles stay connected, and ORBIT now has both orbital ellipses plus three editable
-motion curves, plus one complete editable radial-gradient circle: **45 objects, 352 anchors,
-6/7 strokes**, including the lower cream highlight. Compound navy shapes, ambiguous patches and
-the split upper highlight keep its overall structural target unmet.
+motion curves, plus one complete editable radial-gradient circle: **44 objects, 345 anchors,
+7/7 strokes**, including both cream highlights. Compound navy shapes and ambiguous gradient
+patches keep its overall structural target unmet.
 More general interrupted/branched strokes,
 opaque counters, more general occluders and other cap/join styles remain work.
 `--set complete_hidden=false` also disables stroke completion.
