@@ -636,30 +636,45 @@ def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (
             centre = np.array([[circle.cx, circle.cy]])
             points = np.vstack([centre, points]) if end == 0 else np.vstack([points, centre])
             covers.append(cover)
-    curves = fit_open(points, min(cfg.simplify, 0.45))
-    if not curves or len(curves) > 40:
+    # Schneider fitting at the default tolerance can collapse a short, sharply
+    # curved stroke to a single underfitting cubic (e.g. an EMBER whisker: 1 segment,
+    # IoU 0.887). Fit at progressively tighter tolerances and keep the first that
+    # clears the acceptance gate, else the best seen. This only RAISES the IoU of a
+    # stroke that would otherwise be rejected — a stroke already passing at 0.45 takes
+    # that result and never re-fits, so existing accepted strokes are unchanged.
+    best = curves = None
+    for tolerance in (0.45, 0.3, 0.15):
+        fitted = fit_open(points, min(cfg.simplify, tolerance))
+        if not fitted or len(fitted) > 40:
+            continue
+        dense = np.vstack([bez(c, np.linspace(0, 1, max(8, int(np.linalg.norm(np.diff(c, axis=0), axis=1).sum()/0.3))))
+                           for c in fitted])
+        low = np.minimum([mask.x0, mask.y0], np.floor(dense.min(axis=0)-width-2)).astype(int)
+        high = np.maximum([mask.bbox[3], mask.bbox[2]], np.ceil(dense.max(axis=0)+width+2)).astype(int)
+        w, h = high-low
+        if w > 3*mask.a.shape[1]+4*radius or h > 3*mask.a.shape[0]+4*radius:
+            continue
+        reference = Mask(np.zeros((h, w), bool), low[1], low[0])
+        observed = crop_like(mask, reference)
+        occluded = np.zeros((h, w), bool)
+        for cover in covers:
+            occluded |= crop_like(cover, reference)
+        yy, xx = np.indices((h, w))
+        distances = cKDTree(dense).query(np.c_[xx.ravel()+low[0], yy.ravel()+low[1]])[0].reshape(h, w)
+        scored = None
+        for candidate_width in np.arange(max(1, width-1), width+1.01, 0.25):
+            candidate = distances <= candidate_width/2
+            visible, expected = candidate & ~occluded, observed & ~occluded
+            iou = (visible & expected).sum()/max(1, (visible | expected).sum())
+            if scored is None or iou > scored[0]:
+                scored = (iou, candidate_width, candidate)
+        if best is None or scored[0] > best[0]:
+            best, curves = (*scored, low, h, w, observed, occluded), fitted
+        if scored[0] >= 0.95:
+            break
+    if best is None:
         return None
-    dense = np.vstack([bez(c, np.linspace(0, 1, max(8, int(np.linalg.norm(np.diff(c, axis=0), axis=1).sum()/0.3))))
-                       for c in curves])
-    low = np.minimum([mask.x0, mask.y0], np.floor(dense.min(axis=0)-width-2)).astype(int)
-    high = np.maximum([mask.bbox[3], mask.bbox[2]], np.ceil(dense.max(axis=0)+width+2)).astype(int)
-    w, h = high-low
-    if w > 3*mask.a.shape[1]+4*radius or h > 3*mask.a.shape[0]+4*radius:
-        return None
-    reference = Mask(np.zeros((h, w), bool), low[1], low[0])
-    observed = crop_like(mask, reference)
-    occluded = np.zeros((h, w), bool)
-    for cover in covers:
-        occluded |= crop_like(cover, reference)
-    yy, xx = np.indices((h, w))
-    distances = cKDTree(dense).query(np.c_[xx.ravel()+low[0], yy.ravel()+low[1]])[0].reshape(h, w)
-    best = None
-    for candidate_width in np.arange(max(1, width-1), width+1.01, 0.25):
-        candidate = distances <= candidate_width/2
-        visible, expected = candidate & ~occluded, observed & ~occluded
-        iou = (visible & expected).sum()/max(1, (visible | expected).sum())
-        if best is None or iou > best[0]:
-            best = (iou, candidate_width, candidate)
+    best, low, h, w, observed, occluded = best[:3], best[3], best[4], best[5], best[6], best[7]
     if best[0] < 0.95:
         return None
     visible = best[2] & ~occluded

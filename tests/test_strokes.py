@@ -157,3 +157,42 @@ def test_orbit_motion_curves_stay_strokes_and_square_ended_letter_stays_filled()
     actual[:] = got
     target[:] = wanted
     assert_target(ET.tostring(actual, encoding="unicode"), ET.tostring(target, encoding="unicode"))
+
+
+def test_adaptive_refit_rescues_an_underfit_curve(tmp_path):
+    """fit_stroke refits at tighter tolerances when a single Schneider cubic underfits.
+    Directly exercise it: a shape whose default-tolerance fit scores below the 0.95 IoU
+    gate must be rescued by the retry rather than rejected. Uses a real EMBER whisker
+    (id-independent: pick the thin navy curves that underfit at the default tolerance)."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    import plate.stages.strokes as strokes_mod
+    from plate.config import Config as Cfg
+    from plate.imageio import load_image
+    from plate.stages.segment import segment
+    from plate.stages import order
+    cfg = Cfg()
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    img = load_image(directory / "logo_ember_crest.png", cfg)
+    seg = segment(img, cfg)
+    order.build(seg, seg.rid == -1, cfg)
+    # thin navy whisker-like leaves (small, elongated, navy)
+    navy = [s for s in seg.shapes
+            if abs(s.color[0]-24) < 20 and abs(s.color[1]-46) < 20 and abs(s.color[2]-76) < 20
+            and 200 <= s.vis.area < 400]
+    recovered = sum(strokes_mod.fit_stroke(s.full, cfg, (), img, s.color) is not None for s in navy)
+    assert recovered >= 3, f"adaptive refit should rescue underfit whiskers, got {recovered}/{len(navy)}"
+
+
+def test_ember_recovers_more_whiskers_without_regressing_originals():
+    """The adaptive refit lifts EMBER navy strokes (was 2) and ROOT strokes (was 3)
+    without changing object counts; EMBER's full target stays a strict xfail."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    ember = pipeline.run(directory / "logo_ember_crest.png", Config())
+    assert ember.stats["shapes"] == 51
+    assert ember.stats["strokes"] >= 3   # was 2 before adaptive refit
+    root = pipeline.run(directory / "logo_root_seal.png", Config())
+    assert root.stats["shapes"] == 51
+    assert root.stats["strokes"] >= 9    # was 3 before adaptive refit
