@@ -6,8 +6,12 @@ rendering.
 
 ## State at handover
 
-- Session 24 identity, fixture, tests and handover are committed together at
-  Jessica's request. Use `git log -1 --oneline` for the branding commit.
+- **HEAD is `3ed2bd1`** (`feat: add PLATE identity as an independent tracing
+  challenge`), the session-24 branding/fixture/tests/handover commit. Working tree
+  CLEAN; everything committed and GPG-signed.
+- **`main` is PUSHED and up to date with `origin/main` at `3ed2bd1`.** (Earlier
+  handovers said "no push"; the repo has since been pushed.) Continue to commit/push
+  only when Jessica asks.
 - Session 23 recovery is committed as **`2aa79bc`** (base `7300232`).
 - Sessions 20–21 are committed as **`71f6740`**. Session 22's crossed-curve source
   and tests are committed as **`3c0a8e1`**; session-22 docs are `7300232`.
@@ -15,7 +19,6 @@ rendering.
   `7f0210c` (session-19 feat: stroked loops across crossings) ← `ea4330e` (docs) ←
   `632bb1c` (session 18, mixed-content holes) ← `ebf8762` (session 17) ←
   `a56c13e` (sessions 14–16) ← `0a0fddc`.
-- No push. Commit/push only when Jessica asks.
 - **Tests: 277 passed, 7 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
@@ -222,7 +225,10 @@ log and read the tail.)
 
 1. Sessions 20–23 recovery work is committed. ORBIT
    now has **44 vs target 34 objects**, all seven intended strokes. Its full radial
-   circle and seven strokes pass together; keep all six full gaps active.
+   circle and seven strokes pass together. Keep all seven full gaps active — session
+   24 added `logo_plate` (the PLATE brand fixture) as a 7th strict xfail; it is an
+   ASPIRATIONAL target (its back-P hidden compound geometry is not uniquely
+   recoverable from the raster), so do not expect to promote it.
 2. Recover ORBIT's compound navy badge and monogram. The source-visible ownership
    probe still finds **eight badge-ring regions** and **three monogram regions**
    (≥3% of each target object's visible pixels). The wordmark itself does not show
@@ -444,7 +450,7 @@ Then two structural gaps were closed (each a root-cause fix, verified no-regress
 Both promoted from strict xfail. `overlap` stays <1px, `stack3` ordering/anchors
 unchanged, donut evenodd ring intact, all eight original sample SVGs byte-identical.
 
-## Remaining 6 gaps (all strict xfail; promote only when the independent target is met)
+## Remaining 7 gaps (all strict xfail; promote only when the independent target is met)
 
 Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 
@@ -456,6 +462,7 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
 | `logo_orbit_wordmark` | 44 objects vs 34; full radial core and all 7/7 strokes recovered; compound emblem and ambiguous patches remain |
 | `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
+| `logo_plate` | PLATE brand fixture (session 24); 11/11 objects but back-P silhouette IoU 0.1387 (visible strips, hidden compound geometry not uniquely recoverable from raster); registration strokes merge, 1/3 strokes. Aspirational authoring target. |
 
 The next stroke work includes ROOT's touching ring/leaves and EMBER's missing
 strokes; logos need 7/7/32 strokes and recover 2/7/3. The panel's 27 strokes are complete.
