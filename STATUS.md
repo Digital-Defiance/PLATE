@@ -1,6 +1,21 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 12, complex logos and handover) · Version 0.0.1 · Tests: 148 passing, 9 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 13, chained-completion drift fixed) · Version 0.0.1 · Tests: 149 passing, 8 expected feature gaps (`pytest -q`)
+
+## Chained-completion drift (session 13)
+
+- Fixed `occlusion_chain`: the back disc completed via a Bézier bridge (drifted to
+  (141.5,160.5) r93.1 vs target (145,160) r95) because its correct circle fit —
+  RMS 0.25, 226° arc — was rejected by `complete.try_complete`'s occluder-coverage
+  gate at 89.6% vs the 90% floor. A disc hidden by a same-size neighbour legitimately
+  recovers a ~10% sliver past the occluder. `evaluate()` now relaxes the coverage
+  floors (Cm 0.90→0.85, Cv 0.70→0.65) ONLY for a primitive with RMS ≤ 0.5·tol; the
+  bridge and weak fits keep the strict floors, so a shape still cannot complete into
+  a mere neighbour. Back disc now (145.1,160.1) r94.6 — drift 3.5px→0.1px.
+- Promoted `occlusion_chain` from strict xfail to passing. `overlap` circle stays
+  within 1px, `stack3` ordering/anchors unchanged; original samples unaffected.
+  Suite **149 passed, 8 xfailed** (was 148/9). Committed `ca92bbd`.
+
 
 ## Current remaining work — start here
 
@@ -29,7 +44,6 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | Remaining challenge | Current failure / required target |
 | --- | --- |
 | `perforated_plate` | Blue path has 2 connected components; require 1, with all 3 holes and the separate gold island preserved |
-| `occlusion_chain` | Back circle drifts ≈3.5px, full-silhouette IoU ≈0.946; recover all authored circles accurately |
 | `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
 | `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_instrument_panel` | 60 objects; ticks visible and both routes are editable strokes, but target 59 requires 27 strokes overall |
@@ -69,7 +83,7 @@ earlier measurements as history. Full suite before/after: **81 passed, 9 xfailed
   table. New fidelity floors: EMBER 0.96, ORBIT/ROOT 0.97, active on both backgrounds.
 - Added the three strict structural gaps and nine artwork checks for exact target
   inventory, portable vector assets, dimensions, transparent negative spaces and
-  pixel-identical target/PNG pairing. Full suite **148 passed, 9 xfailed**
+  pixel-identical target/PNG pairing. Full suite at that point **148 passed, 9 xfailed**
   (baseline **133/6**). Existing targets and pipeline code were not changed this session.
 - Ran `plate bench samples/challenges -o /tmp/plate-logo-bench` with VTracer intact.
   Inputs were visually reviewed together in `plate-complex-logos.png` in this
