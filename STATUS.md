@@ -1,6 +1,23 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 13, chained-completion drift fixed) · Version 0.0.1 · Tests: 149 passing, 8 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 13, chained drift + compound-path topology fixed) · Version 0.0.1 · Tests: 150 passing, 7 expected feature gaps (`pytest -q`)
+
+## Compound-path topology (session 13)
+
+- Fixed `perforated_plate`: `order._silhouettes` hole-filled a shape and removed
+  only transparent pixels, so a genuine perforation containing a floating opaque
+  island (the middle hole holds a gold disc) kept the island's footprint as the
+  plate colour — a stray 749px component inside the hole. Now each hole-filled
+  region is checked before transparency removal: a predominantly-transparent
+  region (>50%) is a real perforation and is re-opened in full (dropping the few
+  island pixels); mostly-opaque regions (a shape genuinely sitting behind another,
+  e.g. a background under on-top shapes) stay filled, so paint-order coverage is
+  unchanged. A naive "drop all foreign newly-filled pixels" rule regressed every
+  background and was rejected.
+- Blue plate: 2 components → 1, three holes preserved, gold island separate.
+  Promoted from strict xfail. overlap/stack3/donut(evenodd ring)/badge/ui_card
+  byte-identical. Suite **150 passed, 7 xfailed**. Committed `ccd6188`.
+
 
 ## Chained-completion drift (session 13)
 
@@ -43,7 +60,6 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 
 | Remaining challenge | Current failure / required target |
 | --- | --- |
-| `perforated_plate` | Blue path has 2 connected components; require 1, with all 3 holes and the separate gold island preserved |
 | `complex_mission_patch` | 72 objects / 2 radial fragments; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
 | `complex_storefront` | 73 objects; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_instrument_panel` | 60 objects; ticks visible and both routes are editable strokes, but target 59 requires 27 strokes overall |
