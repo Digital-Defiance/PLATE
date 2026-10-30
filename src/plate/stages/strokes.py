@@ -506,7 +506,34 @@ def _refine(points, mask, radius):
     return p, widths
 
 
-def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = ()) -> Stroke | None:
+def _flat_terminal(boundary, curves, width):
+    """Reject a confidently flat source cap before emitting a round-cap curve.
+
+    Whole-shape IoU can hide the two missing corners of a long square-ended
+    glyph. A straight front edge spanning most of the width is local evidence;
+    the narrow front of a circular cap cannot satisfy that span test.
+    """
+    for curve, start in ((curves[0], True), (curves[-1], False)):
+        end, inner = (curve[0], curve[1]) if start else (curve[-1], curve[-2])
+        outward = end-inner
+        outward /= max(np.linalg.norm(outward), 1e-9)
+        delta = boundary-end
+        along = delta @ outward
+        cap = boundary[(along > .2*width) & (np.linalg.norm(delta, axis=1) < .9*width)]
+        if len(cap) < 3:
+            continue
+        along = (cap-end) @ outward
+        front = cap[along >= along.max()-max(.2, .05*width)]
+        if len(front) < 3:
+            continue
+        _, singular, axes = np.linalg.svd(front-front.mean(axis=0), full_matrices=False)
+        if singular[-1]/np.sqrt(len(front)) <= .12 and np.ptp(front @ axes[0]) >= .75*width:
+            return True
+    return False
+
+
+def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (),
+               img=None, color=None) -> Stroke | None:
     """Fit one round-cap/join curve; reject holes, junctions and taper.
 
     Circles must be later-painted occluders. An aligned terminal may continue to
@@ -595,6 +622,12 @@ def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (
     deviation = (visible ^ expected).sum()/max(1, perimeter)
     if best[0] < 0.96 and deviation > 0.3:
         return None  # e.g. wide square-ended lettering is not a round-cap stroke
+    field = _coverage_field(np.pad(mask.a, 6), mask, 6, img, color)
+    source = [] if field is None else contours_xy(field)
+    if len(source) == 1:
+        boundary = source[0]+[mask.x0-6, mask.y0-6]
+        if _flat_terminal(boundary, curves, best[1]):
+            return None
     full = Mask.from_full(best[2])
     full.x0 += int(low[0])
     full.y0 += int(low[1])

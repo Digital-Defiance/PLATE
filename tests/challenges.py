@@ -54,7 +54,7 @@ CHALLENGES = {
         ssim_floor=0.96),  # Thin-detail recovery improved SSIM to 0.9685.
     "logo_ember_crest": Challenge(
         "51 objects: fox facets, shield cutouts, laurel leaves, ribbon and outlined EMBER.",
-        gap="Shield full silhouette is incomplete (IoU 0.8385); only 2 of 7 strokes recovered.",
+        gap="Shield full silhouette is incomplete (IoU 0.8383); only 2 of 7 strokes recovered.",
         ssim_floor=0.96),
     "logo_orbit_wordmark": Challenge(
         "34 objects: gradient core, interlocking orbital strokes, compound monogram and wordmark.",
@@ -62,7 +62,7 @@ CHALLENGES = {
         ssim_floor=0.97),
     "logo_root_seal": Challenge(
         "56 objects: organic leaves, 32 strokes, counter-cut trunk and outlined ROOT.",
-        gap="Tree/leaf/stroke objects merge or disappear: 52 objects, only 3 of 32 editable strokes.",
+        gap="Tree/leaf/stroke objects merge or disappear: 51 objects, only 3 of 32 editable strokes.",
         ssim_floor=0.97),
 }
 

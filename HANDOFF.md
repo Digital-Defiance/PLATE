@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-29 (sessions 14–16 checkpoint)
+# PLATE handover — 2026-10-29 (session 17)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -6,29 +6,70 @@ rendering.
 
 ## State at handover
 
-- **This checkpoint commits sessions 14–16**, on `main`, based on `0a0fddc`.
-  Commit title: `feat: recover straight and closed strokes and complete instrument panel`.
-  Jessica explicitly requested the commit; no push was requested or made.
-- Included source: `strokes.py`,
-  `pipeline.py`, `complete.py`, `order.py`, `emit.py`, `metrics.py`, a config comment; tests: new
-  `test_straight_strokes.py`, `test_occluded_strokes.py`, `test_parent_fragments.py`,
-  `test_closed_strokes.py`, and the promoted panel marker in `tests/challenges.py`.
-  Docs and the stroke-matcher diagnostic test are updated.
-- **Tests: 199 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **Sessions 14–16 are committed as `a56c13e`** (`feat: recover straight and closed
+  strokes and complete instrument panel`), on `main`, based on `0a0fddc`.
+- **This followup checkpoint commits session 17:** `fix: preserve thin alpha contours
+  and editable curves`. Source: `segment.py`, `strokes.py`, `pipeline.py`; seven new
+  regression cases, current gap measurements, and the reviewed `t3_ring` control
+  snapshot. Jessica requested committing and continuing; no push requested/made.
+- **Tests: 206 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
 - No push. Commit/push only when Jessica asks (she asked for the commits below).
 
+## Alpha-contour repair (session 17)
+
+- Fixed the 5px transparent circle: 295 unresolved opaque pixels previously
+  borrowed transparency for 219 pixels, splitting one loop into four objects.
+  Reuse existing wider colour explanations, and let unsupported near-palette
+  alpha-edge cores seed the existing fallback even inside its resampling halo.
+  Already-supported edge labels, palette budgets and blend competition remain.
+  **Scope to source transparency**: an initial broad variant broke gradients.
+- Circle (210,160), r115, width5 on 420×320: **4 objects/26 anchors → one native
+  circle stroke/4 anchors**, SSIM **.9929→.9996**. Tested 3/5px circles and ellipses
+  preserve all foreground alpha pixels. Do not generalize this fix to opaque
+  boundaries without a separate gradient/antialias analysis.
+- Cleaner masks snapped two ORBIT motion lines to polygons, bypassing the old
+  path-only curved fitter. Consider polygons **bordering source transparency** as
+  curve candidates too. Opaque filled primitives retain their prior eligibility:
+  a broader fallback broke panel title/footer rectangle contracts.
+- A source cap whose extreme front is confidently flat across ≥75% of the width
+  rejects round-cap emission. This protects ORBIT's square-ended descriptor U.
+  An independent regression requires the filled U and all three full editable
+  motion curves, including widths, geometry and order. Seven new cases total.
+- All seven opaque original PLATE sample SVGs and eleven challenge SVGs are
+  byte-identical to `a56c13e`. Panel remains **59 objects/27 strokes/249 anchors,
+  SSIM .9864**, fully passing. Current changed outputs:
+
+  | Image | Objects / anchors / strokes | White / dark SSIM |
+  | --- | --- | --- |
+  | donut_alpha | 2 / 11 / 0 | .9939 / .9954 |
+  | perforated_plate | 2 / 44 / 0 | .9943 / .9957 |
+  | EMBER | 51 / 446 / 2 | .9663 / .9683 |
+  | ORBIT | 60 / 603 / 3 | .9811 / .9870 |
+  | ROOT | 51 / 522 / 3 | .9830 / .9867 |
+
+  ROOT's two mint fragments (previous IDs 20 and 23) now join through restored
+  observed pixels. **51 vs target 56 remains a failure**, not object recovery.
+  Same-colour ring/leaf separation is still needed. EMBER white MAE changes
+  slightly, 2.123→2.135; no full logo structural target is met.
+- Only the soft `tests/golden/controls/t3_ring.svg` snapshot was refreshed:
+  unchanged one-object/even-odd topology, eight anchors, no stroke; source SSIM
+  **.9884→.9983** independently verified. No `.target.svg` files changed.
+- Verification: **206 passed, 6 xfailed**, both benches rendered/inspected.
+  `/tmp/plate-alpha-final-{samples,challenges}`;
+  `/tmp/plate-alpha-final-metrics.json`, `/tmp/plate-alpha-thin-loop-metrics.json`.
+  Review sheets `plate-alpha-final-bench.png`, `plate-alpha-thin-loops.png` in
+  this chat's visualization folder. VTracer implementation remains unchanged.
+
 ## Immediate continuation
 
-Fix the documented 5px transparent-circle fragmentation before expanding loop
-completion. Reproduced with a 420×320 image, circle (210,160), r115, width5:
-295 opaque pixels lack a local assignment; nearest-label fallback borrows
-transparency for 219 of them and produces four regions. Check wider existing
-colour support only for unresolved pixels; preserve antialias blend rejection,
-explicit palettes, speckle filtering and all independent targets. Then revisit
-ROOT's inner ring and ORBIT's interrupted loops. Baseline verified again:
-**199 passed, 6 xfailed** with the renderer enabled.
+Revisit ROOT's inner ring and ORBIT's interrupted orbits. Their merging/fragmentation
+persists after alpha-contour repair: ROOT shares mint with leaves; ORBIT back orbit
+is split into arcs and the front orbit's full silhouette is overfilled. Completion
+must preserve genuine cutouts and filled discs beneath nested shapes. Then address
+branched networks, same-colour object separation and opaque annulus/counter ambiguity.
+Do not loosen independent target contracts to promote these six expected failures.
 
 ## Thin closed strokes (session 16, included in checkpoint)
 
@@ -55,11 +96,13 @@ ROOT's inner ring and ORBIT's interrupted loops. Baseline verified again:
   `/tmp/plate-closed-final-metrics.json`. Rendered/inspected ROOT and all original
   samples; review sheets `plate-closed-ring.png`, `plate-closed-original-samples.png`
   in this chat's visualization folder. No target/golden edits.
-- Next: interrupted loops and fragment reconciliation. ORBIT's back orbit is split
+- At the session-16 checkpoint, next was interrupted loops and fragment reconciliation.
+  ORBIT's back orbit is split
   into arcs; its front orbit's full silhouette is overfilled. ROOT inner ring
   shares colour with leaves and is fragmented/merged. Also a 5px transparent circle
-  splits into four regions during segmentation, before this fitter runs. Complete
-  transparent circles/ellipses at tested widths ≥6px work, including downscaling.
+  split into four regions during segmentation before fitting; that alpha-assignment
+  issue is now fixed in session 17 above. Complete transparent circles/ellipses work
+  at tested widths including 5px and downscaling.
 
 ## Full instrument panel passes (session 15, included in checkpoint)
 
@@ -155,9 +198,9 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `complex_mission_patch` | 72 objects / 2 radial fragments / 7 strokes; target 45 with one radial planet + one linear hull, craters preserved |
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
 | `complex_storefront` | 73 objects / 2 strokes; target 64, repeated windows/awning/lettering merge or fragment |
-| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8385; 2/7 strokes |
+| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
 | `logo_orbit_wordmark` | 60 objects vs 34; orbital emblem + wordmark fragment; 3/7 strokes |
-| `logo_root_seal` | 52 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
+| `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
 
 The next large stroke gap is **interrupted/merged closed loops**, especially ROOT
 and ORBIT; logos need 7/7/32 strokes and recover 2/3/3. The panel's 27 strokes are complete.

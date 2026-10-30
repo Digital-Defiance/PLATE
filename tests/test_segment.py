@@ -145,3 +145,26 @@ def test_panel_signal_route_is_one_continuous_region(route):
     counts = [np.count_nonzero(owners == s.id) for s in result.seg.shapes
               if np.linalg.norm(np.array(s.color)-color) < 3]
     assert max(counts, default=0) / expected.sum() >= 0.9, "signal route remains fragmented"
+
+
+@pytest.mark.parametrize("kind,width", [("circle", 3), ("circle", 5), ("ellipse", 3), ("ellipse", 5)])
+def test_transparent_loop_does_not_lose_opaque_pixels_to_nearby_transparency(tmp_path, kind, width):
+    import io
+    from plate.imageio import load_image
+    from plate.raster import have_renderer
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    import cairosvg
+
+    radii = 'r="115"' if kind == "circle" else 'rx="165" ry="85" transform="rotate(25 210 160)"'
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="320">'
+           f'<{kind} cx="210" cy="160" {radii} fill="none" stroke="#182e4c" '
+           f'stroke-width="{width}"/></svg>')
+    path = tmp_path / "loop.png"
+    with Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(), scale=4))) as image:
+        image.resize((420, 320), Image.Resampling.LANCZOS).save(path)
+    img = load_image(path, Config())
+    expected = img.alpha >= 128
+    result = segment(img, Config())
+    assert len(result.shapes) == 1, "one closed loop must stay one connected colour region"
+    assert np.array_equal(result.rid >= 0, expected), "foreground alpha must not become transparency"

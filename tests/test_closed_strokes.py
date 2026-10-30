@@ -25,7 +25,8 @@ def _png(tmp_path, shape):
 
 
 @pytest.mark.parametrize("kind,width,angle,work_size", [
-    ("circle", 6, 0, 1536), ("circle", 12, 0, 1536),
+    ("circle", 5, 0, 1536), ("circle", 6, 0, 1536), ("circle", 12, 0, 1536),
+    ("ellipse", 5, 25, 1536),
     ("ellipse", 6, 25, 1536), ("ellipse", 8, 115, 1536),
     ("ellipse", 12, 0, 210),
 ])

@@ -1,6 +1,53 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 16, thin closed strokes) · Version 0.0.1 · Tests: 199 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 17, alpha-contour continuity) · Version 0.0.1 · Tests: 206 passing, 6 expected feature gaps (`pytest -q`)
+
+## Alpha-contour continuity (session 17)
+
+- Committed sessions 14–16 and their refreshed handoff as **`a56c13e`**, as Jessica
+  requested. Continued with the documented thin transparent-loop failure.
+- A 5px circle lost 219 opaque pixels when unresolved edge labels borrowed nearby
+  transparency. Reuse a supported wider colour explanation for unresolved pixels
+  beside transparency; genuinely unsupported near-palette cores can seed the
+  existing fallback even within its ordinary resampling halo. Keep existing
+  solid/two-colour competition, palette limits and speckle cleanup.
+- **5px circle: four objects / 26 anchors → one editable circle / four anchors**;
+  SSIM **0.9929→0.9996**. All foreground alpha pixels survive in tested 3/5px
+  circles/ellipses. Opaque colour/gradient boundaries are excluded from the repair:
+  an initial broad variant broke gradient reconstruction and was discarded.
+- Cleaner alpha contours made ORBIT's motion curves snap to polygons. Curved
+  fitting now also considers polygons bordering transparency, preserving all
+  three motion strokes against their unchanged independent targets. A source-cap
+  test rejects a confidently flat front spanning most of the width; this prevents
+  the descriptor's square-ended U from acquiring rounded stroke caps. Opaque
+  primitives retain their previous eligibility; broader variants changed panel
+  title/footer rectangles and were rejected by existing regressions.
+- Final measured changes (white/dark SSIM):
+
+  | Image | Objects | Anchors before → after | Strokes | SSIM before → after |
+  | --- | --- | --- | --- | --- |
+  | donut_alpha | 2 | 13 → 11 | 0 | .9864/.9897 → .9939/.9954 |
+  | perforated_plate | 2 | 38 → 44 | 0 | .9907/.9922 → .9943/.9957 |
+  | ORBIT | 60 | 617 → 603 | 3 | .9787/.9846 → .9811/.9870 |
+  | EMBER | 51 | 463 → 446 | 2 | .9663/.9678 → .9663/.9683 |
+  | ROOT | 52 → 51 | 559 → 522 | 3 | .9830/.9863 → .9830/.9867 |
+
+  ROOT's two previously disconnected mint regions join through restored observed
+  pixels. **51 is still short of the 56-object target**; this does not resolve
+  semantic separation of its ring/leaves. EMBER white MAE changes slightly
+  (2.123→2.135); full structural gaps remain for all three logos.
+- Seven new regression cases; **206 passed, 6 xfailed**. All seven opaque original
+  PLATE sample SVGs and eleven other challenge SVGs are byte-identical. The panel
+  remains **59 objects / 27 strokes / 249 anchors / SSIM .9864**, fully passing.
+  VTracer implementation and all independent targets are unchanged.
+- Refreshed **only** the soft `t3_ring` control snapshot after verifying unchanged
+  one-object/even-odd topology and eight anchors, with SSIM **.9884→.9983**. This
+  removes its intentional geometry-drift warning; no desired-output targets changed.
+- Both benches rendered and reviewed: `/tmp/plate-alpha-final-{samples,challenges}`;
+  metrics `/tmp/plate-alpha-final-metrics.json`, `/tmp/plate-alpha-thin-loop-metrics.json`;
+  review sheets `plate-alpha-final-bench.png`, `plate-alpha-thin-loops.png` in this
+  chat's visualization folder. Next: ROOT inner ring and ORBIT interrupted orbits,
+  true same-colour object separation, branched strokes and opaque counters. No push.
 
 ## Sessions 14–16 checkpoint
 
@@ -185,9 +232,9 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_mission_patch` | 72 objects / 2 radial fragments / 7 strokes; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
-| `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8385; 2 of 7 editable strokes recovered |
+| `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
 | `logo_orbit_wordmark` | 60 objects vs target 34; gradient/orbital emblem and outlined lettering fragment; 3 of 7 strokes |
-| `logo_root_seal` | 52 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
+| `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
 real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy

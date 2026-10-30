@@ -215,8 +215,17 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                         and touches(shapes[sid].vis, mask, (H, W), 2)
                                         and occludes(shapes[sid].vis, mask, (H, W))]
             stroke = fit_straight(shapes[sid].full, cfg, img, shapes[sid].color, straight_covers)
-            if stroke is None and node.kind == "path":
-                stroke = fit_stroke(shapes[sid].full, cfg, covers)
+            if stroke is None:
+                curved_candidate = node.kind == "path"
+                if node.kind == "polygon":
+                    # Clean alpha contours can snap a genuine curve to a coarse
+                    # polygon. Keep that curve eligible without reinterpreting
+                    # the existing filled primitives on opaque artwork.
+                    y0, x0, y1, x1 = shapes[sid].vis.bbox
+                    curved_candidate = np.any(img.alpha[max(0, y0-2):min(H, y1+2),
+                                                         max(0, x0-2):min(W, x1+2)] < 128)
+                if curved_candidate:
+                    stroke = fit_stroke(shapes[sid].full, cfg, covers, img, shapes[sid].color)
             if stroke is None:
                 continue
             node.kind, node.params, node.evenodd = "path", {}, False

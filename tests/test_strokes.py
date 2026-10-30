@@ -133,3 +133,27 @@ def test_stroke_style_survives_svg_emission():
     assert path.get("fill") == "none"
     assert metrics.analyze_svg(svg)["strokes"] == 1
     assert metrics.analyze_svg(svg)["anchors"] == 2
+
+
+def test_orbit_motion_curves_stay_strokes_and_square_ended_letter_stays_filled():
+    from challenges import _mask, assert_target, drawables
+    if not have_renderer():
+        pytest.skip("requires target renderer")
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    result = pipeline.run(directory / "logo_orbit_wordmark.png")
+    actual = ET.fromstring(result.svg)
+    target = ET.parse(directory / "logo_orbit_wordmark.target.svg").getroot()
+    letter = next(e for e in target.iter() if e.get("id") == "descriptor-3-U")
+    wanted_mask = _mask(target, letter)
+    elements = drawables(actual)
+    masks = [_mask(actual, e) for e in elements]
+    ious = [np.count_nonzero(m & wanted_mask)/max(1, np.count_nonzero(m | wanted_mask)) for m in masks]
+    got_letter = elements[int(np.argmax(ious))]
+    assert got_letter.get("stroke") is None, "square-ended outlined U must keep its filled silhouette"
+    wanted = [e for e in target.iter() if e.get("id", "").startswith("motion-line-")]
+    got = [e for e, mask in zip(elements, masks) if e.get("stroke")
+           and np.nonzero(mask)[1].mean() > 700]
+    assert len(got) == len(wanted) == 3
+    actual[:] = got
+    target[:] = wanted
+    assert_target(ET.tostring(actual, encoding="unicode"), ET.tostring(target, encoding="unicode"))

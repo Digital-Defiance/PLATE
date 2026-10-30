@@ -168,8 +168,10 @@ Six desired structural targets remain expected failures; ordinary fidelity/integ
 active. Stroke detection uses only existing numpy/scipy dependencies; `--set strokes=false` disables
 it. Automatic recovery targets round-capped straight marks and open curves, including a straight
 terminal hidden under an aligned circular hub. The full instrument-panel target now passes:
-**59 objects, all 27 strokes, 249 anchors**. ROOT's outer seal is an editable circle stroke,
-reducing its total anchors from **610 to 559** (3/32 strokes). Interrupted/branched strokes,
+**59 objects, all 27 strokes, 249 anchors**. ROOT's outer seal is an editable circle stroke;
+its total is now **522 anchors** (3/32 strokes), after repairing transparent contours.
+Thin 5px circles stay connected, and ORBIT retains its three editable motion curves.
+Interrupted/branched strokes,
 opaque counters, more general occluders and other cap/join styles remain work.
 `--set complete_hidden=false` also disables stroke completion.
 Metrics and per-image stats include

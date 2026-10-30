@@ -140,6 +140,9 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
         pix = rgb[ey, ex].astype(np.float32)
         pal = palette.astype(np.float32)
         best_lbl, best_res = _edge_labels(pix, pal, ok)
+        # Alpha independently identifies foreground along transparent contours.
+        # Keep their repair separate from opaque colour/gradient boundaries.
+        alpha_edge = ndi.maximum_filter(~opaque, size=7, mode="constant")[ey, ex]
 
         # Edge dilation can consume a whole narrow mark, leaving no local flat
         # seed for a colour that is already in the palette. Restore only nearly
@@ -158,7 +161,17 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                 for k in range(K):
                     wide[:, k] = ndi.maximum_filter(src == k, size=9, mode="constant")[
                         ey[candidates], ex[candidates]]
-                _, local_res = _edge_labels(pix[candidates], pal, wide)
+                local_lbl, local_res = _edge_labels(pix[candidates], pal, wide)
+                # An unresolved opaque pixel may sit just beyond the normal
+                # seed radius while the wider halo already explains its colour.
+                # Preserve that explanation before nearest-label filling can
+                # borrow transparency and break a thin loop. Reuse the same
+                # solid/pair competition; do not invent a third blend colour or
+                # replace any assignment the normal neighbourhood supported.
+                explained = (best_lbl[candidates] < 0) & (local_res <= 12.0) & alpha_edge[candidates]
+                rescued = candidates[explained]
+                best_lbl[rescued], best_res[rescued] = local_lbl[explained], local_res[explained]
+                ok[rescued] |= wide[explained]
                 strong = local_res > distance + 6.0
                 seeds, colors = candidates[strong], nearest[strong]
                 affected = np.zeros(ey.size, bool)
@@ -184,7 +197,12 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                         # assignments so gradient fitting remains coherent.
                         if frequencies.max() < 0.3*len(sample):
                             distant[labels == label] = False
-                    chosen = chosen[~supported[components[ey[chosen], ex[chosen]]] | distant]
+                    # A colour-matching unresolved core needs a seed even inside
+                    # the normal resampling halo; otherwise that halo can erase
+                    # a whole thin alpha-supported loop. Already-assigned edges
+                    # still require the existing disconnected/distant proof.
+                    chosen = chosen[~supported[components[ey[chosen], ex[chosen]]] | distant
+                                    | ((best_lbl[chosen] < 0) & alpha_edge[chosen])]
                     if not chosen.size:
                         continue
                     anchors = np.zeros((H, W), bool)
