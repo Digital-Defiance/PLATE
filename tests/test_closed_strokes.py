@@ -101,3 +101,56 @@ def test_filled_disc_under_concentric_disc_keeps_complete_silhouette(tmp_path):
     result = pipeline.run(path)
     assert result.stats["strokes"] == 0
     assert_target(result.svg, target)
+
+
+def test_orbit_front_orbit_recovers_as_an_editable_stroked_ellipse():
+    """ORBIT's gold front orbit is a thin stroked ellipse threaded through the badge
+    ring, gradient core, satellites and wordmark: ~2% of its boundary smears at
+    crossings and ~37% sits near later-painted covers. It must still recover as ONE
+    editable stroked ellipse (width ~6). The full ORBIT structural target stays a
+    strict xfail; this pins the front-orbit sub-result only."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    directory = Path(__file__).resolve().parents[1] / "samples/challenges"
+    result = pipeline.run(directory / "logo_orbit_wordmark.png")
+    stroked = [e for e in ET.fromstring(result.svg).iter()
+               if e.tag.rsplit("}", 1)[-1] == "ellipse" and e.get("stroke")
+               and e.get("stroke").lower() == "#e9bc59"]
+    assert len(stroked) == 1, "front orbit must be one editable stroked ellipse"
+    assert abs(float(stroked[0].get("stroke-width")) - 6) <= 1.5
+
+
+def test_notched_ring_is_not_accepted_as_a_clean_stroke(tmp_path):
+    """The crossing-tolerance must NOT accept a ring with a genuine bite: a real
+    defect is a long contiguous boundary deviation (and fails the footprint gate),
+    unlike the sparse, scattered outliers a crossing produces."""
+    # a stroked circle with a wedge cut out of its ring (a contiguous defect)
+    ring = ('<path d="M95 160a115 115 0 1 0 230 0a115 115 0 1 0 -230 0Z '
+            'M107 160a103 103 0 1 0 206 0a103 103 0 1 0 -206 0Z" '
+            'fill="#182e4c" fill-rule="evenodd"/>'
+            # carve a notch: an opaque wedge removing part of the ring body
+            '<path d="M210 160L340 90L340 230Z" fill="#ffffff"/>')
+    path, _ = _png(tmp_path, ring)
+    from plate.masks import Mask
+    from plate.stages.strokes import fit_closed
+    with Image.open(path) as image:
+        mask = Mask.from_full(np.asarray(image)[..., 3] >= 128)
+    # the ring body is interrupted by the notch -> must not be a clean closed stroke
+    assert fit_closed(mask, Config()) is None
+
+
+def test_boundary_ok_distinguishes_scattered_outliers_from_a_clustered_defect():
+    from plate.stages.strokes import _boundary_ok
+    rng = np.random.default_rng(0)
+    n = 1000
+    res = rng.uniform(-.3, .3, n)                     # clean loop within tolerance
+    assert _boundary_ok(res, .85)
+    scattered = res.copy()
+    scattered[rng.choice(n, 20, replace=False)] = 2.5  # 2% sparse crossings -> ok
+    assert _boundary_ok(scattered, .85)
+    clustered = res.copy()
+    clustered[400:440] = 2.5                           # a contiguous 40-sample notch -> reject
+    assert not _boundary_ok(clustered, .85)
+    many = res.copy()
+    many[rng.choice(n, 80, replace=False)] = 2.5       # 8% outliers -> reject
+    assert not _boundary_ok(many, .85)
