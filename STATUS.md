@@ -1,6 +1,28 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 24, PLATE identity and tracing fixture) · Version 0.0.1 · Tests: 277 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 25, adaptive stroke refit) · Version 0.0.1 · Tests: 279 passing, 7 expected feature gaps (`pytest -q`)
+
+## Adaptive stroke refit (session 25)
+
+- `fit_stroke` could reject a short, sharply curved stroke when Schneider fitting at
+  the default tolerance (0.45) collapsed it to a single underfitting cubic scoring
+  below the 0.95 IoU gate (EMBER whiskers: 1 segment, IoU 0.887). It now refits at
+  progressively tighter tolerances (0.45, 0.3, 0.15), keeping the first that clears
+  the gate (else the best). The retry only RAISES the IoU of a stroke about to be
+  rejected — a stroke already passing at 0.45 is untouched — so existing accepted
+  strokes are unchanged and the acceptance gate itself was NOT relaxed.
+- EMBER navy strokes **2 → 3**; ROOT strokes **3 → 9** (real whisker/root curves),
+  object counts (EMBER 51, ROOT 51) and SSIM steady; both still strict xfail. All
+  eight original samples byte-identical; instrument panel stays 59/27.
+- Investigation note: EMBER whisker id=15 peaks at IoU 0.947 even at the tightest
+  tolerance — a genuine marginal miss, left rejected (do NOT lower the 0.95 gate for
+  it; the gate protects stroke acceptance across the whole suite). Commit `1f54ffe`.
+- Session 25 earlier investigated same-colour separation (ROOT): found the 5 mint
+  leaves are already found correctly; the 51-vs-56 deficit is a scatter of small
+  thin fragments + the teal inner-seal ring merging — NOT one splittable problem.
+  Per-gap crack-difficulty assessment is in HANDOFF. `logo_plate` is unreachable by
+  design (hidden back-P geometry not recoverable from the raster) — leave xfail.
+- Suite **279 passed, 7 xfailed** (was 277/7).
 
 ## PLATE identity and tracing fixture (session 24)
 
