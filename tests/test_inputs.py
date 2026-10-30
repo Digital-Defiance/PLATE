@@ -169,3 +169,57 @@ def test_svg_dimensions_follow_source_for_every_mode(tmp_path):
         # A 1-bit image has two colours: the blue rect and red disc both become black
         # and merge, the yellow triangle becomes white background.
         assert r.stats["shapes"] >= (2 if mode == "1" else 3), mode
+
+
+def _overlay(tmp_path, alpha, name):
+    """Opaque red disc + a flat translucent blue rect on a transparent canvas."""
+    im = Image.new("RGBA", (320 * SS, 240 * SS), (0, 0, 0, 0))
+    ImageDraw.Draw(im).ellipse([40 * SS, 40 * SS, 200 * SS, 200 * SS], fill=(214, 40, 40, 255))
+    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(layer).rectangle([120 * SS, 60 * SS, 290 * SS, 180 * SS], fill=(40, 110, 200, alpha))
+    out = Image.alpha_composite(im, layer).resize((320, 240), Image.LANCZOS)
+    return _save(tmp_path, out, name), out
+
+
+def _opacities(svg):
+    import re
+    return [float(v) for v in re.findall(r' opacity="([\d.]+)"', svg)]
+
+
+@pytest.mark.parametrize("alpha", [64, 128, 191])
+def test_translucent_overlay_keeps_its_opacity(tmp_path, alpha):
+    path, im = _overlay(tmp_path, alpha, f"overlay_{alpha}.png")
+    r = pipeline.run(path, Config())
+    ops = _opacities(r.svg)
+    assert len(ops) == 1 and abs(ops[0] - alpha / 255) <= 0.02, ops
+    for bg in ((255, 255, 255), (24, 24, 24)):
+        if not have_renderer():
+            pytest.skip("requires renderer")
+        assert metrics.fidelity(r.svg, np.asarray(im), bg=bg)["ssim"] >= 0.96
+
+
+@pytest.mark.parametrize("alpha", [26, 51])
+def test_faint_object_below_half_opacity_is_not_dropped(tmp_path, alpha):
+    big = Image.new("RGBA", (240 * SS, 180 * SS), (0, 0, 0, 0))
+    ImageDraw.Draw(big).ellipse([40 * SS, 30 * SS, 200 * SS, 150 * SS], fill=(20, 30, 60, alpha))
+    im = big.resize((240, 180), Image.LANCZOS)
+    r = pipeline.run(_save(tmp_path, im, "faint.png"), Config())
+    assert r.stats["shapes"] == 1                              # was 0: the disc vanished
+    assert abs(_opacities(r.svg)[0] - alpha / 255) <= 0.02
+    assert _ssim(r.svg, im) >= 0.99
+
+
+def test_opaque_art_with_antialiased_alpha_edges_emits_no_opacity(tmp_path):
+    im = _flat_art(bg=(0, 0, 0, 0))                            # soft edges, opaque interiors
+    r = pipeline.run(_save(tmp_path, im, "edges.png"), Config())
+    assert _opacities(r.svg) == []
+
+
+def test_soft_shadow_ramp_is_not_mistaken_for_a_flat_faint_object(tmp_path):
+    from PIL import ImageFilter
+    im = Image.new("RGBA", (320, 240), (0, 0, 0, 0))
+    shadow = Image.new("L", im.size, 0)
+    ImageDraw.Draw(shadow).ellipse([70, 70, 230, 210], fill=100)   # peaks below 50% alpha
+    im.paste((0, 0, 0, 255), (0, 0), shadow.filter(ImageFilter.GaussianBlur(14)))
+    from plate.stages.segment import _faint_objects
+    assert not _faint_objects(np.asarray(im)[..., 3]).any()

@@ -73,3 +73,4 @@ class Node:
     stroke_width: float | None = None
     stroke_linecap: str = "round"
     stroke_linejoin: str = "round"
+    opacity: float = 1.0          # fill/stroke opacity of a translucent shape (source alpha)

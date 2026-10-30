@@ -82,6 +82,21 @@ def _stroke_node(node, shape, stroke, scale, precision):
     shape.completed |= stroke.completed
 
 
+def _opacity(shape: Shape, alpha: np.ndarray) -> float:
+    """Source opacity of a translucent shape (a 50% overlay, a tinted glass panel).
+    Measured on the shape's interior so antialiased rims don't count; opaque shapes
+    (every pixel 255) and shapes too thin to have an interior stay at 1.0."""
+    from scipy import ndimage as ndi
+    m = shape.vis
+    y0, x0, y1, x1 = m.bbox
+    a = alpha[y0:y1, x0:x1]
+    inner = ndi.binary_erosion(m.a, iterations=2)
+    if inner.sum() < 20:
+        return 1.0
+    level = float(np.median(a[inner]))
+    return 1.0 if level >= 245 else round(level / 255.0, 3)
+
+
 def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
     mask = shape.draw or shape.full
     if mask.empty():
@@ -260,6 +275,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                 _closed_node(node, s, loop_fits[s.vis], img.scale)
             elif s.vis in curve_fits:
                 _stroke_node(node, s, curve_fits[s.vis], img.scale, cfg.path_precision)
+            node.opacity = _opacity(s, img.alpha)
             leaves[s.id] = node
     if cfg.strokes:
         from .stages.strokes import fit_closed, fit_straight, fit_stroke, fit_crossed_curve

@@ -99,10 +99,38 @@ def _edge_labels(pix: np.ndarray, pal: np.ndarray, nearby: np.ndarray):
     return best_lbl, best_res
 
 
+def _faint_objects(alpha: np.ndarray) -> np.ndarray:
+    """Pixels of flat translucent objects whose opacity is below 50% (a 25% overlay,
+    a faint watermark). The usual alpha >= 128 test would drop them entirely. Accept a
+    faint region only if it has a real interior (2px erosion) whose alpha sits at one
+    steady level: antialias rims around opaque art have no interior, and soft shadows
+    ramp continuously, so both keep their old treatment. The object's outline is taken
+    at half of its own opacity, the same half-coverage rule as opaque shapes."""
+    out = np.zeros(alpha.shape, bool)
+    faint = (alpha >= 16) & (alpha < 128)
+    if not faint.any():
+        return out
+    count, comp, stats, _ = cv2.connectedComponentsWithStats(faint.astype(np.uint8), connectivity=8)
+    for k in range(1, count):
+        x, y, w, h, area = stats[k]
+        if area < 80:
+            continue
+        member = comp[y:y + h, x:x + w] == k
+        inner = ndi.binary_erosion(member, iterations=2)
+        if inner.sum() < 50:
+            continue
+        values = alpha[y:y + h, x:x + w][inner].astype(np.int16)
+        level = int(np.median(values))
+        if np.percentile(np.abs(values - level), 90) > 8:
+            continue
+        out[y:y + h, x:x + w] |= member & (alpha[y:y + h, x:x + w] >= level / 2)
+    return out
+
+
 def segment(img: Loaded, cfg: Config) -> Segmentation:
     rgb, alpha = img.rgb, img.alpha
     H, W = alpha.shape
-    opaque = alpha >= 128
+    opaque = (alpha >= 128) | _faint_objects(alpha)
     if not opaque.any():
         # Nothing visible (a fully transparent image): no palette, no shapes.
         return Segmentation(rid=np.full((H, W), -1, np.int32), shapes=[],

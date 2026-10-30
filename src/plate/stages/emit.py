@@ -78,13 +78,17 @@ def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, grads: list, depth: in
         fill = f' fill="{_hex(n.color)}"'
     if n.stroke_width is not None and n.kind in ("circle", "ellipse"):
         fill = f' fill="none" stroke="{_hex(n.color)}" stroke-width="{_num(n.stroke_width, prec)}"'
+    # Translucent shapes keep their source opacity as an object-level attribute
+    # (Illustrator maps it to the Transparency panel). Opaque shapes emit nothing.
+    alpha = f' opacity="{_num(n.opacity, 3)}"' if n.opacity < 1.0 else ""
+    fill += alpha
     p = n.params
     N = lambda v: _num(v, prec)
     if n.kind == "path":
         if n.stroke_width is not None:
             return [f'{pad}<path{lab} d="{n.d}" fill="none" stroke="{_hex(n.color)}" '
                     f'stroke-width="{N(n.stroke_width)}" stroke-linecap={quoteattr(n.stroke_linecap)} '
-                    f'stroke-linejoin={quoteattr(n.stroke_linejoin)}/>']
+                    f'stroke-linejoin={quoteattr(n.stroke_linejoin)}{alpha}/>']
         rule = ' fill-rule="evenodd"' if n.evenodd else ""
         return [f'{pad}<path{lab} d="{n.d}"{fill}{rule}/>']
     if n.kind == "circle":
