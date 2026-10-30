@@ -223,3 +223,16 @@ def test_soft_shadow_ramp_is_not_mistaken_for_a_flat_faint_object(tmp_path):
     im.paste((0, 0, 0, 255), (0, 0), shadow.filter(ImageFilter.GaussianBlur(14)))
     from plate.stages.segment import _faint_objects
     assert not _faint_objects(np.asarray(im)[..., 3]).any()
+
+
+def test_unwritable_output_fails_cleanly(tmp_path, capsys):
+    src = _save(tmp_path, _flat_art(), "in.png")
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    locked.chmod(0o555)
+    try:
+        assert main(["trace", str(src), "-o", str(locked / "out.svg")]) == 1
+    finally:
+        locked.chmod(0o755)
+    err = capsys.readouterr().err
+    assert err.startswith("plate: ") and "Traceback" not in err

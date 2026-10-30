@@ -4,10 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "plate-svg"
-version = "0.0.1"
-description = "PLATE: Primitive-aware Layered Amodal Tracing Engine. Local AI raster-to-SVG with real layers, for Illustrator."
+version = "0.1.0"
+description = "PLATE: Primitive-aware Layered Amodal Tracing Engine. Raster-to-SVG with editable layers, primitives, strokes and gradients, for Illustrator."
 readme = "README.md"
 license = { file = "LICENSE" }
+authors = [{ name = "Digital Defiance", email = "jessica@digitaldefiance.org" }]
 requires-python = ">=3.10"
 dependencies = [
   "vtracer>=0.6",
@@ -15,14 +16,18 @@ dependencies = [
   "numpy>=1.26",
   "scipy>=1.11",
   "opencv-python-headless>=4.8",
+  "scikit-image>=0.22",          # geometry.py: sub-pixel contours (core, not optional)
   "tomli>=2; python_version < '3.11'",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Digital-Defiance/PLATE"
+
 [project.optional-dependencies]
 # LM Studio needs no extra deps (stdlib urllib); heavy model deps stay optional.
-render = ["cairosvg", "scikit-image"]   # fidelity metrics, reports, `plate bench`
+render = ["cairosvg"]                   # SSIM metrics, reports, `plate bench` (needs libcairo)
 sam = ["torch", "transformers"]         # optional SAM-family segmenter (not built yet)
-dev = ["pytest", "ruff", "cairosvg", "scikit-image"]
+dev = ["pytest", "ruff", "cairosvg"]
 
 [project.scripts]
 plate = "plate.cli:main"

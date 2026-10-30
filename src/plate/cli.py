@@ -111,12 +111,16 @@ def _batch(args) -> int:
         print(f"plate: no images in {src}", file=sys.stderr)
         return 2
     cfg = _cfg(args)
+    failed = 0
     for f in files:
         try:
             _run_one(f, out / f.relative_to(src).with_suffix(".svg"), cfg, report=args.report)
         except Exception as e:                          # noqa: BLE001
+            failed += 1
             print(f"{f.name}: FAILED ({e})", file=sys.stderr)
-    return 0
+    print(f"plate: batch complete: {len(files) - failed} succeeded, {failed} failed",
+          file=sys.stderr if failed else sys.stdout)
+    return 1 if failed else 0
 
 
 def _sweep(args) -> int:
@@ -177,9 +181,15 @@ def _doctor(args) -> int:
     # cairosvg is special: it may import yet fail to load libcairo at render time,
     # so probe through the renderer helper (which preloads cairo on macOS).
     try:
+        import importlib.util
         from .raster import have_renderer
-        print(f"  ok        cairosvg (renderer ready)" if have_renderer()
-              else "  optional  cairosvg not usable (install cairo: brew install cairo)")
+        if have_renderer():
+            print("  ok        cairosvg (renderer ready)")
+        elif importlib.util.find_spec("cairosvg") is None:
+            print("  optional  cairosvg not installed (pip install 'plate-svg[render]'); "
+                  "enables SSIM in bench/sweep and --report")
+        else:
+            print("  optional  cairosvg installed but libcairo not found (brew install cairo)")
     except Exception as e:                              # noqa: BLE001
         print(f"  optional  cairosvg not usable ({type(e).__name__})")
     url = getattr(args, "vlm_url", None) or "http://localhost:1234/v1"
@@ -262,6 +272,9 @@ def main(argv: list[str] | None = None) -> int:
     except ImageLoadError as e:
         print(f"plate: {e}", file=sys.stderr)
         return 2
+    except OSError as e:          # unwritable output dir, disk full, permission denied
+        print(f"plate: {e.strerror or e}: {e.filename or ''}".rstrip(": "), file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         print("plate: interrupted", file=sys.stderr)
         return 130
