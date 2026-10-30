@@ -32,16 +32,19 @@ def _silhouettes(shapes: list[Shape], transparent: np.ndarray) -> None:
         # contains a floating opaque island (e.g. a plate hole with a disc inside)
         # must stay a hole. `& ~tr` re-opens the transparent part, yet the island's
         # own opaque footprint survives as this colour and leaves a stray component.
-        # Examine each hole-filled region (before transparency is removed): if it is
-        # predominantly transparent it is a real perforation, so drop its few opaque
-        # island pixels too. Regions that are mostly opaque (this shape genuinely sits
-        # behind another) are left filled, so paint-order coverage is unaffected.
+        # Examine each filled region before removing transparency. A majority
+        # transparent region is a perforation, but so is one with a clear alpha
+        # void surrounded mostly by opaque artwork. A fully opaque cover gives
+        # no such evidence. Erosion distinguishes a clear void from a thin
+        # antialias fringe, which must not reopen the whole painted interior.
         filled_region = f.a & ~vis
         if filled_region.any():
             lbl, n = ndi.label(filled_region)
             for k in range(1, n + 1):
                 comp = lbl == k
-                if (comp & tr).sum() > 0.5 * comp.sum():
+                alpha_void = comp & tr
+                clear_void = alpha_void.any() and ndi.binary_erosion(alpha_void, iterations=2).any()
+                if alpha_void.sum() > 0.5 * comp.sum() or clear_void:
                     a = a & ~comp
         s.sil = Mask(a, y0, x0)
         s.full = Mask(a.copy(), y0, x0)

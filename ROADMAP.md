@@ -1,6 +1,6 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-29. Current verification: **206 passed, 6 expected structural gaps**.
+Updated: 2026-10-29. Current verification: **213 passed, 6 expected structural gaps**.
 `STATUS.md` records measurements and all six remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
@@ -20,6 +20,7 @@ Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality w
 - [x] Full instrument-panel target: **59 objects / 27 strokes / 249 anchors / SSIM 0.9864**. Recover the three hidden needle terminals using contact, relative T-junctions, free-cap fitting and visible-source validation. Apply paint constraints only for accepted fits; merge the redundant chassis island with safeguards for earlier overpainting. All other benchmark SVGs remain byte-identical to the preceding run.
 - [x] Complete thin closed circles/ellipses become native editable strokes. ROOT outer seal independently matches its target: **2→3 strokes, 610→559 anchors, SSIM 0.9806→0.9830**. Full-disc silhouettes, cutouts and thick/nonuniform rings are protected; interrupted loops remain open work.
 - [x] Preserve unresolved alpha-contour pixels: a 5px circle improves from four objects/26 anchors to one editable circle/four anchors, SSIM **.9929→.9996**. Restore ORBIT motion curves after polygon snapping; preserve square-ended U and opaque primitives. Seven new regressions; donut SSIM **.9864→.9939**, ORBIT **.9787→.9811**. ROOT now has 51 objects/522 anchors; same-colour decomposition remains unmet.
+- [x] Preserve holes containing mostly opaque artwork when a clear transparent core remains. ORBIT's front path now has one hole instead of four false holes; isolated geometry IoU **.1503→.8630**, anchors **603→600**, white/dark SSIM **.9812/.9882**. Fully opaque covers and thin fringes stay protected. Editable ellipse fitting still needs cleaner gradient-crossing segmentation.
 - [x] Shared gradients behind supported occluders when fragments independently complete to matching primitives. The badge passes its target: 5 objects, 1 full radial disc, 20 anchors, current SSIM 0.9924. Shared linear/radial fits, incompatible colours/geometries, unsupported gaps and source scaling have regressions.
 - [x] Pool disconnected free-boundary arcs and occluder components without joining their tangents. Same-colour siblings merge only after a supported shared primitive fit. `edge_crossing_type` now passes unchanged: 7 → 5 objects, 55 → 36 anchors, SSIM 0.9914 → 0.9931. Original samples and all VTracer outputs remain byte-identical.
 

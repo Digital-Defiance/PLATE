@@ -1,6 +1,36 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-29 (session 17, alpha-contour continuity) · Version 0.0.1 · Tests: 206 passing, 6 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-29 (session 18, mixed-content holes) · Version 0.0.1 · Tests: 213 passing, 6 expected feature gaps (`pytest -q`)
+
+## Mixed-content holes (session 18, uncommitted)
+
+- **HEAD is `ebf8762`** (session 17); session 18 changes are uncommitted. Jessica
+  requested wrapping up at 2% remaining usage. No commit/push this session.
+- Fixed `order._silhouettes` treating a hole as solid when opaque interior artwork
+  occupied more than half of it. Preserve the whole hole when it has a clear
+  transparent core surviving two erosion steps, as well as the existing majority-
+  transparent case. Fully opaque interiors and 1–2px alpha fringes retain prior
+  behaviour. No stroke-fitting thresholds were changed.
+- **ORBIT front loop: four false holes → one genuine hole**, removing the borrowed
+  opaque core from its complete silhouette. Total anchors **603→600**; objects
+  remain 60, editable strokes remain 3. White/dark SSIM **.9811/.9870→.9812/.9882**.
+  Isolated emitted geometry IoU with the authored orbit improves **.1503→.8630**;
+  it remains a compound path rather than the desired editable ellipse.
+- Seven regressions: 5/10/20px clear voids inside mostly opaque holes, fully opaque
+  and 1/2px fringe negatives, and ORBIT's complete front-loop topology/geometry.
+  **213 passed, 6 xfailed** (baseline **206/6**). All eight original PLATE sample
+  SVGs and fourteen other challenge PLATE SVGs are byte-identical to session 17.
+  Independent targets, goldens and VTracer code are unchanged.
+- Ran both benches; rendered and inspected the isolated loop, full composition
+  and original samples. Outputs `/tmp/plate-void-final-{samples,challenges}`;
+  metrics `/tmp/plate-void-final-metrics.json`; review sheets `plate-orbit-hole.png`
+  and `plate-void-original-samples.png` in this chat's visualization folder.
+- Remaining: the front ellipse still has gradient-crossing segmentation outliers
+  (45 boundary points beyond .85px; worst ≈2.82px). Some wrongly assigned boundary
+  pixels are actually solid gold in the PNG. Fix local colour/coverage assignment
+  rather than relaxing constant-width/notch guards. The mint back orbit remains
+  split, and ROOT inner-ring/leaf separation remains unresolved. Six full
+  structural targets still fail; do not promote them based on this partial fix.
 
 ## Alpha-contour continuity (session 17)
 
@@ -233,7 +263,7 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 | `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
 | `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
-| `logo_orbit_wordmark` | 60 objects vs target 34; gradient/orbital emblem and outlined lettering fragment; 3 of 7 strokes |
+| `logo_orbit_wordmark` | 60 objects vs target 34; front-loop hole is preserved, but it remains a path; back orbit/lettering fragment; 3 of 7 strokes |
 | `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
 
 Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image

@@ -1,4 +1,4 @@
-# PLATE handover — 2026-10-29 (session 17)
+# PLATE handover — 2026-10-29 (session 18, wrap-up requested)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
@@ -8,14 +8,37 @@ rendering.
 
 - **Sessions 14–16 are committed as `a56c13e`** (`feat: recover straight and closed
   strokes and complete instrument panel`), on `main`, based on `0a0fddc`.
-- **This followup checkpoint commits session 17:** `fix: preserve thin alpha contours
-  and editable curves`. Source: `segment.py`, `strokes.py`, `pipeline.py`; seven new
-  regression cases, current gap measurements, and the reviewed `t3_ring` control
-  snapshot. Jessica requested committing and continuing; no push requested/made.
-- **Tests: 206 passed, 6 xfailed** (strict expected structural gaps). Run with the
+- **HEAD is `ebf8762`**, session 17: `fix: preserve thin alpha contours and editable
+  curves`. Both checkpoint commits are complete; no push.
+- **Session 18 is verified but uncommitted.** Changed `src/plate/stages/order.py`,
+  new `tests/test_mixed_holes.py`, and status/roadmap/challenge/handoff docs. Jessica
+  requested wrapping up at 2% usage. No implementation work remains in progress.
+- **Tests: 213 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
 - No push. Commit/push only when Jessica asks (she asked for the commits below).
+
+## Mixed-content hole fix (session 18, uncommitted)
+
+- `order._silhouettes` previously reopened an entire hole only when >50% of its
+  pixels were transparent. ORBIT's front ellipse encloses a mostly opaque gradient
+  core, so it incorrectly borrowed that artwork as its own fill and had four holes.
+  Also reopen when the hole contains clear transparency surviving two erosion
+  iterations. Fully opaque covers and thin 1–2px fringes keep old behaviour.
+- ORBIT's front loop is now one hollow compound path: emitted isolated geometry
+  IoU **.1503→.8630**, topology **(1 component, 4 holes)→(1,1)**. It is **not yet
+  an editable ellipse**. Total **60 objects / 600 anchors / 3 strokes / 1 gradient**;
+  white/dark SSIM **.9812/.9882** (was 60/603/3, .9811/.9870).
+- Seven new tests cover mostly opaque holes with clear 5/10/20px voids, opaque and
+  1/2px fringe negatives, and ORBIT full-loop geometry/topology. **213 passed,
+  6 xfailed**, no warnings. All eight original PLATE SVGs and fourteen other
+  challenge PLATE SVGs are byte-identical to `ebf8762`. Targets/goldens unchanged.
+- Bench outputs `/tmp/plate-void-final-{samples,challenges}`; metrics
+  `/tmp/plate-void-final-metrics.json`. Rendered/inspected full ORBIT, its isolated
+  front loop, and all original samples. Durable review sheets in this chat's
+  visualization folder: `plate-orbit-hole.png`, `plate-void-original-samples.png`.
+- No unverified fitter experiments were left in source. Experiments/probes live
+  only in `/tmp`; the implementation change is the small hole-classification fix.
 
 ## Alpha-contour repair (session 17)
 
@@ -46,7 +69,7 @@ rendering.
   | donut_alpha | 2 / 11 / 0 | .9939 / .9954 |
   | perforated_plate | 2 / 44 / 0 | .9943 / .9957 |
   | EMBER | 51 / 446 / 2 | .9663 / .9683 |
-  | ORBIT | 60 / 603 / 3 | .9811 / .9870 |
+  | ORBIT (session 17; see newer result above) | 60 / 603 / 3 | .9811 / .9870 |
   | ROOT | 51 / 522 / 3 | .9830 / .9867 |
 
   ROOT's two mint fragments (previous IDs 20 and 23) now join through restored
@@ -64,12 +87,21 @@ rendering.
 
 ## Immediate continuation
 
-Revisit ROOT's inner ring and ORBIT's interrupted orbits. Their merging/fragmentation
-persists after alpha-contour repair: ROOT shares mint with leaves; ORBIT back orbit
-is split into arcs and the front orbit's full silhouette is overfilled. Completion
-must preserve genuine cutouts and filled discs beneath nested shapes. Then address
-branched networks, same-colour object separation and opaque annulus/counter ambiguity.
-Do not loosen independent target contracts to promote these six expected failures.
+First review/commit the verified session-18 work if Jessica requests it. Then:
+
+1. ORBIT's front silhouette is now hollow, but `fit_closed` rejects gradient-crossing
+   segmentation errors: approximately 45 boundary points exceed .85px deviation,
+   max ≈2.82px; overall RMS ≈.329px. Several wrongly assigned boundary samples are
+   actually solid gold RGB (233,188,89). Inspect local colour/coverage assignment;
+   preserve strict width/notch tests rather than broadly permitting outliers.
+2. Reconcile ORBIT's mint back-orbit arcs with geometric/occlusion evidence. Its
+   full target still needs 34 objects; current count is 60. Foreground hierarchy
+   has changed after correcting the front ring, so re-check parents/paint order.
+3. ROOT's mint inner ring still shares colour with leaves; 51 vs 56 objects and
+   3/32 strokes. Branched networks, same-colour separation and opaque counters
+   remain later work. Preserve genuine cutouts and full discs under nested shapes.
+
+All six full structural gaps remain open. Do not loosen targets to promote them.
 
 ## Thin closed strokes (session 16, included in checkpoint)
 
@@ -199,7 +231,7 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
 | `complex_storefront` | 73 objects / 2 strokes; target 64, repeated windows/awning/lettering merge or fragment |
 | `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
-| `logo_orbit_wordmark` | 60 objects vs 34; orbital emblem + wordmark fragment; 3/7 strokes |
+| `logo_orbit_wordmark` | 60 objects vs 34; front path's hole is fixed, but editable ellipse/back orbit/wordmark recovery remains; 3/7 strokes |
 | `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
 
 The next large stroke gap is **interrupted/merged closed loops**, especially ROOT
