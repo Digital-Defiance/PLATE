@@ -1,7 +1,7 @@
 """Data model shared by the pipeline stages."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -41,6 +41,19 @@ class Segmentation:
     rid: np.ndarray              # (H, W) int32 region id, -1 = transparent
     shapes: list[Shape]
     palette: np.ndarray          # (K, 3) uint8
+
+    def rebuilt(self, shapes: list[Shape]) -> Segmentation:
+        """Reindex merged visible regions and discard stale ordering/completion."""
+        fresh = [replace(s, id=i, full=s.vis, sil=None, parent=None, children=[], prim=None,
+                         completed=False, draw=None, bleed=0., is_background=False)
+                 for i, s in enumerate(shapes)]
+        rid = np.full(self.rid.shape, -1, np.int32)
+        for s in fresh:
+            visible = s.vis.to_full(rid.shape)
+            assert np.all(rid[visible] == -1), "overlapping visible regions after merge"
+            rid[visible] = s.id
+        assert np.array_equal(rid >= 0, self.rid >= 0), "merge changed visible ownership"
+        return Segmentation(rid, fresh, self.palette)
 
 
 @dataclass

@@ -14,8 +14,6 @@ map; palette rides through unchanged.
 """
 from __future__ import annotations
 
-from dataclasses import replace
-
 import numpy as np
 
 from ..config import Config
@@ -289,9 +287,7 @@ def merge_occluded(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
             # All tree/completion fields belong to the old segmentation. The next
             # order.build must derive them afresh from the new visible ownership.
             shapes = [joint if s.id == a.id else s for s in seg.shapes if s.id != b.id]
-            fresh = [replace(s, full=s.vis, sil=None, parent=None, children=[], prim=None,
-                             completed=False, draw=None, bleed=0., is_background=False) for s in shapes]
-            return _reindex(fresh, seg)
+            return seg.rebuilt(shapes)
     return seg
 
 

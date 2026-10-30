@@ -3,7 +3,7 @@
 For a shape R that touches siblings C, decide whether R is partly hidden behind them and,
 if so, reconstruct its full silhouette:
 
- 1. Take R's outer contour. Points near C are "occluded", points on the image frame are
+ 1. Take R's external contours. Points near C are "occluded", points on the image frame are
     "frame", the rest are "free".
  2. Fit exact primitives (circle, ellipse, rectangle) to the free points.
  3. Otherwise bridge each occluded gap with a cubic Bezier that continues the tangents.
@@ -21,8 +21,8 @@ from scipy import ndimage as ndi
 
 from ..bezier import bez, resample_closed
 from ..config import Config
-from ..geometry import (Prim, fit_circle, fit_ellipse, fit_rect, mean_deviation,
-                        outer_contour, raster_prim, SCALE, SHIFT)
+from ..geometry import (Prim, fit_circle, fit_ellipse, fit_rect,
+                        contours_xy, poly_area, raster_prim, SCALE, SHIFT)
 from ..masks import Mask
 from ..scene import Shape
 
@@ -155,6 +155,22 @@ def _occludes(jR, jO, reach: float = 8.0) -> float:
     return float(np.mean(diffs)) if diffs else -999.0
 
 
+def _outlines(mask: np.ndarray) -> list[np.ndarray]:
+    """All external outlines, keeping component boundaries separate."""
+    # find_contours orients foreground outlines positively and hole boundaries
+    # negatively. Filtering by winding avoids a hole-fill pass for every neighbour.
+    return [resample_closed(c, 1.0) for c in contours_xy(mask) if len(c) >= 12 and poly_area(c) > 0]
+
+
+def _component_junctions(contours, near, frame):
+    out, start = [], 0
+    for contour in contours:
+        end = start + len(contour)
+        out.extend(_junctions(contour, near[start:end], frame[start:end]))
+        start = end
+    return out
+
+
 def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Completion | None:
     boxes = [R.sil.bbox] + [c.sil.bbox for c in C]
     y0 = max(min(b[0] for b in boxes) - 2, 0)
@@ -169,10 +185,10 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
     for c in C:
         Cm |= _paste(c.sil, shp, origin)
         Cv |= _paste(c.vis, shp, origin)
-    cont = outer_contour(Rm)
-    if cont is None or len(cont) < 12:
+    contours = _outlines(Rm)
+    if not contours:
         return None
-    cont = resample_closed(cont, 1.0)   # uniform spacing makes window sizes meaningful
+    cont = np.vstack(contours)   # pool free points, never connect separate contour tangents
 
     xi = np.clip(np.round(cont[:, 0]).astype(int), 0, shp[1] - 1)
     yi = np.clip(np.round(cont[:, 1]).astype(int), 0, shp[0] - 1)
@@ -185,17 +201,17 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
     real = []
     for c in C:
         Om = _paste(c.sil, shp, origin)
-        oc = outer_contour(Om)
-        if oc is None or len(oc) < 12:
+        outlines = _outlines(Om)
+        if not outlines:
             continue
-        oc = resample_closed(oc, 1.0)
+        oc = np.vstack(outlines)
         ofr = ((oc[:, 0] + x0) <= -0.4) | ((oc[:, 1] + y0) <= -0.4) | \
               ((oc[:, 0] + x0) >= W - 0.6) | ((oc[:, 1] + y0) >= H - 0.6)
         oxi = np.clip(np.round(oc[:, 0]).astype(int), 0, shp[1] - 1)
         oyi = np.clip(np.round(oc[:, 1]).astype(int), 0, shp[0] - 1)
         On = ndi.binary_dilation(Om, structure=se, iterations=2)
-        jR = _junctions(cont, On[yi, xi], frame)
-        jO = _junctions(oc, Rn[oyi, oxi], ofr)
+        jR = _component_junctions(contours, On[yi, xi], frame)
+        jO = _component_junctions(outlines, Rn[oyi, oxi], ofr)
         if _occludes(jR, jO) >= 15.0:
             real.append(c)
     if not real:
@@ -259,7 +275,7 @@ def try_complete(R: Shape, C: list[Shape], H: int, W: int, cfg: Config) -> Compl
         q = fit_rect(F)
         if q and q[1] <= tol:
             best = evaluate(raster_prim(q[0], shp), q[0])
-    if best is None:
+    if best is None and len(contours) == 1:
         poly = _bridge(cont, cls)
         if poly is not None and len(poly) > 8:
             img = np.zeros(shp, np.uint8)

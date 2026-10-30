@@ -70,6 +70,41 @@ def _toposort(ids: list[int], edges: set[tuple[int, int]], shapes: list[Shape]) 
     return out
 
 
+def merge_fragments(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> Segmentation:
+    """Reunite flat siblings only when a supported primitive explains their union.
+
+    Same colour supplies candidates, not permission to merge. The shared outline
+    must preserve every visible fragment and add hidden area beneath neighbours
+    established by the relative T-junction test. Rebuild order after each merge.
+    """
+    if not cfg.complete_hidden:
+        return seg
+    H, W = transparent.shape
+    groups: dict[tuple, list[Shape]] = {}
+    for s in seg.shapes:
+        if s.grad is None:
+            groups.setdefault((s.parent, s.color), []).append(s)
+    for (parent, color), members in groups.items():
+        if len(members) < 2:
+            continue
+        ids = {s.id for s in members}
+        visible = np.zeros((H, W), bool)
+        for s in members:
+            visible |= s.vis.to_full((H, W))
+        vis = Mask.from_full(visible)
+        sil = Mask.from_full(vis.filled().to_full((H, W)) & ~transparent)
+        joint = Shape(members[0].id, color, vis, sil, sil=sil)
+        covers = [s for s in seg.shapes if s.id not in ids and s.parent == parent
+                  and touches(sil, s.sil, (H, W), 2)]
+        comp = try_complete(joint, covers, H, W, cfg)
+        if comp is None or comp.prim is None:
+            continue
+        shapes = [joint if s.id == joint.id else s for s in seg.shapes
+                  if s.id == joint.id or s.id not in ids]
+        return seg.rebuilt(shapes)
+    return seg
+
+
 def build(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> list[int]:
     """Fills parent/children/full/draw on seg.shapes; returns root-level ids in paint order."""
     shapes = seg.shapes

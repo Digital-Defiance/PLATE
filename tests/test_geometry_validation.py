@@ -70,3 +70,27 @@ def test_poster_footer_remains_an_editable_rectangle():
     assert footer[0].kind == "rect"
     assert abs(footer[0].params["rx"] - 420) < 1
     assert abs(footer[0].params["ry"] - 50) < 1
+
+
+def test_completion_pools_arcs_across_disconnected_visibility():
+    """A cross hides the middle of a disc; no individual arc spans 100 degrees."""
+    canvas = (160, 180)
+    circle = raster_prim(Prim("circle", 90, 80, 50, 50), canvas)
+    vertical = np.zeros(canvas, bool)
+    horizontal = np.zeros(canvas, bool)
+    vertical[10:150, 82:99] = True
+    horizontal[72:89, 15:165] = True
+    observed = Mask.from_full(circle & ~vertical & ~horizontal)
+    behind = Shape(0, (210, 40, 40), observed, observed, sil=observed)
+    covers = []
+    for i, region in enumerate((vertical, horizontal & ~vertical), 1):
+        mask = Mask.from_full(region)
+        covers.append(Shape(i, (40, 70, 190), mask, mask, sil=mask))
+    result = complete.try_complete(behind, covers, *canvas, Config())
+    assert result is not None and result.prim is not None
+    assert result.prim.kind == "circle"
+    assert abs(result.prim.cx - 90) < 1 and abs(result.prim.cy - 80) < 1
+    assert abs(result.prim.rx - 50) < 1
+    recovered = result.full.to_full(canvas)
+    assert (recovered & circle).sum() / (recovered | circle).sum() >= .97
+    assert set(result.above) == {1, 2}

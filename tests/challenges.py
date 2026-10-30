@@ -35,8 +35,7 @@ CHALLENGES = {
     "gradient_badge": Challenge(
         "One full radial disc underneath an edge-crossing ribbon."),
     "edge_crossing_type": Challenge(
-        "Recover the full disc behind three outlined block letters.",
-        gap="Edge-crossing letters fragment the underlying disc (7 objects vs 5)."),
+        "Recover the full disc behind three outlined block letters."),
     "discrete_palette": Challenge("Keep eight hard-edged flat swatches; emit zero gradients."),
     "stroked_route": Challenge(
         "Keep the route as one open stroked path with two endpoint discs."),
@@ -56,6 +55,18 @@ CHALLENGES = {
         "44 objects: gradient disc behind type, ring, ribbon, strokes and repeated dots.",
         gap="Crossing lettering, ribbon and lines fragment the poster's shapes.",
         ssim_floor=0.96),  # Thin-detail recovery improved SSIM to 0.9685.
+    "logo_ember_crest": Challenge(
+        "51 objects: fox facets, shield cutouts, laurel leaves, ribbon and outlined EMBER.",
+        gap="Shield full silhouette is incomplete (IoU 0.8385); only 2 of 7 strokes recovered.",
+        ssim_floor=0.96),
+    "logo_orbit_wordmark": Challenge(
+        "34 objects: gradient core, interlocking orbital strokes, compound monogram and wordmark.",
+        gap="Orbital emblem and wordmark fragment into 60 objects instead of 34.",
+        ssim_floor=0.97),
+    "logo_root_seal": Challenge(
+        "56 objects: organic leaves, 32 strokes, counter-cut trunk and outlined ROOT.",
+        gap="Tree/leaf/stroke objects merge or disappear: 52 objects and no editable strokes.",
+        ssim_floor=0.97),
 }
 
 DRAWABLE = {"rect", "circle", "ellipse", "path", "polygon", "polyline", "line"}
