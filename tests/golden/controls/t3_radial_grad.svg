@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="300" height="300" viewBox="0 0 300 300">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="300" height="300" viewBox="0 0 300 300">
   <defs>
   <radialGradient id="Gray_circle_gradient" gradientUnits="userSpaceOnUse" cx="150.18" cy="150.08" r="110.41">
     <stop offset="0" stop-color="#e4cb97"/>
@@ -11,6 +11,10 @@
     <stop offset="1" stop-color="#80679b"/>
   </radialGradient>
   </defs>
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="300" fill="#ffffff"/>
-  <circle id="Gray_circle" data-name="Gray circle" inkscape:label="Gray circle" cx="150.27" cy="150.23" r="109.75" fill="url(#Gray_circle_gradient)"/>
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="300" fill="#ffffff"/>
+  </g>
+  <g id="Gray_circle_layer" data-name="Gray circle layer" inkscape:label="Gray circle layer" inkscape:groupmode="layer" i:layer="yes">
+    <circle id="Gray_circle" data-name="Gray circle" inkscape:label="Gray circle" cx="150.27" cy="150.23" r="109.75" fill="url(#Gray_circle_gradient)"/>
+  </g>
 </svg>

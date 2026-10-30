@@ -11,7 +11,7 @@ behaviour. Here the target remains the goal even when PLATE currently fails it.
 | Scene / input | Desired SVG | Verified result (2026-10-30) | White-background SSIM |
 | --- | --- | --- | --- |
 | [Nested dial](../samples/challenges/nested_dial.png) | [Target](../samples/challenges/nested_dial.target.svg): background + seven full circles; nested housing, bezel, face, hub and three repeated markers | Pass; 8 objects | 0.9916 |
-| [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Pass: one plate component, three holes, separate island; 2 objects | 0.9943 |
+| [Perforated plate](../samples/challenges/perforated_plate.png) | [Target](../samples/challenges/perforated_plate.target.svg): one connected compound path with three transparent holes + one circle island | Pass: one plate component, three holes, separate island; 2 objects / 20 anchors | 0.9961 |
 | [Occlusion chain](../samples/challenges/occlusion_chain.png) | [Target](../samples/challenges/occlusion_chain.target.svg): three recovered full circles + foreground panel + background, in paint order | Pass: back circle drift ≈0.1px, all full silhouettes/order match; 5 objects | 0.9932 |
 | [Twin gradients](../samples/challenges/twin_gradients.png) | [Target](../samples/challenges/twin_gradients.target.svg): two separate rectangles with opposite linear gradients, two overlaid circles, background | Pass; 5 objects, 2 gradients | 0.9882 |
 | [Gradient badge](../samples/challenges/gradient_badge.png) | [Target](../samples/challenges/gradient_badge.target.svg): one full radial-gradient circle behind a crossing ribbon, two rivets, background | Pass: 5 objects, 1 full radial disc, 20 anchors | 0.9924 |
@@ -32,8 +32,8 @@ brand master, not a simplified test drawing. Three offset, counter-cut P plates,
 five custom outlined letters and three registration strokes make **11 objects**.
 The plates share a truly transparent circular counter.
 
-Initial PLATE result: **11 objects, 125 anchors, 1/3 editable strokes**, SSIM
-**0.9906 / 0.9956** on white/dark. The count matches, but the back P's full-silhouette
+Current audited PLATE result: **11 objects, 121 anchors, 1/3 editable strokes**, SSIM
+**0.9907 / 0.9956** on white/dark. The count matches, but the back P's full-silhouette
 IoU is **0.1387**: hidden compound geometry is not reconstructed, the registration
 mark merges, and some square corners round off. The intended hidden contours are
 an aspirational authoring contract, not uniquely identifiable from the raster.
@@ -58,9 +58,9 @@ holes rather than a background colour painted over the artwork.
 
 | Logo | PNG / desired SVG | Target → actual objects | Target → actual strokes | SSIM white / dark |
 | --- | --- | --- | --- | --- |
-| EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 2 | 0.9663 / 0.9683 |
+| EMBER fox crest, 800×960 | [PNG](../samples/challenges/logo_ember_crest.png) · [SVG](../samples/challenges/logo_ember_crest.target.svg) | 51 → 51 | 7 → 3 | 0.9665 / 0.9685 |
 | ORBIT wordmark, 1200×480 | [PNG](../samples/challenges/logo_orbit_wordmark.png) · [SVG](../samples/challenges/logo_orbit_wordmark.target.svg) | 34 → 44 | 7 → 7 | 0.9846 / 0.9925 |
-| ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 51 | 32 → 3 | 0.9830 / 0.9867 |
+| ROOT tree seal, 900×900 | [PNG](../samples/challenges/logo_root_seal.png) · [SVG](../samples/challenges/logo_root_seal.target.svg) | 56 → 51 | 32 → 9 | 0.9834 / 0.9871 |
 
 EMBER exercises a faceted animal silhouette, four transparent shield cutouts,
 12 laurel leaves, thin whiskers, ribbon layering and outlined lettering. Its
@@ -71,7 +71,7 @@ touching branches/roots, 15 leaf silhouettes and veins, a transparent trunk coun
 and closed circular strokes. All three retain strict structural gaps; appearance
 floors remain active at 0.96 for EMBER and 0.97 for ORBIT/ROOT on both backgrounds.
 ROOT's outer seal now independently matches its target as an editable 18px circle
-stroke; total anchors are now 522 after alpha-contour repair (previously 610).
+stroke; total anchors are now 526 with 9/32 strokes after adaptive refitting and hole compaction.
 ORBIT's three motion curves and both orbital ellipses match their independent
 stroke targets, including the orbital paint order; the square-ended descriptor U
 remains filled. The back orbit pools four visible fragments into one ellipse,
@@ -217,9 +217,9 @@ interior-text control also reconnect; OCR and semantic text grouping remain abse
 
 | Scene | Current objects / target | Strokes | White / dark SSIM |
 | --- | --- | --- | --- |
-| Mission patch | 72 / 45 | 1 | 0.9815 / 0.9830 |
-| Storefront | 73 / 64 | 0 | 0.9738 / 0.9752 |
-| Instrument panel | 60 / 59 | 2 (target 27) | 0.9854 / 0.9854 |
+| Mission patch | 72 / 45 | 8 (target 10) | 0.9817 / 0.9831 |
+| Storefront | 73 / 64 | 3 (target 4) | 0.9738 / 0.9752 |
+| Instrument panel | 59 / 59 | 27 (target 27) | 0.9864 / 0.9864 |
 | Event poster | 83 / 44 | 0 | 0.9715 / 0.9715 |
 
 The patch still has two radial fragments instead of the authored radial planet and

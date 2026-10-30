@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="300" height="240" viewBox="0 0 300 240">
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="240" fill="#ffffff"/>
-  <rect id="Blue_rectangle" data-name="Blue rectangle" inkscape:label="Blue rectangle" x="70" y="60" width="160" height="120" fill="#286ec8"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="300" height="240" viewBox="0 0 300 240">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="240" fill="#ffffff"/>
+  </g>
+  <g id="Blue_rectangle_layer" data-name="Blue rectangle layer" inkscape:label="Blue rectangle layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Blue_rectangle" data-name="Blue rectangle" inkscape:label="Blue rectangle" x="70" y="60" width="160" height="120" fill="#286ec8"/>
+  </g>
 </svg>

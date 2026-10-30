@@ -5,7 +5,7 @@ into an **Illustrator-friendly, layered SVG**. Instead of the flat soup of thous
 typical auto-tracer produces, PLATE reconstructs the *editable structure* of the artwork:
 
 - **Real objects, not pixel outlines** — a circle becomes one `<circle>` with 4 anchors, not a 90-point path.
-- **Named, nested layers** — top-level `<g>` groups map to Illustrator layers; contained shapes nest as sub-layers.
+- **Named layers and nested groups** — top-level artwork imports as actual Illustrator layers; standalone shapes get their own layer containers. Semantic groups remain nested inside them. Verified on Illustrator 30.8.2.
 - **Correct stacking order** — shapes are painted bottom-to-top in the order they actually overlap.
 - **Hidden parts completed** — when one shape is partly hidden behind another, PLATE reconstructs the
   occluded shape's *full* silhouette (amodal completion) and paints the occluder on top. The shape
@@ -23,17 +23,49 @@ By Digital Defiance (501(c)(3)). MIT licensed.
 The [PLATE logo](assets/brand/README.md) doubles as a tracing challenge: its layered
 P, transparent counters and registration strokes test the structure PLATE recovers.
 
-> **Status (v0.0.1):** working classical engine; the real-LM-Studio VLM path is validated (naming +
+> **Status (v0.1.0):** working classical engine; the real-LM-Studio VLM path is validated (naming +
 > semantic grouping against a live vision model). Linear/radial gradients and conservative
-> strokes are implemented. Illustrator import/editability still needs the import checklist.
+> strokes are implemented. All 24 benchmark images pass 636 automated Illustrator 30.8.2
+> checks for actual layers, names, grouping, order, geometry, strokes, gradients, edits and `.ai` round trips;
+> see `docs/illustrator-checklist.md` for measured results and remaining checks.
 > Full state and known limitations are in `STATUS.md`; plans in `ROADMAP.md`. Continuing the project
 > with a coding agent? Start with **`AGENTS.md`**.
+
+## What PLATE covers
+
+PLATE is intended for logos, icons, diagrams and graphic illustrations with
+recoverable shapes. It is **not a universal PNG reconstruction tool**. Opening a
+PNG successfully, matching its rendered pixels and recovering its intended
+editable objects are three different levels of success.
+
+| Artwork / feature | Current coverage and limits |
+| --- | --- |
+| Flat geometric artwork | Strong synthetic coverage for circles, ellipses, rectangles, polygons, containment and supported occlusion. Complex compositions can still split or merge objects. |
+| Thin lines and outlines | Straight round-capped marks, selected open curves and circular/elliptical loops become strokes. Branched networks, touching same-colour details, other caps/joins and variable-width/dashed strokes lack comprehensive coverage. |
+| Gradients | Linear/radial fills and some supported occlusions work. Clamped/nonlinear ramps, general elliptical/focal gradients and complex decorated shading remain incomplete; mesh/conic gradients are outside current coverage. |
+| Transparency | Hard cutouts and tested flat-opacity regions work. Soft shadows, feathering, spatially varying alpha and blend effects are not broadly validated. |
+| Lettering | Traced outlines can remain editable paths. Original fonts, live text, reading order and semantic letter grouping are not recovered reliably. |
+| Tiny, noisy or low-contrast art | Some tiny/degenerate and noise regressions exist. Hairlines, fully antialiased colours, low contrast and resolution changes can still lose details. |
+| PNG decoding / colour | Existing tests cover several modes, corrupt inputs and dark 16-bit normalization. The full palette/bit-depth/transparency/interlacing matrix and ICC/gamma colour policy still need explicit coverage. |
+| Photos, textures and painterly artwork | Outside the current editable-object quality claim; these are not the intended launch use case. |
+
+The **16 independent desired-SVG challenges have 9 structural passes and 7 known
+gaps**, despite all 16 meeting their light/dark appearance floors. The seven gaps
+are mission patch, storefront, event poster, EMBER, ORBIT, ROOT and the PLATE logo;
+matching object counts alone does not make these pass. Some hidden authoring
+geometry is inherently ambiguous from a raster. See [the measured gaps](docs/AUDIT.md).
+
+The **24/24 Illustrator workflows validate SVG interchange**, including real
+layers and native edits; they do not turn those seven reconstruction gaps into
+passes. A representative real-artwork corpus, PNG/colour-mode matrix, scale/noise
+sweeps and further native editing checks are still needed. The remaining work and
+acceptance gates are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## Requirements
 
 - **macOS or Linux**, **Python ≥ 3.10** (developed and tested on Python 3.11).
-- Core dependencies (installed automatically): `numpy`, `scipy`, `opencv-python-headless`, `pillow`, `vtracer`.
-- **Optional, for metrics / reports / `plate bench`** (`render` extra): `cairosvg` + `scikit-image`.
+- Core dependencies (installed automatically): `numpy`, `scipy`, `opencv-python-headless`, `pillow`, `vtracer`, `scikit-image`.
+- **Optional, for metrics / reports / `plate bench`** (`render` extra): `cairosvg`.
   `cairosvg` needs the native **cairo** library:
   - macOS: `brew install cairo`
   - Debian/Ubuntu: `sudo apt-get install libcairo2`
@@ -52,7 +84,7 @@ P, transparent counters and registration strokes test the structure PLATE recove
 ```bash
 cd /Volumes/Code/PLATE
 python3.11 -m venv .venv && source .venv/bin/activate   # use a 3.10+ interpreter; macOS system python3 may be 3.9
-pip install -e ".[dev,render]"      # dev = pytest + ruff; render = cairosvg + scikit-image
+pip install -e ".[dev,render]"      # dev = pytest + ruff; render = cairosvg
 plate doctor                        # check deps and whether LM Studio is reachable
 pytest -q                           # latest verification counts are recorded in STATUS.md
 ```
@@ -95,6 +127,9 @@ plate bench samples
 # plain VTracer output only (the control used by `bench`)
 plate trace art.png --baseline
 ```
+
+`plate batch` continues after individual failures and prints totals. Its exit code is
+0 when every conversion succeeds, 1 when any conversion fails, or 2 when no images are found.
 
 **Per-image overrides:** drop a sidecar JSON next to the image — `art.plate.json` beside `art.png`,
 e.g. `{"simplify": 2.0, "max_colors": 8}` — and those levers apply just to that image.
@@ -175,7 +210,7 @@ active. Stroke detection uses only existing numpy/scipy dependencies; `--set str
 it. Automatic recovery targets round-capped straight marks and open curves, including a straight
 terminal hidden under an aligned circular hub. The full instrument-panel target now passes:
 **59 objects, all 27 strokes, 249 anchors**. ROOT's outer seal is an editable circle stroke;
-its total is now **522 anchors** (3/32 strokes), after repairing transparent contours.
+its total is now **526 anchors** (9/32 strokes), after adaptive curve refitting and hole compaction.
 Thin 5px circles stay connected, and ORBIT now has both orbital ellipses plus three editable
 motion curves, plus one complete editable radial-gradient circle: **44 objects, 345 anchors,
 7/7 strokes**, including both cream highlights. Compound navy shapes and ambiguous gradient
@@ -202,6 +237,17 @@ samples/            generated synthetic test images
 ```
 
 ## Docs
+
+Opt-in desktop validation (macOS + Illustrator; use a fresh output directory):
+
+```bash
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python -m plate.illustrator --output /tmp/plate-illustrator-NEW
+```
+
+This runs eight import/edit/save/reopen workflows and writes JSON evidence, PNGs
+and `.ai` copies. All eight currently pass. To run the full 24-image corpus, append
+`samples/*.png samples/challenges/*.png` before or after the options.
+Full usage and remaining checks: `docs/illustrator-checklist.md`.
 
 `AGENTS.md` (agent handoff) · `ROADMAP.md` · `STATUS.md` · `docs/SPEC.md` · `docs/METRICS.md` ·
 `docs/illustrator-checklist.md`

@@ -1,15 +1,14 @@
 """Stage 6: Node tree -> SVG text with Illustrator-friendly structure.
 
-Top-level groups become Illustrator layers, nested groups become sub-layers. Names are
-written three ways because importers disagree: a sanitised `id` (Illustrator reads this),
-`data-name` (Illustrator round-trip attribute) and `inkscape:label` (Inkscape).
+Top-level groups carry Adobe and Inkscape layer markers; standalone top-level
+shapes get layer containers. Nested semantic groups stay groups. Names are written
+three ways because importers disagree: a sanitised `id` (Illustrator reads this),
+`data-name` and `inkscape:label` (Inkscape).
 """
 from __future__ import annotations
 
 import re
-from xml.sax.saxutils import escape, quoteattr
-
-import numpy as np
+from xml.sax.saxutils import quoteattr
 
 from ..scene import Node
 
@@ -48,7 +47,7 @@ def _label(n: Node, ids: _Ids, cfg_layers: bool, top: bool) -> str:
         return ""
     attrs = f' id="{ids.make(n.name)}" data-name={quoteattr(n.name)} inkscape:label={quoteattr(n.name)}'
     if top and n.kind == "group":
-        attrs += ' inkscape:groupmode="layer"'
+        attrs += ' inkscape:groupmode="layer" i:layer="yes"'
     return attrs
 
 
@@ -86,20 +85,20 @@ def node_svg(n: Node, ids: _Ids, prec: int, layers: bool, grads: list, depth: in
     N = lambda v: _num(v, prec)
     if n.kind == "path":
         if n.stroke_width is not None:
-            return [f'{pad}<path{lab} d="{n.d}" fill="none" stroke="{_hex(n.color)}" '
+            return [(f'{pad}<path{lab} d="{n.d}" fill="none" stroke="{_hex(n.color)}" '
                     f'stroke-width="{N(n.stroke_width)}" stroke-linecap={quoteattr(n.stroke_linecap)} '
-                    f'stroke-linejoin={quoteattr(n.stroke_linejoin)}{alpha}/>']
+                    f'stroke-linejoin={quoteattr(n.stroke_linejoin)}{alpha}/>')]
         rule = ' fill-rule="evenodd"' if n.evenodd else ""
         return [f'{pad}<path{lab} d="{n.d}"{fill}{rule}/>']
     if n.kind == "circle":
         return [f'{pad}<circle{lab} cx="{N(p["cx"])}" cy="{N(p["cy"])}" r="{N(p["r"])}"{fill}/>']
     if n.kind == "ellipse":
-        return [f'{pad}<ellipse{lab} cx="{N(p["cx"])}" cy="{N(p["cy"])}" rx="{N(p["rx"])}" '
-                f'ry="{N(p["ry"])}"{fill}{_rot(p, prec)}/>']
+        return [(f'{pad}<ellipse{lab} cx="{N(p["cx"])}" cy="{N(p["cy"])}" rx="{N(p["rx"])}" '
+                f'ry="{N(p["ry"])}"{fill}{_rot(p, prec)}/>')]
     if n.kind in ("rect", "rrect"):
         rr = f' rx="{N(p["r"])}" ry="{N(p["r"])}"' if n.kind == "rrect" else ""
-        return [f'{pad}<rect{lab} x="{N(p["cx"] - p["rx"])}" y="{N(p["cy"] - p["ry"])}" '
-                f'width="{N(2 * p["rx"])}" height="{N(2 * p["ry"])}"{rr}{fill}{_rot(p, prec)}/>']
+        return [(f'{pad}<rect{lab} x="{N(p["cx"] - p["rx"])}" y="{N(p["cy"] - p["ry"])}" '
+                f'width="{N(2 * p["rx"])}" height="{N(2 * p["ry"])}"{rr}{fill}{_rot(p, prec)}/>')]
     if n.kind == "polygon":
         pts = " ".join(f"{N(x)},{N(y)}" for x, y in p["pts"])
         return [f'{pad}<polygon{lab} points="{pts}"{fill}/>']
@@ -126,13 +125,23 @@ def write_svg(nodes: list[Node], size: tuple[int, int], prec: int = 2, layers: b
     w, h = size
     ids = _Ids()
     grads: list = []
+    # Allocate all original object/gradient IDs before synthetic wrapper IDs, so
+    # an existing object named "Disc layer" cannot lose its ID to Disc's wrapper.
+    parts = [(n, node_svg(n, ids, prec, layers, grads,
+                          int(layers and n.kind != "group"), top=True)) for n in nodes]
     body: list[str] = []
-    for n in nodes:
-        body += node_svg(n, ids, prec, layers, grads, 0, top=True)
-    head = (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" '
+    for n, lines in parts:
+        if layers and n.kind != "group":
+            wrapper = Node(name=f"{n.name} layer", kind="group")
+            lab = _label(wrapper, ids, True, True)
+            body += [f"  <g{lab}>", *lines, "  </g>"]
+        else:
+            body += lines
+    adobe = ' xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/"' if layers else ""
+    head = (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"{adobe} '
             f'width="{w}" height="{h}" viewBox="0 0 {w} {h}">')
-    # a single <defs> is emitted ONLY when at least one gradient exists, so flat art is
-    # byte-identical (no empty <defs> line). It appears textually before the body but is
+    # A single <defs> is emitted only when at least one gradient exists (no empty
+    # <defs> for flat art). It appears textually before the body but is
     # BUILT from ids allocated during the body walk above.
     defs: list[str] = []
     if grads:

@@ -1,14 +1,134 @@
-# PLATE handover — 2026-10-30 (session 24, identity and tracing fixture)
+# PLATE handover — 2026-10-30 (native layers and honest coverage)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
+## Latest checkpoint — native layers pass; PNG reconstruction is not universal
+
+- Jessica requested this checkpoint be committed after updating README/ROADMAP/
+  HANDOFF. Use `git log -1` for the resulting commit. Engine base was `dceaae2`;
+  separate Homebrew/release commits `35793cf` and `e0d525e` are preserved. No push
+  requested. This checkpoint includes the previously pending dark-16-bit loader fix, its 19
+  regressions, audit docs, new Illustrator runner/tests and reviewed control goldens.
+- **Do not claim every meaningful PNG is covered.** README's coverage table is
+  the public boundary: graphic artwork is the target; photographic/painterly
+  reconstruction, original live text/fonts and unknowable hidden authoring data
+  are not launch guarantees. Decode success, render fidelity and editable-object
+  correctness are distinct. **9/16 desired-SVG contracts pass, 7 remain strict
+  xfails**, despite all fidelity floors passing. The 24 Illustrator successes
+  below establish SVG interchange, not full source reconstruction.
+- Fixed native Illustrator layers directly in SVG: Adobe namespace
+  `http://ns.adobe.com/AdobeIllustrator/10.0/`, `i:layer="yes"` on top-level groups
+  alongside Inkscape markers. Standalone root objects get named `… layer` wrappers;
+  nested semantic groups stay groups. Wrapper IDs are minted after every original
+  object/gradient ID, preserving IDs/refs and geometry. No native postprocessing or
+  core Illustrator dependency. `illustrator_layers=false` stays ungrouped.
+- **Illustrator 30.8.2: 24/24 workflows, 636/636 checks pass** including all complex
+  scenes/logos. Exact real layer order, membership, nested groups and drawable
+  order are checked. Names, geometry, strokes/linear-radial gradients, edits and
+  AI save/reopen pass. Minimum interchange SSIM .9928; ORBIT .9960, 34 real layers,
+  44 objects/345 anchors/7 strokes/1 gradient. Face has 2 layers. Ordinary pytest
+  never launches Illustrator. Run from the repo root:
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python -m plate.illustrator --output NEW_DIRECTORY samples/*.png samples/challenges/*.png`.
+- **352 passed/7 xfailed, no warnings** in the final full suite; baseline 341/7.
+  Added 11 regressions for layer serialization, ID collisions, hierarchy/membership
+  and hidden object/layer order; 26 headless Illustrator/layer tests total. Changed
+  Python files pass Ruff. Full log `/tmp/plate-illustrator-layers-final-clean-tests.txt`.
+- Both benches run before/after; all 24 have identical original IDs, geometry,
+  gradients and paint hierarchy after stripping new layer markup, and identical
+  white/dark render pixels. VTracer byte-identical. All 15 control goldens were
+  independently reviewed for identical trees/pixels before their layer-only refresh;
+  authored target SVGs and source PNGs remain untouched. Visual review:
+  `plate-illustrator-layer-review.png` in this chat's visualization directory.
+- Evidence: `/tmp/plate-illustrator-layers-all/` (JSON/PNGs/AI),
+  `/tmp/plate-layers-{before,after}-{samples,challenges}/`,
+  `/tmp/plate-layer-render-comparison.json`, `/tmp/plate-layer-controls-review.json`,
+  `/tmp/plate-layer-import-probe/`. Fresh post-fix document-preservation probe also
+  passes (`/tmp/plate-illustrator-layer-preservation/preservation.json`); unsaved
+  state/marker geometry/colour and active document/UI setting unchanged, cleanup
+  leaves zero documents. No pending dialog or script is known. An earlier nested
+  `$.evalFile` wrapper timed out without a visible dialog; its cause is unidentified.
+- Next quality work: representative real-artwork corpus, PNG bit-depth/palette/
+  alpha/interlacing/ICC-gamma matrix, scale/noise/low-contrast/detail sweeps, soft
+  alpha/shadows, harder gradients/strokes/decomposition, and direct gradient edits,
+  isolated hidden-object/hole and 4× seam checks. ROADMAP lists concrete gates.
+  Service remains design-only; its existing priority is not silently reversed by
+  this coverage audit. Hard geometry research remains deferred.
+
+## Initial Illustrator automation — historical, before native-layer fix
+
+- New uncommitted `src/plate/illustrator.py`, `_illustrator_check.jsx` and
+  `tests/test_illustrator.py`. Run from the repo root on macOS:
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python -m plate.illustrator --output NEW_DIRECTORY`.
+  Requires Illustrator/Automation permission. Headless pytest never launches it.
+  It copies/generates SVGs, inspects native objects, exports PNGs, saves/reopens AI,
+  and tests translate/recolour/stroke-width edits against independent SVG references.
+- Illustrator **30.8.2**: **8/8 default workflows complete, 197/200 checks pass**.
+  Five fully pass; face/gradient badge/ORBIT fail only actual-layer mapping.
+  All imports use one real `Layer 1`, retaining named nested `GroupItem`s.
+  Native names/hierarchy, geometry, strokes and gradient fills survive AI reopen;
+  exported pixels are identical before/after saving. Render SSIM minimum .9928;
+  ORBIT .9960, 44 vector objects/345 anchors/7 strokes/1 gradient. These are SVG
+  interchange checks; seven desired tracing contracts remain xfailed.
+- Evidence `/tmp/plate-illustrator-verified/`: report/illustrator/manifest JSONs,
+  per-case PNGs, edited SVG references and `roundtrip.ai`. Full checklist and
+  limits in `docs/illustrator-checklist.md`; README/AGENTS/ROADMAP corrected.
+  Final suite **341 passed/7 xfailed**, Ruff clean for new Python files.
+  Logs `/tmp/plate-illustrator-resume-before.txt` and
+  `/tmp/plate-illustrator-final-tests.txt`. No converter changes.
+- **Existing-document preservation now verified:** a separate-call probe at
+  `/tmp/plate-illustrator-preservation/` created a copied AI with an unsaved marker,
+  ran the normal checker, then compared native observations. Active document,
+  dirty flag, object count, marker anchors/bounds/RGB and interaction setting all
+  matched exactly. Only the test copy closed; owned-sentinel cleanup succeeded
+  and zero documents remained. Evidence: `preservation.json`, `before.txt`,
+  `after.txt`, probe scripts and `check/report.json` (only the known layer failure).
+  An earlier nested `$.evalFile` sentinel wrapper completed its inner checks but
+  timed out; Jessica confirmed no visible dialog. Cause remains unidentified.
+  Both the default run and separate-call preservation test work normally. Do not
+  blindly retry a timed-out script or kill Illustrator; timeout does not cancel it.
+  The earlier host-array issue is fixed by explicit array copying; avoid conditional
+  `[hostObject]` expressions in ExtendScript. JSON is unavailable there, so the
+  template includes a small serializer.
+- Next desktop work: layer mapping/native AI
+  promotion; live-shape widgets, gradient-stop edits, high-zoom seams and wider
+  input coverage remain. Service code is still design-only. Preserve all prior
+  uncommitted loader/audit work below. No commit/push requested or performed.
+
+## Current checkpoint — both audit bugs fixed
+
+HEAD is now `dceaae2` (version 0.1.0). This separate release commit landed during
+verification and includes the batch fix, packaging and output-error changes. The
+loader fix, new regression file and audit docs remain uncommitted:
+
+- `imageio.py`: declared 16-bit normalization, even for values ≤255; retain PNG
+  depth before EXIF copy for legacy mode-I decoding. General integer/float policy
+  unchanged. `uint16` 200 now maps to 8-bit 1 rather than 200.
+- `cli.py`: complete valid batch files, print counts, return 1 on any failure;
+  retain 0 for all-success and 2 for empty input. The existing output-error patch
+  was preserved. New tests are in `tests/test_audit_bugs.py` (19 cases).
+- **326 passed/7 xfailed**, baseline 307/7; focused input/audit tests 42 passed.
+  Both benches rendered; **all 24 PLATE SVGs are byte-identical** to the audit.
+  Dark-16 reference MAE **199→0**, SSIM **.0102→1.0**. Evidence:
+  `/tmp/plate-bugfix-final-tests.txt`, `/tmp/plate-bugfix-{samples,challenges}`,
+  `/tmp/plate-bugfix-review/metrics.json`. Visuals: `plate-dark16-fix.png` and
+  `plate-bugfix-original-samples.png` in this chat's visualization directory.
+- Loader/new tests pass Ruff; the CLI still has its pre-existing S110 finding.
+  No commit/push made by this bugfix session. Preserve the remaining uncommitted work.
+
+[docs/AUDIT.md](docs/AUDIT.md) retains the original findings and their resolution.
+The service remains design-only; follow SERVICE.md with resource-bounded workers,
+upload/result isolation, accounts/quotas, Stripe and deployment/CI. Illustrator
+and real-corpus validation remain open. Nine of 16 structural targets pass; all
+16 fidelity floors pass. ROOT has 9/32 strokes, EMBER 3/7, ORBIT 7/7. Hard geometry
+gaps remain deferred. Historical checkpoints below retain older measurements.
+
 ## ⟹ DIRECTION CHANGE (session 25): pivot from engine gaps to the hosted service
 
 Jessica has decided PLATE's next phase is a **donation-supported hosted PNG→SVG service**
 for her 501(c)(3), NOT continuing to close the remaining synthetic logo/scene gaps. The
-engine is considered **done-enough**: it produces excellent layered SVGs across 277 tests,
+engine is considered **done-enough**: it produces excellent layered SVGs across the tested fixture suite,
 and the remaining 7 strict-xfail gaps are the hard tail (same-colour organic separation,
 complex-scene gradients) with diminishing returns for the actual goal.
 
@@ -29,7 +149,7 @@ complex-scene gradients) with diminishing returns for the actual goal.
   0.95 IoU gate to grab a marginal whisker — it protects stroke acceptance across the whole
   suite; the real issue there is curve-fit quality on short sharply-curved strokes.
 
-## State at handover
+## Historical state at session-24 handover
 
 - **HEAD is `3ed2bd1`** (`feat: add PLATE identity as an independent tracing
   challenge`), the session-24 branding/fixture/tests/handover commit. Working tree

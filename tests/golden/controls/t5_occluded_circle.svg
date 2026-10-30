@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="360" height="360" viewBox="0 0 360 360">
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="360" height="360" fill="#ffffff"/>
-  <circle id="Red_circle" data-name="Red circle" inkscape:label="Red circle" cx="150.31" cy="180.25" r="89.86" fill="#d62828"/>
-  <rect id="Blue_rectangle" data-name="Blue rectangle" inkscape:label="Blue rectangle" x="150" y="40" width="170" height="280" fill="#1e46be"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="360" height="360" viewBox="0 0 360 360">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="360" height="360" fill="#ffffff"/>
+  </g>
+  <g id="Red_circle_layer" data-name="Red circle layer" inkscape:label="Red circle layer" inkscape:groupmode="layer" i:layer="yes">
+    <circle id="Red_circle" data-name="Red circle" inkscape:label="Red circle" cx="150.31" cy="180.25" r="89.86" fill="#d62828"/>
+  </g>
+  <g id="Blue_rectangle_layer" data-name="Blue rectangle layer" inkscape:label="Blue rectangle layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Blue_rectangle" data-name="Blue rectangle" inkscape:label="Blue rectangle" x="150" y="40" width="170" height="280" fill="#1e46be"/>
+  </g>
 </svg>

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="360" height="360" viewBox="0 0 360 360">
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="360" height="360" fill="#ffffff"/>
-  <g id="Navy_rectangle" data-name="Navy rectangle" inkscape:label="Navy rectangle" inkscape:groupmode="layer">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="360" height="360" viewBox="0 0 360 360">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="360" height="360" fill="#ffffff"/>
+  </g>
+  <g id="Navy_rectangle" data-name="Navy rectangle" inkscape:label="Navy rectangle" inkscape:groupmode="layer" i:layer="yes">
     <rect id="Navy_rectangle_2" data-name="Navy rectangle" inkscape:label="Navy rectangle" x="60" y="60" width="240" height="240" fill="#1e3c78"/>
     <circle id="Yellow_circle" data-name="Yellow circle" inkscape:label="Yellow circle" cx="180.32" cy="180.23" r="50.22" fill="#fad228"/>
   </g>

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="320" height="320" viewBox="0 0 320 320">
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="320" height="320" fill="#ffffff"/>
-  <ellipse id="Purple_ellipse" data-name="Purple ellipse" inkscape:label="Purple ellipse" cx="160.43" cy="160.05" rx="99.8" ry="55.02" fill="#783cb4" transform="rotate(60.221 160.43 160.05)"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="320" height="320" viewBox="0 0 320 320">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="320" height="320" fill="#ffffff"/>
+  </g>
+  <g id="Purple_ellipse_layer" data-name="Purple ellipse layer" inkscape:label="Purple ellipse layer" inkscape:groupmode="layer" i:layer="yes">
+    <ellipse id="Purple_ellipse" data-name="Purple ellipse" inkscape:label="Purple ellipse" cx="160.43" cy="160.05" rx="99.8" ry="55.02" fill="#783cb4" transform="rotate(60.221 160.43 160.05)"/>
+  </g>
 </svg>

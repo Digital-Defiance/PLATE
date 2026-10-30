@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="340" height="280" viewBox="0 0 340 280">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="340" height="280" viewBox="0 0 340 280">
   <defs>
   <linearGradient id="Lime_rectangle_gradient" gradientUnits="userSpaceOnUse" x1="39.78" y1="138.97" x2="300.23" y2="141.11">
     <stop offset="0" stop-color="#2da357"/>
@@ -11,8 +11,10 @@
     <stop offset="1" stop-color="#d9c62c"/>
   </linearGradient>
   </defs>
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="340" height="280" fill="#ffffff"/>
-  <g id="Lime_rectangle" data-name="Lime rectangle" inkscape:label="Lime rectangle" inkscape:groupmode="layer">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="340" height="280" fill="#ffffff"/>
+  </g>
+  <g id="Lime_rectangle" data-name="Lime rectangle" inkscape:label="Lime rectangle" inkscape:groupmode="layer" i:layer="yes">
     <rect id="Lime_rectangle_2" data-name="Lime rectangle" inkscape:label="Lime rectangle" x="40" y="50" width="260" height="180" fill="url(#Lime_rectangle_gradient)"/>
     <circle id="Dark_red_circle" data-name="Dark red circle" inkscape:label="Dark red circle" cx="210.39" cy="140.23" r="60.24" fill="#be283c"/>
   </g>

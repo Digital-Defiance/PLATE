@@ -34,10 +34,10 @@ You are continuing **PLATE**, a CLI that converts raster images to Illustrator-f
 - Children list order = paint order bottom→top. Background = root covering ≥60% of canvas, kept as its own layer.
 - Occlusion decisions use the *relative* T-junction angle test (`complete._occludes`, threshold 15°), validated by a parameter sweep; don't replace with absolute-angle tests (they failed).
 - Primitive snap accepts by mean boundary deviation = |xor|/perimeter; polygons need ≤14 vertices and 0.45×tolerance (tight, so curved shapes stay Béziers).
-- Illustrator layer behaviour is UNVERIFIED (see checklist).
+- Illustrator 30.8.2: 24 cases/636 native checks pass, including actual layers and AI round trips. Top-level groups need Adobe `i:layer="yes"` (10.0 namespace) as well as Inkscape markers; standalone roots use layer containers, nested semantic groups stay groups. See `docs/illustrator-checklist.md`. This does not certify all PNG reconstruction; 7 structural gaps remain.
 
 ## Environment note
-The original author's sandbox could not reach the user's LM Studio, so the VLM path has only run against `tests/mock_vlm.py`. LM Studio serves OpenAI-style API at `http://localhost:1234/v1` (start server in the LM Studio "Developer" tab, load a vision model).
+The original author's sandbox could not reach LM Studio; later sessions verified a real naming/grouping connection (see `STATUS.md`). Automated tests use `tests/mock_vlm.py`; current live availability was not rechecked in the project audit. LM Studio serves an OpenAI-style API at `http://localhost:1234/v1` (start the server in the LM Studio "Developer" tab and load a vision model).
 
 ## Suggested first session
 1. `pip install -e ".[dev,render]" && pytest -q && plate bench samples`

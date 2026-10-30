@@ -1,10 +1,72 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-30. Current verification: **277 passed, 7 expected structural gaps**.
+Updated: 2026-10-30. Current verification: **352 passed, 7 expected structural gaps**.
 `STATUS.md` records measurements and all seven remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
+
+## Coverage boundary and quality gates
+
+PLATE is not complete across every meaningful PNG. Its intended launch scope is
+logos/icons/diagrams/graphic illustrations, not photographic or painterly image
+reconstruction. A successful decode, high render SSIM and correct editable
+structure are separate claims. **9/16 authored structural targets pass**; seven
+remain strict expected gaps. **24/24 Illustrator workflows and 636 native checks
+pass** for the SVGs currently produced; that is interchange validation, not proof
+of complete PNG reconstruction. README's coverage table is the public scope.
+
+- [x] Correct actual Illustrator layer import with Adobe namespace markers and
+  explicit containers for standalone top-level shapes. Preserve original IDs,
+  geometry, stacking, gradients, nested groups and existing-document state.
+- [ ] Add a representative, redistributable 10–20-image real-artwork corpus,
+  tagged by artwork family and difficulty; report per-image failures, not just
+  aggregate scores. Independent authored fixtures remain the structural oracle.
+- [ ] Complete an explicit PNG decode/colour matrix: palette/tRNS, grayscale,
+  RGB/RGBA, relevant 1/2/4/8/16-bit variants, interlacing, transparent-pixel RGB,
+  ICC/gamma policy and malformed/truncated cases. Distinguish supported decoding
+  from preservation of the intended appearance and document 8-bit normalization.
+- [ ] Add deterministic scale/rotation/noise/blur/low-contrast sweeps, including
+  tiny/large/aspect-ratio extremes and hairlines. Measure topology, per-object
+  silhouette/anchor recovery and foreground detail coverage as well as SSIM;
+  compare geometry in source coordinates and do not average away bad cases.
+- [ ] Broaden meaningful graphic-feature coverage: soft/varying alpha and shadows;
+  clamped/nonlinear/elliptical gradients; branching/same-colour decomposition;
+  other stroke caps/joins/dashes/widths; lettering and complex completion. Existing
+  seven independent gap contracts remain active; inherently unobservable hidden
+  geometry must be documented rather than promised as recoverable.
+- [ ] Extend native checks to direct gradient-stop edits, isolated hidden shapes
+  and compound holes, 4× seam checks and live-shape controls. Linear and radial
+  gradient import are covered by the current 24-case suite; live widgets are not.
+- [ ] Before broad beta quality claims, publish results by supported artwork
+  family, explicit limitations and representative real inputs. Require the
+  applicable structural/topology/detail gates and both-background fidelity floors
+  to pass for each claimed family. No finite fixture set certifies every PNG.
+
+These validation gates refine the intended product claims. They do not silently
+reverse the existing decision to defer hard geometry research while building the
+hosted service. Photos/textures, exact original fonts/live text and arbitrary
+hidden authoring geometry are not launch guarantees.
+
+## Current priority — hosted-service milestone
+
+The agreed direction is the classical hosted service; detailed engine-gap work below
+is a deferred backlog. [docs/AUDIT.md](docs/AUDIT.md) records fresh measurements and
+[docs/SERVICE.md](docs/SERVICE.md) records the product design. Service code is not built.
+
+- [x] Fix low-valued 16-bit PNG normalization; cover zero/dark/full range, both byte orders and legacy Pillow integer-PNG decoding.
+- [x] Return a nonzero batch exit status on any failure; retain valid outputs, summarize totals, and cover successful/mixed/all-failed/empty batches.
+- [x] Review the existing output-error handler; its permission regression passes. It is included in concurrent release commit `dceaae2`.
+- [ ] Build upload → queued, isolated worker → preview/download with explicit byte,
+  dimension, time and memory limits; working-size resize is not a decode limit.
+- [ ] Add accounts, race-safe daily quotas, anonymous abuse controls, ownership and expiry.
+- [ ] Add verified/idempotent Stripe webhooks and supporter entitlement lifecycle.
+- [ ] Choose deployment/auth, add container/CI/monitoring and measure worker capacity.
+- [ ] Complete Illustrator validation and a representative real-image corpus before beta claims.
+
+Current full suite: **352 passed/7 xfailed**, including the output-permission and
+packaging regressions, 19 audit-bug cases and 26 headless Illustrator/layer cases. Nine of 16 authored structural targets pass;
+all 16 meet light/dark fidelity floors. Do not lower contracts to clear the hard tail.
 
 ## Done
 
@@ -34,7 +96,7 @@ Each change needs a focused regression, before/after tests, and rendered `plate 
 results. Retain VTracer as the control and keep target SVGs independent of PLATE output.
 
 1. [x] **Preserve isolated thin details during segmentation.** `stages/segment.py` now restores near-palette cores only in components without flat seeds, vetoing explained antialias blends. All 18 gauge ticks survive, with ≥80% coverage both in segmentation and emitted SVG. `tests/test_segment.py` protects several widths/orientations, speckles, transparency and false outlines. Existing circle-stack regression remains green.
-2. [ ] **Complete stroke coverage.** Round-capped straight marks, open curves, aligned hidden straight terminals, closed loops across crossings and supported interrupted ellipses are implemented. Both ORBIT orbital ellipses pass independently: **7/7 strokes**, 44 objects/345 anchors. The panel passes **59 objects/27 strokes**; ROOT outer seal passes (**3/32**). Both ORBIT highlights now pass beneath the gold loop. Next: EMBER's missing strokes, ROOT's inner ring joined to same-colour leaves (requires decomposition), non-leaf/non-sibling fragments, opaque counters, branched networks and other caps/joins. Preserve full discs, cutouts and real openings; verify Illustrator stroke editability.
+2. [ ] **Complete stroke coverage.** Round-capped straight marks, open curves, aligned hidden straight terminals, closed loops across crossings and supported interrupted ellipses are implemented. Both ORBIT orbital ellipses pass independently: **7/7 strokes**, 44 objects/345 anchors. The panel passes **59 objects/27 strokes**; ROOT outer seal passes (**9/32** total strokes). Both ORBIT highlights now pass beneath the gold loop. Next: EMBER's missing strokes, ROOT's inner ring joined to same-colour leaves (requires decomposition), non-leaf/non-sibling fragments, opaque counters, branched networks and other caps/joins. Preserve full discs, cutouts and real openings; verify Illustrator stroke editability.
 3. [ ] **Extend shared gradients to harder occlusions.** `gradient_badge` and ORBIT's affine radial-circle band recovery are fixed. Nonlinear/clamped and general elliptical ramps remain open. The patch's detector omits outer/clamped bands and already absorbs its third crater into a gradient region; joining only the two gradient fragments leaves internal band edges in the fit. Recover coherent bands while retaining hard-edged craters, then use pooled free boundaries for the planet and recover the hull's linear gradient. Keep `twin_gradients` separate and `discrete_palette` at zero gradients. Conic/mesh gradients and focal-point fitting remain later work.
 4. [ ] **Extend completion to complex letters, bars and ribbons.** Disconnected contour pooling and flat-sibling merging are implemented; `edge_crossing_type` passes with a full disc and 5 objects. Patch/poster completion remains open, including candidate selection when unrelated objects share a palette colour. Preserve relative T-junctions and containment/hidden-area safeguards. Geometric completion can improve independently of OCR.
 5. [x] **Reduce chained-completion drift.** `occlusion_chain` passes: the back disc recovers to (145.1,160.1) r94.6 vs target (145,160) r95 (drift 3.5px→0.1px). Fix: `complete.evaluate` relaxes the occluder-coverage floors only for a primitive fit with RMS ≤ 0.5·tol, so the correct circle is no longer beaten by a boundary-hugging Bézier bridge. `overlap` <1px and `stack3` retained. Commit `ca92bbd`.
@@ -45,7 +107,7 @@ results. Retain VTracer as the control and keep target SVGs independent of PLATE
 Complex logo targets are now available, with fidelity checks active on both backgrounds:
 EMBER **51 target / 51 actual**, but shield full-silhouette IoU is only 0.8383;
 ORBIT **34 / 44**, with compound-emblem/ambiguous-patch fragmentation despite the recovered radial core and all seven strokes; ROOT **56 / 51**, with
-**3 of 32** intended editable strokes recovered. Use these alongside the existing
+**9 of 32** intended editable strokes recovered. Use these alongside the existing
 scenes for completion, compound paths, gradient separation and stroke work.
 
 The instrument panel is the first passing large composition (**59 / 59**, 27 strokes).
@@ -56,7 +118,10 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 
 ## P0 — hardware and real-artwork validation (alongside P1)
 
-- [ ] **Illustrator import.** Follow `docs/illustrator-checklist.md`; verify names/layers, nested groups, live primitives, compound holes and `userSpaceOnUse` gradients. Record results and adjust `stages/emit.py` from evidence.
+- [x] **Automated Illustrator import/edit/AI roundtrip.** Opt-in `python -m plate.illustrator --output NEW_DIRECTORY`; the full 24-image corpus passes 636 checks in Illustrator 30.8.2. Native names, layers/groups, geometry/order, strokes, linear/radial fills and independently checked edits survive. All render SSIMs ≥.9928. Details: `docs/illustrator-checklist.md`.
+- [x] **Actual Illustrator layers.** `i:layer="yes"` in Adobe's 10.0 namespace imports real named layers directly. Standalone roots use layer containers; nested semantic groups remain groups. All 24 render identically before/after; layer names/order and object membership are checked explicitly. Raw imports and AI reopening pass without native postprocessing.
+- [x] **Existing-document preservation.** A separate-call native probe verified that the normal runner preserves an already-open copied AI with unsaved changes, marker geometry/colour, active document and interaction setting. Only owned test documents close. Evidence: `/tmp/plate-illustrator-preservation/preservation.json`. An earlier nested wrapper timed out without a visible dialog; cause remains unidentified.
+- [ ] **Remaining Illustrator validation.** Live-shape widgets, direct gradient edits, wider opacity/blend inputs, native hidden-shape/hole isolation and high-zoom seams. Inspect app state after any timeout before retrying. The full 24-case run and post-fix preservation test completed normally.
 - [ ] **Real-world corpus.** Gather 10–20 logos, clipart and scans in `samples/real/`; run `plate bench samples/real` and record failures. Current benchmark results are synthetic.
 - [ ] **Real VLM quality/performance.** Connection/naming/grouping work; improve left/right names, grouping accuracy and one-request-per-shape latency (earlier face run ≈6s/shape). Verify on real images.
 
@@ -66,7 +131,7 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 - [ ] Ring/compound-path semantic naming (e.g. "Red ring"); validate `t3_ring` without changing its even-odd topology.
 - [ ] Thin occluded rectangles: a narrow bar split by a perpendicular cover can fail hidden-area validation because rasterized perimeter pixels dominate the inferred extra area. Correct pixel-boundary evaluation before changing occlusion thresholds.
 - [ ] Palette pressure: exercise >64 distinct flat colours and k-means in `stages/segment.py`; add a labelled mosaic.
-- [ ] Soft alpha edges/shadows: check light/dark backgrounds and preserve opacity rather than baking in a background colour.
+- [ ] Extend the implemented flat-region opacity/faint-object support to nonuniform alpha/shadows; validate both backgrounds.
 - [ ] Scale consistency: run the same authored logo at 1×/2×/4×; compare object recovery and source-coordinate geometry. Badge source scaling at a 400px working size passes; reducing work_size to 200 currently loses gradient detection before reconciliation (10 flat objects / 0 gradients).
 
 ## P2 — optional naming/grouping and text

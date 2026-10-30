@@ -14,14 +14,19 @@ class ImageLoadError(ValueError):
     """The input is missing, unreadable or not a supported image."""
 
 
-def _to_8bit(im: Image.Image) -> Image.Image:
+def _to_8bit(im: Image.Image, *, bit_depth: int | None = None) -> Image.Image:
     """Pillow's convert() clips 16/32-bit integer and float pixels to 0..255, which
     turns a 16-bit grayscale PNG white. Scale those modes to 8-bit explicitly."""
     if im.mode not in ("I", "F") and not im.mode.startswith("I;16"):
         return im
     a = np.asarray(im, dtype=np.float64)
     top = float(a.max()) if a.size else 0.0
-    if im.mode == "F" and top <= 1.0:
+    if bit_depth == 16 or im.mode.startswith("I;16"):
+        # A dark 16-bit image still uses the full declared 0..65535 range.
+        # Mode I alone is ambiguous (e.g. 32-bit TIFF); its PNG depth is passed
+        # explicitly before EXIF transpose drops the file-format metadata.
+        a = a * (255.0 / 65535.0)
+    elif im.mode == "F" and top <= 1.0:
         a = a * 255.0
     elif top > 255.0:
         a = a * (255.0 / max(65535.0, top))
@@ -40,8 +45,9 @@ def open_rgba(path: Path | str) -> Image.Image:
     try:
         with Image.open(p) as im:
             im.load()
+            bit_depth = 16 if im.format == "PNG" and (im.mode == "I" or im.mode.startswith("I;16")) else None
             im = ImageOps.exif_transpose(im)
-            return _to_8bit(im).convert("RGBA")
+            return _to_8bit(im, bit_depth=bit_depth).convert("RGBA")
     except Image.DecompressionBombError as e:
         raise ImageLoadError(f"{p} is too large to decode safely ({e})") from e
     except UnidentifiedImageError as e:

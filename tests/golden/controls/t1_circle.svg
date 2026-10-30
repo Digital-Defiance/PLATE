@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="300" height="300" viewBox="0 0 300 300">
-  <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="300" fill="#ffffff"/>
-  <circle id="Red_circle" data-name="Red circle" inkscape:label="Red circle" cx="150.39" cy="150.23" r="59.93" fill="#d23232"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" width="300" height="300" viewBox="0 0 300 300">
+  <g id="Background_layer" data-name="Background layer" inkscape:label="Background layer" inkscape:groupmode="layer" i:layer="yes">
+    <rect id="Background" data-name="Background" inkscape:label="Background" x="0" y="0" width="300" height="300" fill="#ffffff"/>
+  </g>
+  <g id="Red_circle_layer" data-name="Red circle layer" inkscape:label="Red circle layer" inkscape:groupmode="layer" i:layer="yes">
+    <circle id="Red_circle" data-name="Red circle" inkscape:label="Red circle" cx="150.39" cy="150.23" r="59.93" fill="#d23232"/>
+  </g>
 </svg>

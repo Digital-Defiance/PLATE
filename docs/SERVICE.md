@@ -35,9 +35,10 @@ remains the open-source MIT core; the service is a SEPARATE LAYER on top of it.
 ## Why the engine already fits this
 
 - **Classical core runs anywhere, CPU-only, no GPU/model deps** → cheap, predictable hosting
-  (critical for a nonprofit budget). A typical conversion is well under a second, so even a
-  few thousand free conversions/day is cheap. The real cost lever is total CPU, not per-user
-  count — hence affording a generous free tier.
+  (critical for a nonprofit budget). Capacity is unmeasured on a deployment host. The local
+  audit observed about .19s for a face, 3.63s for ORBIT and 5.22s for the mission patch
+  under concurrent testing. Measure throughput, peak memory and tail latency before
+  setting worker concurrency or making cost/volume commitments. See [AUDIT.md](AUDIT.md).
 - **AI is already optional and cleanly separated** (`vlm.py`, off unless `vlm_url` set,
   graceful fallback) → the AI perk tier is a config/routing concern, not new engine work.
 

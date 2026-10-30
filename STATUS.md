@@ -1,6 +1,148 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 25, conversion-quality levers) · Version 0.0.1 · Tests: 281 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (native Illustrator layers and coverage boundary) · Version 0.1.0 · Tests: 352 passing, 7 expected feature gaps (`pytest -q`)
+
+## Native Illustrator layers fixed; coverage remains bounded — 2026-10-30
+
+- Jessica asked whether PLATE covers every meaningful PNG: **no**. README now
+  distinguishes decoding, rendered appearance and editable reconstruction, with
+  a coverage/limitations table. ROADMAP adds explicit real-corpus, PNG/colour-mode,
+  scale/noise/detail, alpha/stroke/gradient and native-editing validation gates.
+  **9/16 authored structural targets pass; 7 remain strict expected gaps.** Photos,
+  textures, exact original fonts/live text and arbitrary hidden authoring geometry
+  are outside the launch guarantee. The existing hosted-service direction remains;
+  service code is still absent and hard geometry research remains deferred.
+- Found a direct SVG layer fix empirically: `i:layer="yes"` in Adobe's 10.0
+  namespace imports real Illustrator layers. Inkscape-only markers do not. Emit
+  both markers on top-level groups and add named `… layer` containers for standalone
+  roots, including backgrounds. Nested semantic groups stay groups. Allocate wrapper
+  IDs after original object/gradient IDs so existing IDs/references are preserved;
+  `illustrator_layers=false` retains ungrouped output. No native postprocessing or
+  Illustrator dependency is added to the conversion pipeline.
+- Illustrator **30.8.2: 24/24 cases, all 636 checks pass**. The default eight cases
+  also pass. Checker now verifies exact layer names/order, object layer membership,
+  nested groups and drawable paint order; native layer records replace only
+  explicitly marked SVG groups in the expected hierarchy. Existing tests still
+  reject same-named groups masquerading as layers. Face has 2 actual layers;
+  ORBIT has 34, retaining 44 objects/345 anchors/7 strokes/1 gradient. Minimum
+  SVG-interchange SSIM across all native imports/reopens/edits: **.9928**.
+- Both before/after benches ran, with VTracer retained. All **24** SVGs have exactly
+  unchanged geometry, original IDs, gradient definitions and paint hierarchy after
+  removing the new layer annotations/containers. White/dark Cairo renders are
+  **pixel-identical**; all VTracer SVGs are **byte-identical**. Render comparison
+  inspected in this chat's visualization directory: `plate-illustrator-layer-review.png`.
+  Reviewed all **15 control goldens** independently the same way before refreshing
+  their intended layer-only serialization changes. Desired targets/PNG fixtures
+  are unchanged.
+- Added **11 regressions** (4 emitter, 7 checker), for a total 26 headless
+  Illustrator/layer cases. Baseline full suite **341 passed/7 xfailed**; final
+  **352 passed/7 xfailed**, no warnings, in 125.20s. Focused 26 pass; changed Python
+  files pass Ruff. Logs `/tmp/plate-illustrator-layers-{before,final-clean-tests}.txt`.
+  The intermediate post-fix suite passed with 15 expected golden-drift warnings;
+  the final run follows the reviewed golden refresh.
+- Repeated existing-document preservation after the fix: all native checks pass,
+  unsaved marker state/geometry/colour, active document and interaction setting
+  match exactly. Only test documents close; final document count zero. Evidence:
+  `/tmp/plate-illustrator-layer-preservation/preservation.json`.
+- Evidence: `/tmp/plate-layer-import-probe/`,
+  `/tmp/plate-illustrator-layers-all/{report,illustrator,manifest}.json`,
+  `/tmp/plate-layers-{before,after}-{samples,challenges}/`,
+  `/tmp/plate-layer-render-comparison.json`, `/tmp/plate-layer-controls-review.json`.
+  Jessica requested updated README/ROADMAP/HANDOFF and a commit of this checkpoint;
+  the prior loader fix, 19 audit regressions and audit docs are included. No push requested.
+
+## Initial automated Illustrator verification — historical, before layer fix
+
+- Added opt-in `python -m plate.illustrator --output NEW_DIRECTORY`. On macOS it
+  drives Illustrator through AppleScript/ExtendScript, opens generated/copied SVGs,
+  inspects the native DOM, exports PNGs, saves/reopens `.ai`, and verifies named
+  object movement, recolouring and 50% stroke-width changes against independently
+  edited SVGs. Existing output directories are refused; only owned test documents
+  are closed. Ordinary tests never launch Illustrator. See
+  [docs/illustrator-checklist.md](docs/illustrator-checklist.md).
+- Live Illustrator **30.8.2**, eight fixtures including ORBIT: **8/8 workflows
+  complete, 197/200 checks pass**, five cases fully pass. Named vectors, hierarchy,
+  expected object/stroke/gradient counts, four-anchor circles/ellipses, and exact
+  recorded geometry/metadata survive `.ai` reopening. Imported/reopened PNG pixels
+  are identical. All imported/reopened/edited renders clear .98 SSIM on white/dark;
+  lowest **.9928** (shaded), ORBIT **.9960**, with all **7 native strokes** and
+  **1 gradient fill**. This measures SVG interchange, not source-PNG tracing quality.
+- **Confirmed export limitation:** every SVG imports into one real `Layer 1`.
+  Face, gradient badge and ORBIT retain correctly named/nested groups but fail the
+  actual-layer check. `inkscape:groupmode` does not create Illustrator layers.
+  README/agent/checklist claims corrected; the checker stays red for this gap.
+  Native live-shape widgets, direct gradient edits, high-zoom seams and a real-image
+  corpus remain unverified. An extra nested sentinel wrapper timed out after its
+  inner checks; Jessica confirmed no visible dialog. A subsequent **separate-call
+  preservation test passed** using the normal runner: an already-open copied AI
+  with unsaved changes retained its dirty flag, object count, marker anchors/bounds/
+  RGB, active-document state and interaction setting exactly. Only the test copy
+  closed; the owned sentinel was then cleaned up normally. Evidence/scripts:
+  `/tmp/plate-illustrator-preservation/`, including `preservation.json` and the
+  before/after observations. Final document count zero. Nested-wrapper timeout
+  cause remains unidentified; a timeout does not cancel an in-app script.
+- Fixed a reproduced ExtendScript host-object compatibility problem in the harness:
+  conditional array literals could return undefined for `PathItem`s. Explicit
+  copying into a JavaScript array completes all eight cases. Added **15 headless
+  checker tests**, covering lost objects/names/strokes/gradients, rasterization,
+  primitive anchors, actual layers versus groups, hierarchy, hidden-geometry
+  roundtrip changes, duplicate names, missing artifacts and output preservation.
+- Before this continuation: **338 passed/7 xfailed** (12 initial checker tests);
+  final: **341 passed/7 xfailed**; new Python files pass Ruff. Logs:
+  `/tmp/plate-illustrator-resume-before.txt`, `/tmp/plate-illustrator-final-tests.txt`.
+  Desktop artifacts: `/tmp/plate-illustrator-verified/{report,illustrator,manifest}.json`
+  plus per-case PNGs and `.ai` files. Additional probe:
+  `/tmp/plate-illustrator-document-guard/`. Converter output/targets unchanged.
+  No commit/push; prior loader/audit changes preserved.
+
+## Audit reliability fixes — 2026-10-30
+
+- Fixed the two reproduced audit bugs. Declared 16-bit integer images always use
+  0..65535 normalization, including dark inputs and both byte orders. Retain PNG
+  bit-depth context before EXIF copying so older Pillow mode-I PNGs also scale
+  correctly. General integer/float inputs retain their previous policy.
+- Batch converts all valid files even when others fail, prints success/failure
+  totals, and exits **1 if any file failed / 0 if all succeeded**. Empty input still
+  exits 2. The pre-existing top-level output-error handler was preserved and its
+  input tests remain green.
+- Added **19 regression cases**. Before the fix, 12 of these failed; after it,
+  **42 focused input/audit tests pass**. Baseline full suite **307 passed/7 xfailed**
+  (includes the pre-existing output-permission and packaging changes); final full
+  suite **326 passed/7 xfailed**. Logs: `/tmp/plate-bugfix-{before,final}-tests.txt`,
+  `/tmp/plate-bugfix-focused-tests.txt` and `/tmp/plate-bugfix-red-tests.txt`.
+- Both benches rendered and inspected: `/tmp/plate-bugfix-{samples,challenges}`.
+  All **24 PLATE fixture SVGs are byte-identical** to the audit baseline, with
+  VTracer retained. Independent dark-16 reference: **MAE 199→0, SSIM .0102→1.0**.
+  Review: `/tmp/plate-bugfix-review/metrics.json`, `plate-dark16-fix.png` and
+  `plate-bugfix-original-samples.png` in this chat's visualization directory.
+- Loader/new regression file pass Ruff. CLI lint findings were checked against
+  HEAD; pre-existing S110 remains. Separate doctor edits removed F541. Audit/status/roadmap
+  updated; hosted service and real-world/Illustrator validation remain next.
+  Concurrent release commit `dceaae2` landed during verification and included the
+  batch fix along with packaging/version/output-error work. Loader, new regressions
+  and audit docs remain uncommitted. No commit/push made by this bugfix session.
+
+## Project audit — 2026-10-30 (historical snapshot; issues fixed above)
+
+- Full current-state audit: [docs/AUDIT.md](docs/AUDIT.md). Engine HEAD `101b63d`;
+  fresh full suite **303 passed / 7 xfailed**. The concurrent output-permission
+  test was added after collection and checked separately with the input-test module.
+- Fresh original/challenge benches: **24 inputs**, VTracer retained; **9/16 desired
+  structural targets pass**, **16/16 challenge fidelity floors pass on both backgrounds**.
+  Current ORBIT **44/345/7** objects/anchors/strokes; EMBER **51/455/3**; ROOT
+  **51/526/9**; PLATE **11/121/1**. Panel **59/249/27** remains structurally passing.
+- Reproduced two issues: low-valued 16-bit PNGs bypass normalization (sample 200
+  becomes 8-bit 200 instead of 1); batch prints conversion failures but exits 0.
+  These remain unfixed. Concurrent CLI/output-permission edits were preserved.
+- The agreed next milestone is the hosted service, whose code is still absent.
+  Fix the two reliability issues, then build a resource-bounded classical conversion
+  slice and add accounts/quotas/Stripe/deployment. Illustrator and real-corpus
+  validation remain open; seven hard geometry gaps remain deferred.
+- Evidence: `/tmp/plate-audit-tests.txt`, `/tmp/plate-audit-input-tests.txt`,
+  `/tmp/plate-audit-{samples,challenges}`, `/tmp/plate-audit-results.json`.
+  Local sample timings span .191s (face), 3.630s (ORBIT), 5.220s (mission) under
+  concurrent testing; service capacity is not established. No engine changes,
+  commit or push made by this audit.
 
 ## Circular compound-path holes → arcs (session 25)
 
@@ -504,15 +646,17 @@ Implementation order (details and acceptance checks in `ROADMAP.md`):
 
 | Remaining challenge | Current failure / required target |
 | --- | --- |
-| `complex_mission_patch` | 72 objects / 2 radial fragments / 7 strokes; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
-| `complex_storefront` | 73 objects / 2 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
+| `complex_mission_patch` | 72 objects / 2 radial fragments / 8 strokes; target 45 with one radial planet + one linear hull, correct occlusion/strokes/cutouts |
+| `complex_storefront` | 73 objects / 3 strokes; target 64, retaining repeated windows, awning panels, lettering, curves and small details |
 | `complex_event_poster` | 83 objects; fidelity 0.9715 and one gradient, but target 44 still needs full underlying shapes, holes, strokes and lettering |
-| `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 2 of 7 editable strokes recovered |
+| `logo_ember_crest` | 51 objects matches count, but shield silhouette IoU 0.8383; 3 of 7 editable strokes recovered |
 | `logo_orbit_wordmark` | 44 objects vs target 34; full radial core and all 7/7 strokes recovered; compound badge/monogram and ambiguous patches remain |
-| `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 3 of 32 strokes recovered, outer circle passes independently |
+| `logo_root_seal` | 51 objects vs target 56; touching organic shapes merge; 9 of 32 strokes recovered, outer circle passes independently |
 
-Still unverified: Illustrator layer/live-shape/gradient import and a 10–20-image
-real-world corpus. Real LM Studio naming/grouping **is verified**; naming accuracy
+Illustrator native vectors/layers/groups/strokes/gradient fills and AI round trips
+now pass automated checks (see the current checkpoint above). Live-shape widgets
+and a 10–20-image real-world corpus remain unverified.
+Real LM Studio naming/grouping **is verified**; naming accuracy
 and request latency remain work. Other deferred items (palette pressure, soft
 alpha/shadows, scale consistency, text, product/export/release) remain
 tracked in `ROADMAP.md`.
@@ -869,7 +1013,7 @@ out as a live `<circle>` that also carries `fill="url(#...)"`.
 - **VLM model auto-selection was blind** (`models[0]`). New `vlm.pick_model` skips obvious non-vision models (embedding/rerank/tts/etc.) and `describe` logs which model it used and warns when zero names come back. Explicit `--vlm-model` still wins.
 
 ## Remaining external validation
-1. **Illustrator import**: do top-level `<g>` become layers with the right names? Are circles/rects editable live shapes? Follow `docs/illustrator-checklist.md` and record results here. (STILL the main open P0 — needs a human in Illustrator.)
+1. **Illustrator follow-up**: all 24 automated 30.8.2 import/edit/AI-roundtrip cases, actual layers/order/membership and existing-document preservation pass. Verify live-shape widgets, direct gradient edits, native isolated hidden-shape/hole contracts and high-zoom seams. See `docs/illustrator-checklist.md`.
 2. **Real-world images** (logos, clipart, scans). Only synthetic samples tested. Collect 10–20 real ones into `samples/real/` and run `plate bench`.
 3. VLM naming quality: the model names both eyes "Left Eye" (dedupe suffixes → "Left Eye 2") rather than distinguishing left/right; naming is ~6s/shape (one request per shape → 47–65s for the face). Prompt/throughput tuning is open.
 
