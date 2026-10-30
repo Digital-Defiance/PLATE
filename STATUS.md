@@ -1,6 +1,18 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (session 25, adaptive stroke refit) · Version 0.0.1 · Tests: 279 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (session 25, conversion-quality levers) · Version 0.0.1 · Tests: 281 passing, 7 expected feature gaps (`pytest -q`)
+
+## Circular compound-path holes → arcs (session 25)
+
+- `trace.mask_to_path` traced every hole as Béziers, so a round transparent
+  perforation became a ~300-point/15-anchor Bézier chain despite being a perfect
+  circle. Now each interior hole that fits a circle tightly (rms ≤ ~0.35·scale,
+  ≥350° coverage, real radius) is emitted as two SVG arcs (4 anchors) — compact and
+  exactly round/editable under resize. Outer contour and non-circular holes keep
+  Bézier tracing (guarded, so square/irregular holes are untouched).
+- `perforated_plate`: **44 → 20 anchors**, path 1546 → 272 chars, SSIM 0.9943 →
+  **0.9961**, still matches its target. All eight original samples byte-identical
+  (none have circular transparent holes). Two regressions added. Commit `e9d66af`.
 
 ## Adaptive stroke refit (session 25)
 
