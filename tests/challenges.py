@@ -26,8 +26,7 @@ class Challenge:
 CHALLENGES = {
     "nested_dial": Challenge("Eight objects; full concentric discs and repeated markers."),
     "perforated_plate": Challenge(
-        "One compound path with three transparent holes, plus an island.",
-        gap="The plate path contains two connected components instead of one."),
+        "One compound path with three transparent holes, plus an island."),
     "occlusion_chain": Challenge(
         "Recover three full circles behind successive occluders."),
     "twin_gradients": Challenge("Two independent opposite ramps, each behind a solid dot."),

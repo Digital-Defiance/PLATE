@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numpy as np
+from scipy import ndimage as ndi
 
 from ..config import Config
 from ..masks import Mask, contains, touches, crop_like
@@ -21,7 +22,24 @@ def _silhouettes(shapes: list[Shape], transparent: np.ndarray) -> None:
         y0, x0 = f.y0, f.x0
         h, w = f.a.shape
         tr = transparent[y0:y0 + h, x0:x0 + w]
+        vis = s.vis.to_full(transparent.shape)[y0:y0 + h, x0:x0 + w]
         a = f.a & ~tr
+        # A hole-fill normally keeps pixels this shape is painted *behind* (a later
+        # sibling/child draws over them). But a genuine perforation that merely
+        # contains a floating opaque island (e.g. a plate hole with a disc inside)
+        # must stay a hole. `& ~tr` re-opens the transparent part, yet the island's
+        # own opaque footprint survives as this colour and leaves a stray component.
+        # Examine each hole-filled region (before transparency is removed): if it is
+        # predominantly transparent it is a real perforation, so drop its few opaque
+        # island pixels too. Regions that are mostly opaque (this shape genuinely sits
+        # behind another) are left filled, so paint-order coverage is unaffected.
+        filled_region = f.a & ~vis
+        if filled_region.any():
+            lbl, n = ndi.label(filled_region)
+            for k in range(1, n + 1):
+                comp = lbl == k
+                if (comp & tr).sum() > 0.5 * comp.sum():
+                    a = a & ~comp
         s.sil = Mask(a, y0, x0)
         s.full = Mask(a.copy(), y0, x0)
 
