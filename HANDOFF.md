@@ -6,13 +6,12 @@ rendering.
 
 ## State at handover
 
-- **Sessions 14–16 are committed as `a56c13e`** (`feat: recover straight and closed
-  strokes and complete instrument panel`), on `main`, based on `0a0fddc`.
-- **HEAD is `ebf8762`**, session 17: `fix: preserve thin alpha contours and editable
-  curves`. Both checkpoint commits are complete; no push.
-- **Session 18 is verified but uncommitted.** Changed `src/plate/stages/order.py`,
-  new `tests/test_mixed_holes.py`, and status/roadmap/challenge/handoff docs. Jessica
-  requested wrapping up at 2% usage. No implementation work remains in progress.
+- **HEAD is `632bb1c`** (`fix: keep mixed-content holes open around a clear alpha void`) —
+  the session-18 mixed-content hole fix, now committed and signed (the previous handover
+  left it uncommitted; it was verified green and committed on takeover). Working tree CLEAN.
+- Recent lineage: `632bb1c` (session 18) ← `ebf8762` (session 17, thin alpha contours) ←
+  `a56c13e` (sessions 14–16, straight/closed strokes + instrument panel) ← `0a0fddc`.
+- No push. Commit/push only when Jessica asks.
 - **Tests: 213 passed, 6 xfailed** (strict expected structural gaps). Run with the
   renderer on:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`
@@ -265,13 +264,16 @@ occluders. `stages/strokes.py` contains straight/open-curve and complete closed-
   (re-exec with `DYLD_FALLBACK_LIBRARY_PATH`). But when you call the library directly in
   a script or run `pytest`, PREFIX with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`,
   or `have_renderer()` is False and all SSIM/silhouette checks silently skip.
-- **git commits hang unless you bypass the commit template.** `commit.template` is set to
-  `~/.stCommitMsg` and blocks non-interactive commits in this shell (symptom: the commit
-  command hangs/times out and HEAD does not move). Commit with:
-  `GIT_EDITOR=true git -c commit.template= -c core.editor=true -c gpg.program=/tmp/gpg-batch.sh commit -F <msgfile>`
-  where `/tmp/gpg-batch.sh` is a wrapper: `#!/bin/sh` + `exec /opt/homebrew/bin/gpg --batch --no-tty "$@"`.
-  GPG signing is ENABLED (`commit.gpgsign=true`); default gpg blocks on pinentry, so the
-  `--batch --no-tty` wrapper is required. Do NOT change git config; these are per-invocation `-c` flags.
+- **git commits hang because of a global identity-prompt hook (CORRECTED — this is the
+  real cause, not the commit template).** `core.hooksPath` points at `~/.git-templates/hooks`;
+  its `pre-commit` hook opens an AppleScript "Select Identity" GUI (`osascript choose from
+  list`) that blocks forever in a non-interactive shell. The hook itself honours a bypass:
+  `hooks.skipidentityprompt=true`. Commit with:
+  `GIT_EDITOR=true git -c hooks.skipidentityprompt=true -c commit.template= -c gpg.program=/tmp/gpg-batch.sh commit -F <msgfile>`
+  where `/tmp/gpg-batch.sh` is `#!/bin/sh` + `exec /opt/homebrew/bin/gpg --batch --no-tty "$@"`.
+  GPG signing IS enabled and DOES work once the hook is bypassed (standalone gpg was never the
+  blocker; earlier sessions misattributed the hang to the template/gpg). All `-c` flags are
+  per-invocation; do NOT change git config. Commits stay signed.
 - **`try_complete` is imported by name into `order.py`, `gradient.py`.** Monkeypatching
   `complete.try_complete` won't intercept those call sites; patch `order.try_complete` etc.
 - **`tests/challenges.py` strict-xfail contract:** a gap that starts passing causes a strict
