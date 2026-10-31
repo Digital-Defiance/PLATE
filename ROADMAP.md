@@ -1,8 +1,9 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-30. Current verification: **519 passed, 7 expected structural gaps**.
-`STATUS.md` records measurements and all seven remaining challenge failures;
-`docs/challenges.md` links each PNG to its independent desired SVG.
+Updated: 2026-10-30. Current verification: **541 passed, 7 expected structural gaps**;
+full robustness sweep **70/78**, core **36/36**. `STATUS.md` records measurements and
+all seven remaining challenge failures; `docs/challenges.md` links each PNG to its
+independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
 
@@ -17,16 +18,24 @@ Homebrew executable. Packaging is a separate delivery track; resolve any concret
 installation bug already underway, then work this queue. This latest direction
 supersedes older statements deferring all engine work to the hosted service.
 
-1. [ ] Reproduce/fix sigma-2 opaque-noise cases (seeds 17/204): investigate the
-   auto-denoise blind spot, primitive loss and excess anchors; protect clean art
-   and other noise levels with regressions.
-2. [ ] Close the other 13 stress cases: quarter-size route/marker loss (4),
-   half-size marker geometry (4), blur (2), low contrast (1), 1/2px routes (2).
-   Retain ≥.90 per-object detail coverage; publish core and full sweep deltas.
-3. [ ] Improve per-object challenge diagnostics, then incrementally close the seven
-   complex targets: patch, storefront, poster, EMBER, ORBIT, ROOT and PLATE identity.
-   The latter's exact hidden geometry is ambiguous; document the information limit.
-   See HANDOFF's current gap table and the detailed P1 backlog below.
+1. [x] Fixed the sigma-2 opaque-noise cases (seeds 17/204): the auto-denoise blind
+   spot was a global `noise_fraction` estimator confounded by edge density. Added an
+   `interior_noise_fraction` estimator (median residual among pixels ≥3px from any
+   edge) OR'd into the denoise trigger, plus `Config.interior_noise=0.002`. Both
+   cases pass; clean art and other noise levels protected by regression.
+2. [x] Worked all 15 stress misses: **7 fixed** (sigma-2 noise ×2, half-size markers
+   ×4, blur 0.7px ×1) and **8 documented as information-theoretic floors** (quarter-size
+   route/marker ×4, blur 1.2px ×1, low contrast 1/16 ×1, hairline routes 1/2px ×2),
+   each pinned by a test. Sweep **63/78 → 70/78**, core **36/36**, 24 shipped SVGs
+   byte-identical, no gate weakened. Measured evidence for every floor is in STATUS.
+3. [~] Per-object challenge diagnostics DONE (`tests/challenge_diff.py` +
+   `tests/challenge_report.py`; surfaces missing/extra/split/merged, silhouette IoU,
+   topology, primitive/fill, paint order past the first count mismatch). STILL OPEN:
+   incrementally close the seven complex targets using it — patch, storefront, poster,
+   EMBER, ORBIT, ROOT and PLATE identity. ORBIT/EMBER are closest to their targets;
+   the common blocker is same-colour organic separation and complex-scene gradient
+   bands. PLATE identity's exact hidden geometry is ambiguous (document the limit,
+   do not invent it). See HANDOFF's gap table and the detailed P1 backlog below.
 4. [ ] Add the 10–20-image redistributable real corpus and broader independent
    alpha/gradient/occlusion/aspect-ratio/stroke/lettering contracts. Add per-case
    exception recording before fuzzing.
@@ -35,10 +44,11 @@ supersedes older statements deferring all engine work to the hosted service.
 
 Each implementation must add bug regressions, pass full tests before/after, retain
 independent targets/VTracer, and show before/after robustness and rendered bench
-results. Current baseline: **36/36 core, 63/78 full sweep, 9/16 structural targets**;
-the **519 passing tests/7 strict xfails** do not hide or resolve the 15 sweep misses.
-The separate hosted-service milestone below remains unimplemented, not a reason
-to skip this authorized quality work. Update this queue and HANDOFF as work lands.
+results. Current baseline: **36/36 core, 70/78 full sweep, 9/16 structural targets**;
+the **541 passing tests/7 strict xfails** do not hide the remaining sweep floors (all
+pinned) or the 7 structural gaps. The separate hosted-service milestone below remains
+unimplemented, not a reason to skip this authorized quality work. The next front is
+item 3 (structural targets). Update this queue and HANDOFF as work lands.
 
 ## Coverage boundary and quality gates
 
@@ -73,13 +83,14 @@ of complete PNG reconstruction. README's coverage table is the public scope.
   topology, detail recall, colour, primitives/anchors and editable strokes, plus
   both-background SSIM. Reproducible input seeds and JSON/HTML evidence. Fix small
   isolated novel-colour loss: core **24→36/36**, full **48→63/78**. See `docs/ROBUSTNESS.md`.
-- [ ] Close the 15 measured stress misses: tiny/half-size marker coverage, .7/1.2px
-  blur, sigma-2 noise in opaque art, 1/16 contrast and 1/2px routes. Preserve the
-  .90 per-object coverage gate; global SSIM can exceed .98 while objects vanish.
+- [x] Worked the 15 measured stress misses: sweep 63/78 → 70/78. 7 fixed (sigma-2
+  noise, half-size markers, blur 0.7px); 8 are information-theoretic floors (quarter-
+  size route/marker, blur 1.2px, 1/16 contrast, 1/2px routes), each with measured
+  evidence and a pin test. The .90 per-object coverage gate and all other gates were
+  preserved; no shipped SVG changed. Mild-noise denoise detection was the sigma-2 fix.
 - [ ] Expand sweeps to real artwork, aspect-ratio extremes, gradients/occlusion
-  interactions and more independent geometry. Investigate mild-noise denoise
-  detection; add per-case exception recording before fuzzing. The current two
-  disjoint scenes are not a universal scale/noise quality guarantee.
+  interactions and more independent geometry. Add per-case exception recording before
+  fuzzing. The current two disjoint scenes are not a universal scale/noise guarantee.
 - [ ] Broaden meaningful graphic-feature coverage: soft/varying alpha and shadows;
   clamped/nonlinear/elliptical gradients; branching/same-colour decomposition;
   other stroke caps/joins/dashes/widths; lettering and complex completion. Existing

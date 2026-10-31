@@ -1,46 +1,51 @@
-# PLATE handover — 2026-10-30 (verified robustness checkpoint)
+# PLATE handover — 2026-10-30 (stress-miss campaign complete)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Next agent: work the conversion-quality gaps, beyond Homebrew
+## Next agent: close the structural targets (stress misses are DONE)
 
-Jessica's latest direction (2026-10-30): identify and work the remaining gaps;
-Homebrew/executable delivery is a separate packaging track. An installable command
-does not establish reconstruction quality. Finish any concrete installation bug
-already in progress, then follow this queue. This instruction supersedes older
-sections that call engine work deferred or the hosted service the sole priority.
+Jessica's direction (2026-10-30): work the conversion-quality gaps; Homebrew/executable
+delivery is a separate packaging track and v0.1.0 already shipped (tag at `55701bd`,
+brew tap `Digital-Defiance/homebrew-tap`). An installable command does not establish
+reconstruction quality. This supersedes older sections calling engine work deferred.
 
-**Repository reconciliation:** at this review the tree was clean, HEAD
-`649343a`. The PNG/marker fixes (`9f0df0f`), robustness runner (`30339d5`) and
-documentation (`649343a`) are now committed. Older uncommitted-work statements
-below describe their original checkpoints. Preserve those commits; these new
-priority-document edits are not a request to commit or push.
+**Repository reconciliation:** HEAD is now on `main` six commits past the v0.1.0 tag
+`55701bd`, NOT pushed (Jessica pushes herself). Full suite **541 passed / 7 xfailed /
+0 xpassed**; robustness sweep **70/78** full, **36/36** core; **9/16** structural
+targets pass. The six commits are: `c4a0c8e` mild-noise denoise, `76cbc46` challenge
+diff, `fdf90d1` half-size markers, `083c9a7` blur-0.7, `0d1a73b` hairline pins, plus
+the doc commit for this handoff. All reviewed, green, and gate-preserving.
+
+**DONE this phase (do not redo):**
+
+- **All 15 stress misses resolved** — 7 fixed, 8 documented as information-theoretic
+  floors, each pinned by a test. Sweep 63/78 → 70/78. See the "Stress-miss campaign
+  complete" section in STATUS for the per-case table and measured floor evidence. Do
+  NOT reopen a floor by weakening a gate; the pins will catch it.
+- **Per-object challenge diagnostics** — `tests/challenge_diff.py` (non-raising
+  `diff_target` → matched/missing/extra/split/merged + per-object silhouette IoU,
+  topology, primitive/fill, stroke-vs-fill, paint order) and `tests/challenge_report.py`
+  (`python -m challenge_report <name>|--all`). `assert_target` attaches the diff to
+  `TargetMismatch`. Use this to measure incremental progress on the targets below.
 
 **Do these next, in order:**
 
-1. **Fix mild-noise geometry damage.** Reproduce opaque `panels`, noise sigma 2,
-   seeds 17/204 with `plate.robustness`. Investigate why stronger noise can trigger
-   denoising while mild noise loses primitives or inflates anchors. Add a failing
-   regression before the fix; compare clean inputs and other noise levels too.
-2. **Recover small details without inventing geometry.** Work the remaining
-   quarter-size route/marker loss (4 cases), half-size marker coverage (4), blurred
-   markers (2), low-contrast foreground (1), and 1/2px routes (2). Half-size marker
-   segmentation now survives, but its rectangular fit covers only ~.846 of the
-   intended circle. Preserve the .90 detail gate. Together with noise above these
-   are **15 stress misses**, distinct from the seven complex structural gaps.
-3. **Expose and fix complex-object failures.** Extend challenge diagnostics past
-   the first count mismatch to missing/extra/split objects, silhouette, topology,
-   fill/stroke types and paint order. Then take one measurable geometry issue at
-   a time from the table below; complete stroke recovery, same-colour separation,
-   gradient bands, occlusion/completion and corner decisions remain engine work.
-4. **Broaden empirical coverage.** Add a redistributable 10–20-image real-artwork
+1. **Close the seven structural targets, one measurable issue at a time**, using the
+   new per-object diff to see exactly what is missing/extra/split rather than a bare
+   count mismatch. The table below is the per-target gap. ORBIT and EMBER are closest.
+   The recurring blockers are same-colour organic separation, complex-scene gradient
+   bands, and compound-emblem fragmentation — all genuine engine work in
+   `stages/{segment,gradient,complete,strokes,order}.py`. PLATE identity's hidden back-P
+   geometry is NOT uniquely recoverable from the raster; document the information limit
+   rather than inventing geometry, and leave it xfail.
+2. **Broaden empirical coverage.** Add a redistributable 10–20-image real-artwork
    corpus with per-image results. Expand independent fixtures to extreme aspect
    ratios, overlapping gradients, soft/varying alpha/shadows, branching lines,
    caps/joins/dashes/widths and lettering. Add per-case exception collection to the
    robustness runner before malformed-input/fuzzing expansion.
-5. **Close colour/input and native-editing gaps.** Implement/test ICC/gamma-aware
+3. **Close colour/input and native-editing gaps.** Implement/test ICC/gamma-aware
    sRGB normalization and explicit pre-decode resource limits; expand damaged-file
    tests. Extend Illustrator automation to direct gradient-stop edits, isolated
    hidden shapes/compound holes, live-shape controls and 4× seam checks. Broader

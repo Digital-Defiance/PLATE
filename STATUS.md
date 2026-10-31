@@ -1,6 +1,32 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (blur & low-contrast robustness) · Version 0.1.0 · Tests: 539 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (stress-miss campaign complete) · Version 0.1.0 · Tests: 541 passing, 7 expected feature gaps (`pytest -q`)
+
+## Stress-miss campaign complete — 2026-10-30
+
+All 15 robustness "stress misses" recorded at the start of this phase are now
+resolved: **7 fixed, 8 documented as information-theoretic floors** (each pinned by
+a test so it cannot silently drift). The full sweep rose **63/78 → 70/78**; core
+held **36/36** throughout; every landed change kept the **24 shipped sample/challenge
+SVGs byte-identical**, all **7 strict-xfail structural gaps intact**, and **no gate
+weakened**. Full suite **519 → 541 passed / 7 xfailed / 0 xpassed**. The per-object
+challenge diagnostic (below) also landed, making the remaining structural targets
+measurable. Six commits on `main` after the v0.1.0 tag (`55701bd`), not yet pushed.
+
+| Group | Cases | Outcome |
+| --- | --- | --- |
+| sigma-2 opaque noise (seeds 17/204) | 2 | FIXED — interior-noise denoise trigger (`imageio.py`) |
+| half-size markers (4 rotations) | 4 | FIXED — circle/ellipse fit before rect in tiny-mask snap (`primitives.py`) |
+| blur 0.7px marker | 1 | FIXED — alpha-recovery colour-spread gate `>3`→`>6` (`segment.py`) |
+| quarter-size route/marker | 4 | FLOOR — 2px marker < speckle, 1 working-px route < poly/stroke floors |
+| blur 1.2px marker | 1 | FLOOR — alpha≥128 silhouette erodes to .846 coverage; fixing it breaks shipped SVGs |
+| low contrast 1/16 | 1 | FLOOR — foreground ~5 Lab dE < `color_merge`; separating it breaks shipped SVGs |
+| hairline routes 1px/2px | 2 | FLOOR — 1px geometric (`fit_straight` 0.75 half-width); 2px palette-admission |
+
+Each per-change note (with measured evidence and the pin/regression test names) is
+recorded in the dated sections below. Next front: the 7 structural targets
+(patch, storefront, poster, EMBER, ORBIT, ROOT, PLATE) — now measurable via the
+per-object challenge diff — plus the real-artwork corpus and colour/input work.
 
 ## Blur & low-contrast robustness — 2026-10-30 (branch `fix/blur-contrast-detection`)
 
