@@ -1,10 +1,14 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-30. Current verification: **352 passed, 7 expected structural gaps**.
+Updated: 2026-10-30. Current verification: **519 passed, 7 expected structural gaps**.
 `STATUS.md` records measurements and all seven remaining challenge failures;
 `docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
+
+Owner steering: Jessica explicitly allows scope expansion as useful, provided
+every addition and remaining item is recorded here and in HANDOFF. At the current
+usage limit, finish a verified checkpoint before starting further expansion.
 
 ## Coverage boundary and quality gates
 
@@ -22,14 +26,30 @@ of complete PNG reconstruction. README's coverage table is the public scope.
 - [ ] Add a representative, redistributable 10–20-image real-artwork corpus,
   tagged by artwork family and difficulty; report per-image failures, not just
   aggregate scores. Independent authored fixtures remain the structural oracle.
-- [ ] Complete an explicit PNG decode/colour matrix: palette/tRNS, grayscale,
-  RGB/RGBA, relevant 1/2/4/8/16-bit variants, interlacing, transparent-pixel RGB,
-  ICC/gamma policy and malformed/truncated cases. Distinguish supported decoding
-  from preservation of the intended appearance and document 8-bit normalization.
-- [ ] Add deterministic scale/rotation/noise/blur/low-contrast sweeps, including
-  tiny/large/aspect-ratio extremes and hairlines. Measure topology, per-object
-  silhouette/anchor recovery and foreground detail coverage as well as SSIM;
-  compare geometry in source coordinates and do not average away bad cases.
+- [x] Explicit static PNG decode matrix: all 15 legal colour/depth combinations,
+  ordinary/Adam7 rows, tRNS/palette alpha, packing/filter/IDAT cases, exact 16-bit
+  transparency, equivalent-encoding traces, hidden RGB, EXIF and selected malformed
+  streams. Fix dropped 2/4/16-bit gray and 16-bit RGB keys; normalize all 16-bit
+  channels consistently. See `docs/PNG-COVERAGE.md` (111 new cases).
+- [x] Document and test current sample/metadata policy: nearest 8-bit reduction,
+  EXIF once, ICC/gamma metadata without colour transformation, APNG default/first
+  image only. This is not a colour-managed appearance guarantee.
+- [ ] Broader PNG colour/robustness work: colour-managed sRGB normalization with
+  wide-gamut/grayscale ICC and gamma fixtures; more malformed/chunk/fuzzing cases
+  and explicit pre-decode resource limits. Animation reconstruction is outside
+  the static-SVG scope. Distinguish decoding from intended display appearance.
+- [x] Initial independent scale/rotation/noise/blur/contrast sweep: 78 cases across
+  two authored scenes, 36 core + 42 stress, normalized per-object silhouettes,
+  topology, detail recall, colour, primitives/anchors and editable strokes, plus
+  both-background SSIM. Reproducible input seeds and JSON/HTML evidence. Fix small
+  isolated novel-colour loss: core **24→36/36**, full **48→63/78**. See `docs/ROBUSTNESS.md`.
+- [ ] Close the 15 measured stress misses: tiny/half-size marker coverage, .7/1.2px
+  blur, sigma-2 noise in opaque art, 1/16 contrast and 1/2px routes. Preserve the
+  .90 per-object coverage gate; global SSIM can exceed .98 while objects vanish.
+- [ ] Expand sweeps to real artwork, aspect-ratio extremes, gradients/occlusion
+  interactions and more independent geometry. Investigate mild-noise denoise
+  detection; add per-case exception recording before fuzzing. The current two
+  disjoint scenes are not a universal scale/noise quality guarantee.
 - [ ] Broaden meaningful graphic-feature coverage: soft/varying alpha and shadows;
   clamped/nonlinear/elliptical gradients; branching/same-colour decomposition;
   other stroke caps/joins/dashes/widths; lettering and complex completion. Existing
@@ -64,8 +84,9 @@ is a deferred backlog. [docs/AUDIT.md](docs/AUDIT.md) records fresh measurements
 - [ ] Choose deployment/auth, add container/CI/monitoring and measure worker capacity.
 - [ ] Complete Illustrator validation and a representative real-image corpus before beta claims.
 
-Current full suite: **352 passed/7 xfailed**, including the output-permission and
-packaging regressions, 19 audit-bug cases and 26 headless Illustrator/layer cases. Nine of 16 authored structural targets pass;
+Current full suite: **519 passed/7 xfailed**, including the output-permission and
+packaging regressions, 19 audit-bug cases, 26 headless Illustrator/layer cases and
+111 PNG-matrix cases and 56 robustness regression cases. Nine of 16 authored structural targets pass;
 all 16 meet light/dark fidelity floors. Do not lower contracts to clear the hard tail.
 
 ## Done

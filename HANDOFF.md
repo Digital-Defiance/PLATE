@@ -1,10 +1,148 @@
-# PLATE handover — 2026-10-30 (native layers and honest coverage)
+# PLATE handover — 2026-10-30 (verified robustness checkpoint)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — native layers pass; PNG reconstruction is not universal
+## Authorized expanded scope — explicit owner instruction
+
+Jessica authorizes expanding the quality/coverage quest beyond the initial PNG
+matrix as useful. Every expansion and outstanding item must be recorded in both
+ROADMAP and this handoff. Do not interpret the earlier hosted-service pivot as
+prohibiting further engine fixes or coverage work. At the usage limit she asked
+for this verified wrap-up first; the next session can resume the expanded quest.
+
+**Already expanded and implemented:** independent PNG encoding/alpha/precision
+coverage (111 cases and loader fixes), native Illustrator automation/real layers,
+and an independent scale/rotation/noise/blur/contrast/detail sweep (78 scenarios,
+56 regression tests and isolated-marker palette recovery). The checkpoint below
+records exact measurements, files and remaining failures.
+
+**Expanded work still planned, not completed:**
+
+- Close the 15 measured stress misses first: mild-noise primitive damage,
+  tiny-marker geometry/coverage, blur, low contrast and hairline retention.
+- Broaden deterministic sweeps to aspect-ratio extremes, overlapping/completed
+  shapes, gradients, soft/varying alpha, branching/same-colour decomposition,
+  stroke caps/joins/dashes/widths and lettering. Keep independent object/topology/
+  detail contracts; do not declare success from aggregate SSIM or matching counts.
+- Gather a representative redistributable real-artwork corpus and record failures
+  by artwork family. Add richer ICC/gamma colour handling, malformed/chunk/fuzzing
+  inputs, per-case exception reporting and pre-decode memory/time/size limits.
+- Extend native Illustrator checks to gradient-stop edits, isolated hidden shapes
+  and compound holes, live-shape controls, 4× seams and broader versions/inputs.
+- Hosted upload/queue/isolated workers, accounts/quotas/ownership/expiry, Stripe,
+  deployment/CI/monitoring remain a separate unimplemented product milestone.
+
+These are authorization and queued scope, not claims that the features exist.
+The seven authored structural gaps and 15 new stress misses remain open. Do not
+promise universal PNG recovery, original fonts/live text or unknowable hidden
+authoring geometry. Recommended immediate next investigation: sigma-2 noise's
+auto-denoise blind spot, then tiny-marker/route fitting, with before/after benches.
+
+## Latest checkpoint — wrap-up requested at 8% usage; green and ready to continue
+
+- **519 passed / 7 xfailed**, no warnings/skips. Final full log
+  `/tmp/plate-sweeps-final-tests.txt` (134.87s); baseline 463/7. New robustness tests:
+  **56**; focused robustness + segmentation **77 pass**. Changed Python files
+  pass Ruff; `git diff --check` clean. No failing ordinary test is being left behind.
+- **HEAD `4f8e8d1`; new work is UNCOMMITTED.** Preserve the previous PNG phase
+  (`imageio.py`, `tests/png_fixtures.py`, `tests/test_png_matrix.py`, PNG coverage
+  docs) AND this phase (`segment.py`, new `plate/robustness.py`,
+  `tests/test_robustness.py`, `docs/ROBUSTNESS.md`, updated README/ROADMAP/STATUS).
+  No commit/push was requested for these continuations. No asset/target/golden
+  changes. Jessica permits scope expansion as useful, provided additions and
+  remaining items are tracked in ROADMAP and this handoff. She asked for a safe
+  wrap-up at 8% usage; do not reopen new work before completing this checkpoint.
+- New independent robustness runner:
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python -m plate.robustness --output NEW_DIRECTORY`.
+  All 78 cases intentionally include stress failures; **exit 1 is expected**.
+  Add `--suite core` for the supported 36-case subset. Output directories must be
+  new. Each case saves PNG, authored target SVG, traced SVG and JSON; aggregate
+  `report.json`/`index.html` expose every missing object and failed contract.
+- Two simple authored scenes cover transparent marks (disc/rectangle/compound
+  ring/route/tiny marker) and opaque panels. Scales .25/.5/1/2/4, quarter/arbitrary
+  rotations, work-size reduction, fixed-seed noise, premultiplied blur, contrast
+  and 1/2px hairlines. Match objects by silhouette, not names; evaluate in
+  authored-base pixels, with ≥.90 detail recall, topology, colour, primitive/anchor
+  and stroke contracts plus clean-reference SSIM ≥.97 on both backgrounds.
+  Observed-noisy-PNG SSIM is diagnostic, not a demand to reproduce noise.
+- Found/fixed missing unique-colour marker: `segment.py` admits a stable eroded
+  near-opaque interior from a separate alpha component lacking flat seeds. Alpha
+  ≥245, ≥2 interior samples, 90th-percentile RGB deviation ≤3; keep explicit
+  palettes, palette budget and speckle thresholds authoritative. This repairs
+  palette discovery, not arbitrary amodal/geometry inference. Source ownership
+  survives at native/half size, but half-size 12-pixel dots still snap rectangular
+  and miss the independent circle-coverage gate. Do not lower that gate.
+- **Core 24→36/36; full 48→63/78**. Fifteen stress misses remain red: quarter-size
+  route/marker loss (4 rotations); half-size marker recall ~.846 (4); marker blur
+  .7/1.2px (2); opaque sigma-2 noise seeds 17/204 (2); 1/16 contrast merging all
+  foreground despite global SSIM >.98 (1); 1/2px routes (2). These are NOT the
+  existing seven structural xfails and are not hidden in pytest passes. Tests gate
+  the core subset and deliberately broken matcher examples. Full report remains red.
+- Evidence `/tmp/plate-robustness-{before,final}/` and
+  `/tmp/plate-sweeps-{before,after}-{samples,challenges}/`. All **24 PLATE and 24
+  VTracer benchmark SVGs byte-identical**; compare JSON
+  `/tmp/plate-sweeps-benchmark-comparison.json`. Visual review
+  `plate-robustness-marker-review.png` in this chat's visualization directory.
+  Native-marker and reduced-work-size marker SVGs pass Illustrator checks at
+  `/tmp/plate-sweeps-illustrator/`. No pending dialog/script is known.
+- **Recommended next investigation:** mild-noise detection: sigma-2 opaque inputs
+  lose clean primitives/anchors while stronger noise can trigger denoising and do
+  better. Then tiny-marker alpha-aware fitting and thin-route preservation. Expand
+  beyond these two disjoint scenes to aspect ratios, gradients/occlusion and real
+  art. Add per-case exception recording before fuzzing (current runner stops on
+  unexpected exceptions), native gradient edits/isolated holes/4× seams and richer
+  ICC/gamma handling. Service remains design-only; original seven geometry gaps
+  remain open. See `docs/ROBUSTNESS.md` and ROADMAP for the complete scope.
+
+## Previous checkpoint — PNG matrix and transparent colour keys fixed
+
+- Jessica asked to continue buildout/coverage. This continuation adds **111 PNG
+  cases** and loader fixes; it is **uncommitted**, on HEAD `4f8e8d1` at the last
+  check. No commit/push requested for this continuation. Preserve prior native-layer
+  and audit work, already committed at `4f8e8d1`.
+- New `tests/png_fixtures.py` independently encodes raw samples into PNG bytes,
+  without Pillow/OpenCV encoders. `tests/test_png_matrix.py` tests all 15 legal
+  type/depth combinations in ordinary/Adam7 form, filters 0–4, tRNS/palette alpha,
+  packed/tiny/interlace/IDAT cases, source-sample exactness and equivalent traces.
+  Fifteen encodings of an independent transparent cutout must match one reference
+  SVG exactly. Full list and policy in `docs/PNG-COVERAGE.md`.
+- Initial 80 cases: **21 failed before the fix**. `imageio.py` now expands gray
+  2/4-bit tRNS keys into the same range as Pillow's pixels; keeps full PNG 16-bit
+  channels using existing OpenCV `IMREAD_UNCHANGED`, compares exact transparency
+  before quantization, then normalizes all channels/alpha with nearest `sample/257`.
+  Grayscale tRNS needs a manual full-sample mask because OpenCV may omit alpha.
+  Preserve metadata for a single EXIF transpose; catch full-depth decoder failures
+  as readable input errors. No new core dependencies or geometry changes.
+- Remaining cases cover PNG EXIF, ICC/gamma sample policy, hidden transparent RGB
+  with/without downsampling, APNG default/first image, invalid formats and damaged
+  streams/decoder failures. **ICC/gamma transformations are still not implemented**;
+  samples are traced as encoded RGB, implicitly SVG sRGB, so non-sRGB artwork may
+  differ from colour-managed viewers. APNG animation is outside static SVG scope.
+  ICC profile fixture generation skips if optional Pillow LittleCMS is absent;
+  it is present here, so the current run has no skips.
+- Full suite **463 passed/7 xfailed, no warnings**, baseline 352/7. Final log
+  `/tmp/plate-png-matrix-final-tests.txt`; initial red log
+  `/tmp/plate-png-matrix-red-tests.txt`. Focused input/audit/matrix run: 152 passed
+  before the last decoder-exception test; full final suite includes that test.
+  New/changed Python files pass Ruff. Targets, goldens and source assets unchanged.
+- Both benches run before/after: **all 24 PLATE and 24 VTracer SVGs byte-identical**.
+  `/tmp/plate-png-{before,after}-{samples,challenges}/` and
+  `/tmp/plate-png-benchmark-comparison.json`. Four independent transparency repros
+  improve to **SSIM 1.0 on white and dark**; artifacts/HTML/metrics at
+  `/tmp/plate-png-matrix-review/`. Visually checked `plate-png-transparency-review.png`
+  in this chat's visualization directory. All four new Illustrator import/edit/AI
+  round trips pass at `/tmp/plate-png-matrix-illustrator/`; original 636 native
+  checks remain applicable to the unchanged original 24 SVGs.
+- Next coverage step: deterministic scale/rotation/noise/blur/low-contrast sweeps
+  with per-object geometry/topology/detail checks, not just global SSIM; retain
+  expected limits rather than weakening targets. Also gather the real-artwork
+  corpus. Wider ICC/gamma handling, malformed-chunk/fuzzing/decode limits, soft
+  alpha/shadows and native gradient/hidden-object/4× checks remain in ROADMAP.
+  The seven hard structural gaps and service design-only status are unchanged.
+
+## Previous checkpoint — native layers pass; PNG reconstruction is not universal
 
 - Jessica requested this checkpoint be committed after updating README/ROADMAP/
   HANDOFF. Use `git log -1` for the resulting commit. Engine base was `dceaae2`;

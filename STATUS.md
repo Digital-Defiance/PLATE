@@ -1,6 +1,99 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (native Illustrator layers and coverage boundary) · Version 0.1.0 · Tests: 352 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (robustness sweep and isolated-marker recovery) · Version 0.1.0 · Tests: 519 passing, 7 expected feature gaps (`pytest -q`)
+
+## Robustness sweep checkpoint — 2026-10-30
+
+- Jessica requested continued coverage work, then a safe wrap-up at 8% usage.
+  She explicitly permits scope expansion if recorded in ROADMAP/HANDOFF. Stopped
+  adding features at this verified checkpoint; no commit/push in this continuation.
+  HEAD remains `4f8e8d1`. Both this phase and the prior PNG fixes remain uncommitted.
+- New `python -m plate.robustness --output NEW_DIRECTORY` diagnostic: independent
+  two-scene source SVGs, 4× rasterization, scale/rotation, fixed-seed noise, proper
+  premultiplied blur, contrast and hairlines. Saves all inputs, target/actual SVGs,
+  per-case/aggregate JSON and visual HTML. Evaluates masks in authored-base pixels,
+  per-object coverage ≥.90, topology, colour, native primitives/anchor budgets,
+  editable strokes and both-background fidelity. Input RNG is reproducible; no
+  universal backend-determinism claim. Full scope: `docs/ROBUSTNESS.md`.
+- Fixed a novel-colour marker disappearing with SSIM still near .99: edge dilation
+  consumes its flat seeds and RGB ringing defeats repeated-colour admission.
+  `segment.py` now admits a stable eroded near-opaque interior for an isolated
+  component with no flat seed, respecting explicit palettes, palette budget and
+  speckle threshold. No geometry thresholds or independent targets were relaxed.
+  Native/half-size quarter-turn source ownership is tested. Half-size markers
+  still fail their independent circle-coverage target; this remains reported.
+- **36/36 core cases pass** (before 24/36). **63/78 full cases pass** (before
+  48/78), with **15 stress failures** retained: quarter-size route/marker loss (4),
+  half-size marker geometry (4), .7/1.2px blur (2), opaque sigma-2 noise (2),
+  1/16 contrast (1) and 1/2px routes (2). The full command intentionally exits 1;
+  `--suite core` selects the passing regression subset. These are separate from
+  the seven pre-existing strict-xfail logo/scene contracts, which remain unchanged.
+- Added **56 robustness tests**; focused robustness/segmentation **77 passed**.
+  Baseline full suite **463 passed/7 xfailed**; final **519 passed/7 xfailed**,
+  no warnings/skips, 134.87s. Logs `/tmp/plate-sweeps-{before,final}-tests.txt`,
+  `/tmp/plate-robustness-{red,focused}-tests.txt`. Changed Python files pass Ruff.
+- Before/after benches: **all 24 PLATE and 24 VTracer SVGs byte-identical**, no
+  source/target/golden changes. Evidence `/tmp/plate-sweeps-{before,after}-{samples,challenges}/`
+  and `/tmp/plate-sweeps-benchmark-comparison.json`. Sweep evidence:
+  `/tmp/plate-robustness-{before,final}/{report.json,index.html}`. Visually inspected
+  `plate-robustness-marker-review.png` in this chat's visualization directory.
+  New native-marker and downsampled-marker SVGs also pass Illustrator import/edit/
+  AI roundtrip checks (`/tmp/plate-sweeps-illustrator/`).
+- Next: mild-noise auto-denoise detection, tiny-marker/route fitting without
+  weakening .90 coverage, then broader scenes/aspect ratios/real artwork and
+  native editing. Runner exceptions are not yet collated per case; add that before
+  fuzzing. Colour management and hosted-service implementation remain open.
+
+## Static PNG encoding coverage and precision fixes — 2026-10-30
+
+- Continued Jessica's coverage buildout with an independent byte-authored PNG
+  matrix: all **15 legal colour/depth combinations**, ordinary/Adam7 rows, all
+  five scanline filters, tRNS keys, palette alpha/implicit opaque tails, packed
+  rows, tiny/empty interlace passes and split IDAT. Expected pixels are computed
+  from original integer samples; the fixture writer does not use Pillow/OpenCV
+  encoders. Fifteen equivalent encodings must yield the same editable cutout SVG.
+  New files: `tests/png_fixtures.py`, `tests/test_png_matrix.py`; full inventory and
+  interpretation policy: [docs/PNG-COVERAGE.md](docs/PNG-COVERAGE.md).
+- The first 80 tests reproduced **21 failures**. Fixed lost grayscale **2/4-bit
+  tRNS** (Pillow expands pixels but leaves the key in the source range), grayscale
+  **16-bit tRNS** (normalization lost transparency), and **RGB 16-bit tRNS** (Pillow
+  reduces precision before the exact match). Use the existing OpenCV unchanged
+  decoder to retain full 16-bit samples, compare tRNS exactly, and consistently
+  round all RGB/alpha channels to 8 bits (`sample/257`). Near-key opaque samples
+  that collapse to the same 8-bit RGB stay opaque. Preserve EXIF and apply it once.
+  Dependency failures are readable `ImageLoadError`s, without a lossy fallback.
+- **111 new cases total**, including PNG EXIF, sample-based gAMA/sRGB/valid ICC
+  handling, hidden-RGB trace invariance at native/reduced working sizes, APNG
+  first/default-image policy, invalid type/depth, CRC/deflate and decoder failures.
+  ICC/gamma transforms remain **unimplemented**; the tests document normalized
+  encoded samples, not colour-managed appearance. APNG animation is not reconstructed.
+  ICC fixture generation uses optional Pillow LittleCMS; it is available in this
+  run, so there are no skips. These fixtures are not complete conformance/fuzzing
+  or decode-resource-limit coverage.
+- Baseline full suite **352 passed/7 xfailed**; final **463 passed/7 xfailed**,
+  no warnings/skips, 126.69s. Focused input/audit/matrix checks: **152 passed** before
+  adding the final decoder-exception case; the full suite includes that case.
+  Changed Python files pass Ruff. Logs `/tmp/plate-png-matrix-{before,final}-tests.txt`,
+  `/tmp/plate-png-matrix-{red,focused}-tests.txt`.
+- Four independent transparent-cutout repros render at **SSIM 1.0 on white/dark**
+  after the fix; before white/dark scores were gray2 **.7192/.6740**, gray4
+  **.8740/.5691**, gray16 **.9173/.5467**, RGB16 **.8100/.5927**. Metrics, HTML
+  reports and before/after SVGs: `/tmp/plate-png-matrix-review/`. Rendered and
+  visually inspected `plate-png-transparency-review.png` in this chat's visualization
+  directory. Four new Illustrator workflows also pass (report
+  `/tmp/plate-png-matrix-illustrator/report.json`), preserving real layers, names,
+  holes/rendering, edits and AI reopening. The native check still does not prove
+  arbitrary source reconstruction.
+- Both original/challenge benches run before/after. **All 24 PLATE and 24 VTracer
+  SVGs are byte-identical**; fixtures/targets/goldens untouched. Evidence:
+  `/tmp/plate-png-{before,after}-{samples,challenges}/`,
+  `/tmp/plate-png-benchmark-comparison.json`. Prior 24-case/636-check Illustrator
+  verification remains applicable to those unchanged SVGs.
+- README/ROADMAP/HANDOFF updated. Remaining coverage: real artwork, scale/noise/
+  low-contrast/detail sweeps, richer colour management/metadata/fuzzing, soft alpha,
+  harder gradients/strokes and direct native-edit/4× seam checks. Seven structural
+  targets remain strict gaps. Service implementation is still absent. No commit
+  or push in this continuation; HEAD remains `4f8e8d1` at the latest check.
 
 ## Native Illustrator layers fixed; coverage remains bounded — 2026-10-30
 

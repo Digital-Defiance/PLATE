@@ -45,8 +45,8 @@ editable objects are three different levels of success.
 | Gradients | Linear/radial fills and some supported occlusions work. Clamped/nonlinear ramps, general elliptical/focal gradients and complex decorated shading remain incomplete; mesh/conic gradients are outside current coverage. |
 | Transparency | Hard cutouts and tested flat-opacity regions work. Soft shadows, feathering, spatially varying alpha and blend effects are not broadly validated. |
 | Lettering | Traced outlines can remain editable paths. Original fonts, live text, reading order and semantic letter grouping are not recovered reliably. |
-| Tiny, noisy or low-contrast art | Some tiny/degenerate and noise regressions exist. Hairlines, fully antialiased colours, low contrast and resolution changes can still lose details. |
-| PNG decoding / colour | Existing tests cover several modes, corrupt inputs and dark 16-bit normalization. The full palette/bit-depth/transparency/interlacing matrix and ICC/gamma colour policy still need explicit coverage. |
+| Tiny, noisy or low-contrast art | A controlled [78-case sweep](docs/ROBUSTNESS.md) measures per-object detail/topology: all 36 core cases pass; 15 stress cases still fail. Tiny markers/hairlines, blur, mild noise and low contrast remain limits. |
+| PNG decoding / colour | All 15 legal static colour/depth combinations are tested with Adam7, tRNS and palette alpha. Channels normalize to 8-bit RGBA. ICC/gamma colour transforms remain unimplemented; APNG uses only the default/first image. See [PNG coverage and policy](docs/PNG-COVERAGE.md). |
 | Photos, textures and painterly artwork | Outside the current editable-object quality claim; these are not the intended launch use case. |
 
 The **16 independent desired-SVG challenges have 9 structural passes and 7 known
@@ -57,7 +57,7 @@ geometry is inherently ambiguous from a raster. See [the measured gaps](docs/AUD
 
 The **24/24 Illustrator workflows validate SVG interchange**, including real
 layers and native edits; they do not turn those seven reconstruction gaps into
-passes. A representative real-artwork corpus, PNG/colour-mode matrix, scale/noise
+passes. A representative real-artwork corpus, broader colour management, scale/noise
 sweeps and further native editing checks are still needed. The remaining work and
 acceptance gates are tracked in [ROADMAP.md](ROADMAP.md).
 
