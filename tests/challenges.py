@@ -125,7 +125,30 @@ def _gradient_kind(root, element):
 
 
 def assert_target(actual_svg, target_svg):
-    """Match objects by silhouette, then check primitive/fill/topology/paint order."""
+    """Match objects by silhouette, then check primitive/fill/topology/paint order.
+
+    On any mismatch the raised ``TargetMismatch`` keeps the original first-line
+    message (so ``match=`` substring tests and strict-xfail wiring are
+    unchanged) and is enriched with a full structured per-object diff: the
+    readable summary is appended to the message and the machine-readable diff is
+    attached as ``err.diff`` / ``err.diff_dict``. The enrichment never changes
+    which check fails first or the exception type.
+    """
+    try:
+        _assert_target(actual_svg, target_svg)
+    except TargetMismatch as err:
+        from challenge_diff import diff_target  # local import avoids a cycle
+        try:
+            diff = diff_target(actual_svg, target_svg)
+        except Exception:  # noqa: BLE001 - diagnostics must never mask the real failure
+            raise err from None
+        err.diff = diff
+        err.diff_dict = diff.to_dict()
+        err.args = (f"{err.args[0]}\n{diff.summary()}", *err.args[1:])
+        raise
+
+
+def _assert_target(actual_svg, target_svg):
     actual, target = ET.fromstring(actual_svg), ET.fromstring(target_svg)
     got, want = drawables(actual), drawables(target)
     _require(len(got) == len(want),
