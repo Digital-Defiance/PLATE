@@ -150,3 +150,39 @@ def test_isolated_palette_recovery_obeys_the_requested_speckle_threshold(tmp_pat
     image.save(path)
     result = pipeline.run(path, Config(filter_speckle=area_limit))
     assert np.linalg.norm(result.seg.palette.astype(float)-[234, 172, 35], axis=1).min() > 20
+
+
+@pytest.mark.parametrize('seed', [17, 204])
+def test_mild_noise_panels_recovers_primitives_at_sigma_2(tmp_path, seed):
+    """Mild Gaussian noise (sigma 2) used to sit below the auto-denoise trigger, corrupting
+    boundaries so circles/rects failed to snap and were emitted as Beziers (primitives 2/1,
+    anchors 35/49). The interior-noise estimator now trips denoise for exactly these cases."""
+    case = SweepCase(family='panels', noise=2, seed=seed, tier='stress')
+    report = run_case(case, tmp_path/'case')
+    assert report['passed'], report
+    by_name = {o['name']: o for o in report['objects']}
+    for name in ('disc', 'panel', 'detail'):
+        checks = by_name[name]['checks']
+        assert checks['primitive'], (name, report)
+        assert checks['anchors'], (name, report)
+        assert checks['silhouette'], (name, report)
+    assert by_name['disc']['checks']['detail_coverage'], report
+    assert report['stats']['primitives'] == 4, report
+    assert report['stats']['anchors'] <= 16, report
+
+
+def test_interior_noise_estimator_separates_mild_noise_from_clean_edges():
+    """The estimator must stay at ~0 on clean art (even edge-dense/rotated marks) and rise
+    above the threshold on mild sigma-2 noise. This is the regression guard proving edge
+    density alone does not trip the new trigger (which would risk smearing clean strokes)."""
+    from plate.imageio import interior_noise_fraction
+
+    def planes(case):
+        arr = np.asarray(make_input(case)[0])
+        return arr[..., :3].copy(), arr[..., 3].copy()
+
+    for family in ('panels', 'marks'):
+        rgb, alpha = planes(SweepCase(family=family))
+        assert interior_noise_fraction(rgb, alpha) < 0.002, family
+    rgb, alpha = planes(SweepCase(family='panels', noise=2, seed=17, tier='stress'))
+    assert interior_noise_fraction(rgb, alpha) > 0.002

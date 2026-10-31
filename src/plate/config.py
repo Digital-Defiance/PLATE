@@ -19,6 +19,7 @@ class Config:
     # --- working resolution ---
     work_size: int = 1536           # longest side used internally; larger = finer, slower
     denoise: int = -1                # -1 auto (by measured noise), 0 off, N = N bilateral passes
+    interior_noise: float = 0.002    # auto-denoise also fires when interior (edge-free) noise exceeds this
     # --- color / segmentation ---
     max_colors: int = 16            # palette cap (flat art usually auto-detects fewer)
     color_merge: float = 8.0        # merge palette colors closer than this (Lab dE)

@@ -1,6 +1,54 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (handoff priorities and remaining-gap review) · Version 0.1.0 · Tests: 519 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (mild-noise auto-denoise blind-spot fix) · Version 0.1.0 · Tests: 522 passing, 7 expected feature gaps (`pytest -q`)
+
+## Mild-noise denoise blind spot fixed — 2026-10-30
+
+- Root cause: `imageio.load_image` auto-denoise fired only when
+  `noise_fraction > 0.04`. That global median-residual fraction is confounded by
+  edge density, so mild Gaussian noise (sigma 2) on the opaque `panels` scene
+  measured only ~0.018 and never tripped the bilateral filter, while sigma 4/8
+  (0.28/0.73) did and passed. The uncleaned sigma-2 boundaries pushed circles/rects
+  past `snap_tolerance`, so they were emitted as Beziers — lost primitives, inflated
+  anchors. Failing cases: `panels-s1-r0-n2-...-seed17` and `-seed204`.
+- Fix (trigger only; no gate/tolerance weakened): added
+  `interior_noise_fraction(rgb, alpha)` beside `noise_fraction` in `imageio.py`. It
+  runs the same `>6` residual test but only on pixels >=3px from any Sobel edge
+  (distance_transform_edt), returning 0.0 when <100 interior pixels remain. Uniform
+  noise reaches flat interiors; anti-aliased edge residual does not, so this cleanly
+  separates mild noise (sigma 2 >= 0.0049) from clean edge-dense art (0.0000). The
+  auto branch now fires when `noise_fraction > 0.04` OR `interior_noise_fraction >
+  cfg.interior_noise`. New frozen `Config` lever `interior_noise = 0.002`. Classical,
+  CPU-only, deterministic; no new dependency (scipy.ndimage already in use).
+- Results: sweep 63/78 -> 65/78, the two sigma-2 panels cases flip to full PASS
+  (disc/panel/detail primitive+anchors+silhouette+detail_coverage all true;
+  stats primitives 2/1 -> 4, anchors 35/49 -> 16), zero previously-green case
+  regressed, core suite 36/36. Full `pytest -q`: 522 passed / 7 xfailed (was 519/7),
+  no new xpasses. All 24 shipped sample+challenge PLATE SVGs byte-identical to main
+  (no sample's denoise decision changes; max interior estimate on any sample 0.0008).
+  New tests in `tests/test_robustness.py`:
+  `test_mild_noise_panels_recovers_primitives_at_sigma_2` (seeds 17, 204) and
+  `test_interior_noise_estimator_separates_mild_noise_from_clean_edges`.
+
+## Handoff priority reconciliation — 2026-10-30
+
+- Jessica requested explicit remaining-gap instructions beyond Homebrew delivery.
+  HANDOFF and ROADMAP now direct the next agent through mild-noise damage, the
+  other 13 stress misses, diagnostics/seven complex structural targets, real-art
+  and broader feature coverage, colour/input limits and native editing checks.
+  Earlier service-first/deferred-engine wording is superseded by this direction;
+  the unimplemented hosted service remains a separate milestone.
+- Review began with a clean tree at `649343a`: prior PNG/marker fixes (`9f0df0f`),
+  robustness runner (`30339d5`) and docs (`649343a`) have been committed by the
+  intervening session. Earlier uncommitted-work notes below are historical.
+- Saved full-sweep JSON independently rechecked: **63/78 pass, 15 fail**; current
+  challenge definitions retain **seven strict expected gaps**. Corrected stale
+  HANDOFF stroke counts (patch 8, storefront 3, EMBER 3, ROOT 9). These edits change
+  documentation only; no engine/targets/packaging changes or commit/push requested.
+- Full suite before and after: **519 passed/7 xfailed**, no warnings/skips
+  (135.13s / 133.60s). Logs `/tmp/plate-handoff-priority-{before,after}.txt`.
+  `git diff --check` passes; only HANDOFF/ROADMAP/STATUS changed. No new pipeline
+  render check was needed for these documentation-only edits.
 
 ## Handoff priority reconciliation — 2026-10-30
 

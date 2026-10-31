@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
+from scipy import ndimage as ndi
 
 from .config import Config
 from .scene import Loaded
@@ -119,6 +120,30 @@ def noise_fraction(rgb: np.ndarray, alpha: np.ndarray | None = None) -> float:
     return float((diff > 6).mean())
 
 
+def interior_noise_fraction(rgb: np.ndarray, alpha: np.ndarray | None = None) -> float:
+    """Median-residual noise measured only in flat interiors, away from edges.
+
+    `noise_fraction` is confounded by edge density: dense anti-aliased edges on clean art
+    produce a large median-residual fraction without any real noise. Uniform Gaussian noise,
+    by contrast, reaches deep into flat interiors while anti-aliased residual stays confined
+    to thin fringes next to edges. Restricting the same `>6` residual test to pixels at least
+    3px from any gradient edge isolates true mild noise (where the global fraction is masked
+    by edges) from clean edge-dense art. Returns 0.0 when too few interior pixels remain to
+    measure reliably (e.g. heavy noise where the global branch already fires)."""
+    med = cv2.medianBlur(rgb, 3).astype(np.int16)
+    diff = np.abs(rgb.astype(np.int16) - med).max(axis=2)
+    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
+    edge = np.hypot(gx, gy) > 20
+    interior = ndi.distance_transform_edt(~edge) >= 3
+    if alpha is not None:
+        interior &= alpha > 250
+    if int(interior.sum()) < 100:
+        return 0.0
+    return float((diff[interior] > 6).mean())
+
+
 def load_image(path: Path | str, cfg: Config) -> Loaded:
     im = open_rgba(path)
     w, h = im.size
@@ -131,7 +156,12 @@ def load_image(path: Path | str, cfg: Config) -> Loaded:
     rgb, alpha = arr[..., :3].copy(), arr[..., 3].copy()
     level = cfg.denoise
     if level < 0:                       # auto: only filter inputs that are actually noisy
-        level = 2 if noise_fraction(rgb, alpha) > 0.04 else 0
+        # The global fraction catches heavy noise; the interior estimator catches mild
+        # uniform noise whose global fraction is masked by edge density. They complement:
+        # fire on either so the sigma-2 "blind spot" between them no longer slips through.
+        noisy = (noise_fraction(rgb, alpha) > 0.04
+                 or interior_noise_fraction(rgb, alpha) > cfg.interior_noise)
+        level = 2 if noisy else 0
     if level:
         # edge-preserving: bilateral keeps corners and small features that a median erases
         for _ in range(level):
