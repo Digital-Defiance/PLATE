@@ -166,6 +166,34 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                 near = np.linalg.norm(colors.astype(float)-colors[i], axis=1) <= 12
                 if counts[i] >= 0.25*counts[near].sum():
                     palette = np.vstack([palette, colors[i]])
+    # An isolated small alpha component can have no flat seeds at all: edge
+    # dilation consumes it, while Lanczos RGB ringing leaves too few identical
+    # pre-dilation colours for the repeated-colour fallback above. Its own alpha
+    # silhouette supplies independent evidence. Use a stable opaque interior,
+    # away from the ringing rim; respect the speckle threshold and palette budget.
+    if not cfg.palette and len(palette) < budget and not opaque.all():
+        count, components, stats, _ = cv2.connectedComponentsWithStats(opaque.astype(np.uint8), connectivity=8)
+        for k in range(1, count):
+            x, y, w, h, area = stats[k]
+            if area < max(6, cfg.filter_speckle) or len(palette) >= budget:
+                continue
+            member = components[y:y+h, x:x+w] == k
+            if (member & flat[y:y+h, x:x+w]).any():
+                continue
+            inner = ndi.binary_erosion(member, iterations=2)
+            if inner.sum() < 2:
+                inner = ndi.binary_erosion(member)
+            confident = inner & (alpha[y:y+h, x:x+w] >= 245)
+            if confident.sum() < 2:
+                continue
+            colors = rgb[y:y+h, x:x+w][confident].astype(float)
+            color = np.rint(np.median(colors, axis=0)).astype(np.uint8)
+            if np.percentile(np.linalg.norm(colors-color, axis=1), 90) > 3:
+                continue  # a variable ramp/noisy island is not one new flat colour
+            existing = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
+            lab_color = _lab(color.reshape(1, 1, 3)).reshape(3)
+            if np.linalg.norm(existing-lab_color, axis=1).min() >= cfg.color_merge:
+                palette = np.vstack([palette, color])
     plab = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
     _, idx = cKDTree(plab).query(lab[flat])
 

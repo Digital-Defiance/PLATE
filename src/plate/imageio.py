@@ -33,10 +33,49 @@ def _to_8bit(im: Image.Image, *, bit_depth: int | None = None) -> Image.Image:
     return Image.fromarray(np.clip(np.rint(a), 0, 255).astype(np.uint8), "L")
 
 
+def _png16_rgba(path: Path, info: dict) -> Image.Image:
+    """Keep full PNG samples through tRNS comparison, then normalize to 8 bits.
+
+    Pillow has already discarded low bytes for multichannel 16-bit PNGs. OpenCV's
+    unchanged decoder retains them; UNCHANGED also leaves EXIF rotation to us.
+    """
+    samples = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if samples is None or samples.dtype != np.uint16:
+        raise ValueError('cannot decode 16-bit PNG at full sample depth')
+    if samples.ndim == 2:
+        rgb = np.repeat(samples[..., None], 3, axis=2)
+        alpha = np.full_like(samples, 65535)
+    elif samples.shape[2] == 2:
+        rgb = np.repeat(samples[..., :1], 3, axis=2)
+        alpha = samples[..., 1]
+    elif samples.shape[2] in (3, 4):
+        rgb = samples[..., 2::-1]  # BGR(A) -> RGB(A)
+        alpha = samples[..., 3] if samples.shape[2] == 4 else np.full(samples.shape[:2], 65535, np.uint16)
+    else:
+        raise ValueError('unsupported 16-bit PNG channel layout')
+    key = info.get('transparency')
+    if isinstance(key, int):
+        # libpng/OpenCV may return grayscale tRNS without an alpha channel.
+        alpha = np.where(rgb[..., 0] == key, 0, 65535)
+    elif isinstance(key, tuple):
+        alpha = np.where(np.all(rgb == key, axis=2), 0, 65535)
+    rgba = np.empty((*rgb.shape[:2], 4), dtype=np.uint8)
+    rgba[..., :3] = np.rint(rgb.astype(np.float64) / 257).astype(np.uint8)
+    rgba[..., 3] = np.rint(alpha.astype(np.float64) / 257).astype(np.uint8)
+    converted = Image.fromarray(rgba)
+    converted.info.update(info)  # retain EXIF for the single orientation step below
+    return converted
+
+
 def open_rgba(path: Path | str) -> Image.Image:
     """Open any Pillow-readable image as 8-bit RGBA in its DISPLAYED orientation
     (EXIF rotation applied, as every image viewer shows it). Raises ImageLoadError
-    with a readable message instead of a library traceback."""
+    with a readable message instead of a library traceback.
+
+    PNG channels use their declared sample range (16-bit -> nearest 8-bit); tRNS
+    is matched before reduction. ICC/gamma metadata is not colour-transformed.
+    Animated inputs use the default/first image, not an animation reconstruction.
+    """
     p = Path(path)
     if p.is_dir():
         raise ImageLoadError(f"{p} is a directory, not an image")
@@ -44,15 +83,29 @@ def open_rgba(path: Path | str) -> Image.Image:
         raise ImageLoadError(f"no such file: {p}")
     try:
         with Image.open(p) as im:
+            depth, colour = None, None
+            if im.format == 'PNG':
+                # IHDR is fixed at the start; read the declared depth before
+                # Pillow's mode conversion or EXIF copying discards that context.
+                with p.open('rb') as stream:
+                    header = stream.read(26)
+                if len(header) != 26 or header[:8] != b'\x89PNG\r\n\x1a\n':
+                    raise ValueError('incomplete PNG header')
+                depth, colour = header[24], header[25]
             im.load()
-            bit_depth = 16 if im.format == "PNG" and (im.mode == "I" or im.mode.startswith("I;16")) else None
+            if depth == 16:
+                im = _png16_rgba(p, im.info)
+            elif colour == 0 and depth in (2, 4) and 'transparency' in im.info:
+                # Pillow expands low-depth gray pixels to L but leaves tRNS in
+                # the original sample range. Match the expanded key to the pixels.
+                im.info['transparency'] = round(im.info['transparency'] * 255 / ((1 << depth)-1))
             im = ImageOps.exif_transpose(im)
-            return _to_8bit(im, bit_depth=bit_depth).convert("RGBA")
+            return _to_8bit(im).convert("RGBA")
     except Image.DecompressionBombError as e:
         raise ImageLoadError(f"{p} is too large to decode safely ({e})") from e
     except UnidentifiedImageError as e:
         raise ImageLoadError(f"{p} is not a recognised image format") from e
-    except (OSError, SyntaxError, ValueError) as e:
+    except (OSError, SyntaxError, ValueError, cv2.error) as e:
         raise ImageLoadError(f"cannot read {p}: {e}") from e
 
 
