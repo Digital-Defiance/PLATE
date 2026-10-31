@@ -74,7 +74,37 @@ def snap(mask: Mask, cfg: Config) -> Prim | None:
         # fringes between shapes; keep dropping those (except a whole 1x1 image).
         h, w = mask.a.shape
         if mask.a.all() and (min(h, w) >= 2 or mask.area == 1):
-            return Prim("rect", mask.x0 + (w - 1) / 2, mask.y0 + (h - 1) / 2, w / 2, h / 2)
+            rect = Prim("rect", mask.x0 + (w - 1) / 2, mask.y0 + (h - 1) / 2, w / 2, h / 2)
+            # A tiny filled blob can still be a genuine circle/ellipse (e.g. a small
+            # route marker). Try fitting one with the SAME gates used on the normal
+            # path, and prefer it only when it strictly beats the full-bbox rect on
+            # full-primitive deviation (so ambiguous solid squares stay rects).
+            tpad = 3
+            ta = np.pad(mask.a, tpad)
+            tconts = [c for c in contours_xy(ta) if len(c) >= 8]
+            if len(tconts) == 1:
+                tc = tconts[0]
+                ttol = max(0.7, cfg.snap_tolerance * np.sqrt(float(mask.area)))
+                # Rect in padded-array-local coords, for a like-for-like deviation compare.
+                lrect = Prim("rect", tpad + (w - 1) / 2, tpad + (h - 1) / 2, w / 2, h / 2)
+                rect_dev = _full_primitive_deviation(ta, lrect)
+                pc, _rms, cov = fit_circle(tc)
+                cand = None
+                if cov > 5.5:
+                    dev = _full_primitive_deviation(ta, pc)
+                    if dev <= ttol and dev < rect_dev:
+                        cand = pc
+                if cand is None:
+                    e = fit_ellipse(tc)
+                    if e and e[2] > 5.5:
+                        dev = _full_primitive_deviation(ta, e[0])
+                        if dev <= ttol and dev < rect_dev:
+                            cand = e[0]
+                if cand is not None:
+                    cand.cx += mask.x0 - tpad
+                    cand.cy += mask.y0 - tpad
+                    return normalize(cand)
+            return rect
         return None
     pad = 3
     a = np.pad(mask.a, pad)

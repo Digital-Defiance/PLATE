@@ -21,16 +21,32 @@ def test_isolated_marker_survives_without_a_flat_palette_seed(tmp_path, scale, a
     assert marker['checks']['present'], report
     assert marker['checks']['topology'], marker
     assert report['checks']['object_count'], report
-    # This regression guards source ownership. At half size the 12 source pixels
-    # survive, but snapping them to a rectangle still misses the independent 90%
-    # circle-coverage contract. That stress failure stays red in the sweep.
+    # This regression guards source ownership: every gold source pixel must be owned
+    # by a segment at both scales. Half-size markers now also recover as circles
+    # (asserted below), so the 90% circle-coverage contract holds at .5 and 1.
     image, _ = make_input(case)
     result = pipeline.run(tmp_path/'marker/input.png')
     rgba = np.asarray(image)
     gold = (rgba[..., 3] >= 128) & (rgba[..., 0] > 180) & (rgba[..., 1] > 120) & (rgba[..., 2] < 90)
     assert (result.seg.rid[gold] >= 0).all()
-    if scale == 1:
-        assert marker['checks']['detail_coverage'], marker
+    # Half-size markers now recover as genuine circles (snap fits a circle before the
+    # tiny-mask rect fallback), so detail_coverage holds at both scales, not just 1.
+    assert marker['checks']['detail_coverage'], marker
+
+
+@pytest.mark.parametrize('angle', [0, 90, 180, 270])
+def test_half_size_marker_recovers_as_a_circle_with_full_coverage(tmp_path, angle):
+    case = SweepCase(scale=.5, angle=angle, tier='stress')
+    report = run_case(case, tmp_path/'m')
+    marker = next(o for o in report['objects'] if o['name'] == 'marker')
+    assert marker['checks']['present'], report
+    # Per-object recovery (NOT global SSIM): the emitted element must be a circle and
+    # cover >= 90% of the authored silhouette.
+    actual = ET.fromstring((tmp_path/'m'/'actual.svg').read_text())
+    element = next(e for e in actual.iter() if e.get('id') == marker['actual_name'])
+    assert element.tag.rsplit('}', 1)[-1] == 'circle', ET.tostring(element, encoding='unicode')
+    assert marker['checks']['detail_coverage'], marker
+    assert marker['coverage'] >= .9, marker
 
 
 @pytest.mark.parametrize('case', [c for c in cases() if c.tier == 'core'], ids=lambda c: c.name)

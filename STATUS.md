@@ -50,6 +50,39 @@ Last updated: 2026-10-30 (mild-noise auto-denoise blind-spot fix) · Version 0.1
   `git diff --check` passes; only HANDOFF/ROADMAP/STATUS changed. No new pipeline
   render check was needed for these documentation-only edits.
 
+## Small-marker geometry recovery — 2026-10-30 (branch `fix/small-marker-geometry`)
+
+- Half-size route markers now recover as a native `<circle>`. Mechanism: the
+  tiny-mask branch of `stages/primitives.py::snap` (the `area < 30` path that used
+  to emit a full-bbox rect for any fully-filled blob) now first tries `fit_circle`
+  (then `fit_ellipse`) on the padded contour, accepting it only when it clears the
+  SAME gates as the normal path (coverage > 5.5, full-primitive deviation ≤ tol)
+  AND strictly beats the rect's deviation. Ambiguous solid squares (2×2, 8×8) still
+  snap to rects — `tests/test_inputs.py::test_tiny_solid_image_is_one_canvas_rect`
+  stays green. No gate weakened: detail-coverage ≥.90, circle-coverage, snap
+  tolerance, anchors ceiling, speckle and stroke/contour floors are all unchanged.
+- Sweep: **63/78 → 67/78** (core unchanged at 36/36; sweep still exits 1 by design).
+  Fixed exactly the 4 `marks-s0p5-{r0,r90,r180,r270}` cases: marker object now
+  `actual_name=Gold_circle`, `coverage=1.0`, `detail_coverage=True` (was
+  `Gold_rectangle`, coverage 0.846, detail_coverage False). No other case changed.
+- STILL FAILING, below the information floor (documented, NOT faked): the 4
+  `marks-s0p25-*` quarter-size cases. At scale 0.25 the gold marker has only 2
+  opaque (alpha≥128) pixels — dropped by `filter_speckle=6` in segmentation
+  (`present=false`), and 2 pixels carry no uniquely inferable circle. The dark
+  route survives segmentation but is a 1-working-px-tall sliver: its zero-area
+  contour is rejected by the `poly_area>=4` floor and `fit_straight` deliberately
+  rejects 1-px rows. Recovering either would require weakening a gate, so they
+  stay red. `work_size` only downscales, so it cannot add information here.
+- Tests: full suite **519 → 523 passed / 7 xfailed, 0 xpassed** (the +4 are the new
+  half-size circle regressions). New regression
+  `tests/test_robustness.py::test_half_size_marker_recovers_as_a_circle_with_full_coverage`
+  (×4 angles) fails on base, passes after; and the existing marker-survival test
+  now asserts `detail_coverage` at both scales (.5 and 1). Benches: the 24 shipped
+  PLATE SVGs (`samples` + `samples/challenges`) are byte-identical to the 55701bd
+  baseline. Change localized to `primitives.py` + two project tests; `segment.py`
+  untouched (no collision with the concurrent noise branch). No commit/push beyond
+  the focused branch commit; owner Jessica to decide merge.
+
 ## Handoff priority reconciliation — 2026-10-30
 
 - Jessica requested explicit remaining-gap instructions beyond Homebrew delivery.
