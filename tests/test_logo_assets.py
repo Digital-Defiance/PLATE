@@ -49,6 +49,47 @@ def test_logo_negative_spaces_are_transparent(name, points):
             assert image.getpixel(point)[3] < 10
 
 
+def test_ember_same_colour_face_features_are_one_raster_region():
+    """DOCUMENTED INFORMATION LIMIT, measured — do NOT invent geometry or use the VLM to
+    split these, and do NOT weaken a gate to force logo_ember_crest's missing face features.
+
+    The EMBER target authors several adjacent/overlapping same-colour fills with no separator
+    between them. The input PNG maps 1:1 to the authored viewBox (both 800x960), so the
+    authored sub-shapes exist only in the vector source: in the rendered raster each group is
+    a single contiguous region with no colour, luminance, alpha or concavity cue to cut on.
+    A classical splitter would have to fabricate the boundary, so these sub-shapes cannot be
+    recovered and the structural target legitimately stays xfail. This test pins the pixel
+    contiguity so a regression or a silent gate-weakening "fix" is caught.
+
+    Measured (scipy.ndimage 8-connectivity on the input PNG):
+    - left-cheek, right-cheek and muzzle (all #f5edda) are ONE cream component;
+    - each pupil (#182e4c r=5) is fused into its same-colour navy eye-mask (ONE component).
+    """
+    from scipy import ndimage as ndi
+
+    with Image.open(DIRECTORY / "logo_ember_crest.png") as image:
+        rgba = np.asarray(image.convert("RGBA"))
+    rgb, alpha = rgba[..., :3].astype(int), rgba[..., 3]
+
+    def one_component(colour, probes, tol):
+        hexed = bytes.fromhex(colour[1:])
+        mask = (np.abs(rgb - np.array(list(hexed))).max(axis=2) <= tol) & (alpha >= 128)
+        labels, _ = ndi.label(mask, np.ones((3, 3)))
+        # probes are (x, y); numpy indexes [row=y, col=x]
+        hit = {int(labels[y, x]) for x, y in probes}
+        return hit, mask
+
+    # Cheeks + muzzle: authored #f5edda, probed at each sub-shape's interior.
+    cream_labels, _ = one_component("#f5edda", [(315, 440), (485, 440), (400, 500)], tol=20)
+    assert 0 not in cream_labels, "a cream probe landed on background"
+    assert len(cream_labels) == 1, f"cheeks+muzzle are not one cream region: {cream_labels}"
+
+    # Left pupil vs its eye-mask: both authored #182e4c; strict tolerance.
+    navy_labels, _ = one_component("#182e4c", [(323, 373), (300, 345)], tol=14)
+    assert 0 not in navy_labels, "a navy probe landed on background"
+    assert len(navy_labels) == 1, f"left pupil is separable from its eye-mask: {navy_labels}"
+
+
 @pytest.mark.parametrize("name", [row[0] for row in LOGOS])
 def test_logo_png_matches_authored_svg(name):
     if not have_renderer():
