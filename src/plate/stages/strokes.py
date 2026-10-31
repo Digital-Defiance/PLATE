@@ -676,6 +676,11 @@ def fit_stroke(mask: Mask, cfg: Config, circles: Sequence[tuple[Mask, Prim]] = (
             break
     if best is None:
         return None
+    if best[0] < 0.95 and not covers:
+        # Skeleton endpoints and pixel staircases can bias a short curve even
+        # after tighter centreline fits. Retry against the original subpixel
+        # boundary, retaining the same footprint acceptance gates.
+        return _refit_exposed_curve(mask, points, width, img, color)
     best, low, h, w, observed, occluded = best[:3], best[3], best[4], best[5], best[6], best[7]
     if best[0] < 0.95:
         return None
@@ -708,6 +713,49 @@ def _curve_distance(curve, points):
         denominator = (first*first).sum(axis=1)+(delta*second).sum(axis=1)
         t = np.clip(t-numerator/np.maximum(denominator, 1e-8), 0, 1)
     return np.linalg.norm(bez(curve, t)-points, axis=1)
+
+
+def _refit_exposed_curve(mask, points, width, img, color):
+    """Bounded single-cubic retry for a rejected, fully exposed centreline fit.
+
+    Original antialias coverage must support the entire round-capped boundary.
+    This is not a completion model: no covered or missing pixels are inferred.
+    """
+    pad = 6
+    reference = Mask(np.pad(mask.a, pad), mask.y0-pad, mask.x0-pad)
+    field = _coverage_field(reference.a, mask, pad, img, color)
+    contours = [] if field is None else contours_xy(field)
+    if len(contours) != 1 or len(contours[0]) < 20:
+        return None
+    boundary = contours[0]+[reference.x0, reference.y0]
+    distance = np.r_[0., np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))]
+    if distance[-1] <= 0:
+        return None
+    u = distance/distance[-1]
+    basis = np.c_[(1-u)**3, 3*(1-u)**2*u, 3*(1-u)*u**2, u**3]
+    curve = np.linalg.lstsq(basis, points, rcond=None)[0]
+    initial = np.r_[curve.ravel(), width]
+    span = np.r_[np.full(8, min(2., width/2)), min(1., width/4)]
+    fitted = least_squares(lambda q: _curve_distance(q[:8].reshape(4, 2), boundary)-q[8]/2,
+                           initial, bounds=(initial-span, initial+span), max_nfev=80)
+    if np.sqrt(np.mean(fitted.fun**2)) > .2 or np.max(np.abs(fitted.fun)) > .6:
+        return None
+    curve, width = fitted.x[:8].reshape(4, 2), float(fitted.x[8])
+    if _flat_terminal(boundary, [curve], width):
+        return None
+    yy, xx = np.indices(reference.a.shape)
+    grid = np.c_[xx.ravel()+reference.x0, yy.ravel()+reference.y0]
+    predicted = _curve_distance(curve, grid).reshape(reference.a.shape) <= width/2
+    if (predicted[0].any() or predicted[-1].any()
+            or predicted[:, 0].any() or predicted[:, -1].any()):
+        return None  # compare the complete candidate, never a clipped footprint
+    observed = reference.a
+    iou = (predicted & observed).sum()/max(1, (predicted | observed).sum())
+    perimeter = (observed & ~ndi.binary_erosion(observed)).sum()
+    deviation = (predicted ^ observed).sum()/max(1, perimeter)
+    if iou < .95 or (iou < .96 and deviation > .3):
+        return None
+    return Stroke([curve], width, Mask(predicted, reference.y0, reference.x0))
 
 
 def fit_crossed_curve(mask: Mask, cfg: Config, overlays: Sequence[Mask] = (),

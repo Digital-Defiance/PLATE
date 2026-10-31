@@ -1,10 +1,61 @@
-# PLATE handover — 2026-10-30 (stress-miss campaign complete)
+# PLATE handover — 2026-10-31 (audit and exposed-curve recovery)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Next agent: close the structural targets (stress misses are DONE)
+## Current checkpoint — structural progress; eight default-config misses remain
+
+- **Safe wrap-up requested at 6% usage. Final suite: 549 passed/7 xfailed**, no
+  warnings/skips, 165.32s (`/tmp/plate-oct31-final-tests.txt`). No jobs from this
+  session remain running. No further feature work was started during wrap-up.
+- **Uncommitted files to preserve:** `src/plate/stages/strokes.py`, new
+  `tests/test_exposed_curve_refit.py`, `HANDOFF.md`, `STATUS.md`, `ROADMAP.md`,
+  `README.md`, `docs/ROBUSTNESS.md`. No PNGs, authored targets or goldens changed.
+  HEAD remains `286c713`; no commit/push requested or performed.
+- Audit began with a clean tree at `286c713`. Reproduced **541 passed/7 xfailed**,
+  **70/78 full sweep**, **36/36 core**, and the seven strict structural gaps.
+  Latest changes in this session are UNCOMMITTED; do not commit/push unless asked.
+- Fixed EMBER's fourth whisker: a rejected skeleton-centreline fit can now retry
+  against the original PNG's subpixel boundary as one bounded cubic. Only fully
+  exposed curves rejected by the existing .95 IoU gate are eligible; a consistent
+  source boundary, round caps and the unchanged footprint gates are required.
+  Accepted existing fits are untouched; hidden completion is not expanded.
+- **EMBER: 3→4 editable strokes, 455→447 anchors**, 51 objects unchanged. All four
+  whiskers independently match their authored paths. White/dark SSIM improves
+  **.9665/.9685→.9666/.9686**. The full shield/stem/merged-object contract stays
+  xfail. The other **23 PLATE SVGs and all 24 VTracer SVGs are byte-identical**;
+  full sweep remains 70/78 with identical per-case verdicts. Illustrator 30.8.2
+  passes the changed SVG's import/edit/AI roundtrip workflow.
+  Final evidence: `/tmp/plate-oct31-final-{samples,challenges,robustness}/`,
+  `/tmp/plate-oct31-final-comparison.json`, `/tmp/plate-oct31-illustrator/report.json`.
+- Eight new regressions cover mirrored opaque/transparent curves, square-cap
+  protection, missing source evidence and all four EMBER whiskers. Four fail when
+  the new retry is disabled; focused stroke suite **50 passed**. Final full-suite
+  verification and artifact paths are recorded in STATUS.
+- **Audit correction:** the eight remaining sweep failures are measured limits
+  of current defaults/algorithms, not proven information-theoretic impossibilities.
+  Low contrast is merged by `color_merge`; the 2px route passes with an explicit
+  palette. Neither observation proves automatic recovery impossible. Preserve
+  gates and the recorded repros; any future valid improvement must review the
+  tests that currently assert failure. Do not call 70/78 complete recovery.
+- **Diagnostic caveat:** `diff_target(svg, svg)` falsely labels two identical,
+  overlapping rectangles as splits, because split detection treats any IoU≥.1
+  overlap as fragmentation. Reproduce with a 100×100 back rectangle and a 50×50
+  front rectangle at (20,20). Fix split/merge classification with overlapping
+  self-comparison regressions before using those counts to rank scene fixes.
+- A short curved **butt-cap** probe also emits round caps in the current accepted
+  path; this predates the retry. Square-cap and existing taper/branch guards pass.
+  Broader cap handling remains open; do not infer it from the new tests.
+
+Next: fix misleading split diagnostics, then EMBER's laurel/stem separation or
+ORBIT's compound emblem. Continue the real-art/colour/native queue below. Do not
+reopen unchanged accepted fits merely to normalize output or lower quality gates.
+Baseline command: `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/pytest -q`.
+Object report from repo root:
+`DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib PYTHONPATH=tests .venv/bin/python -m challenge_report logo_ember_crest`.
+
+## Previous campaign — seven stress fixes, eight measured limitations
 
 Jessica's direction (2026-10-30): work the conversion-quality gaps; Homebrew/executable
 delivery is a separate packaging track and v0.1.0 already shipped (tag at `55701bd`,
@@ -20,10 +71,10 @@ the doc commit for this handoff. All reviewed, green, and gate-preserving.
 
 **DONE this phase (do not redo):**
 
-- **All 15 stress misses resolved** — 7 fixed, 8 documented as information-theoretic
-  floors, each pinned by a test. Sweep 63/78 → 70/78. See the "Stress-miss campaign
-  complete" section in STATUS for the per-case table and measured floor evidence. Do
-  NOT reopen a floor by weakening a gate; the pins will catch it.
+- **Seven of 15 stress misses fixed; eight still fail** with default settings.
+  Their reproductions are pinned by tests. Sweep 63/78 → 70/78. The earlier
+  "information-theoretic" classification was too strong; see the audit above.
+  Do not weaken gates to force a pass.
 - **Per-object challenge diagnostics** — `tests/challenge_diff.py` (non-raising
   `diff_target` → matched/missing/extra/split/merged + per-object silhouette IoU,
   topology, primitive/fill, stroke-vs-fill, paint order) and `tests/challenge_report.py`
@@ -56,7 +107,7 @@ the doc commit for this handoff. All reviewed, green, and gate-preserving.
 | Mission patch | 72 objects vs 45; fragmented planet/gradient bands, missing linear hull ramp, completion and 8/10 strokes |
 | Storefront | 73 vs 64; merged/split repeated details, curves/corners and 3/4 strokes |
 | Event poster | 83 vs 44; crossing type/ribbon fragments underlying objects; 0/6 strokes |
-| EMBER | 51/51 counts conceal shield IoU .8383 and only 3/7 strokes |
+| EMBER | 51/51 counts conceal shield IoU .8383; now 4/7 strokes (all four whiskers), stems and merged mouth remain open |
 | ORBIT | 44 vs 34; compound emblem/ambiguous ramp fragments; radial core and all 7 strokes already pass |
 | ROOT | 51 vs 56; touching same-colour leaves/rings/branches and only 9/32 strokes |
 | PLATE identity | 11/11 counts conceal rear-P geometry mismatch and 1/3 registration strokes; exact hidden P geometry is not uniquely observable, so document that limit rather than invent evidence |
@@ -65,8 +116,8 @@ the doc commit for this handoff. All reviewed, green, and gate-preserving.
 bug; before/after core + full robustness reports; `plate bench samples` and
 `plate bench samples/challenges` retaining VTracer; visual inspection on light/dark
 backgrounds; applicable per-object/topology/stroke checks and native checks for
-affected SVG features. Start from **519 passed/7 strict xfails**, **36/36 core**,
-**63/78 full sweep**, **9/16 structural targets**. Report case-level improvements
+affected SVG features. Use STATUS's latest full test count, **36/36 core**,
+**70/78 full sweep**, **9/16 structural targets**. Report case-level improvements
 and regressions. Do not lower gates, replace authored targets with traced output,
 or count aggregate SSIM/Illustrator interchange as reconstruction success.
 
@@ -91,8 +142,8 @@ records exact measurements, files and remaining failures.
 
 **Expanded work still planned, not completed:**
 
-- Close the 15 measured stress misses first: mild-noise primitive damage,
-  tiny-marker geometry/coverage, blur, low contrast and hairline retention.
+- Seven stress fixes have landed; eight default-config failures remain documented
+  limits. Investigate further only with independent evidence and unchanged gates.
 - Broaden deterministic sweeps to aspect-ratio extremes, overlapping/completed
   shapes, gradients, soft/varying alpha, branching/same-colour decomposition,
   stroke caps/joins/dashes/widths and lettering. Keep independent object/topology/
@@ -106,10 +157,10 @@ records exact measurements, files and remaining failures.
   deployment/CI/monitoring remain a separate unimplemented product milestone.
 
 These are authorization and queued scope, not claims that the features exist.
-The seven authored structural gaps and 15 new stress misses remain open. Do not
+The seven authored structural gaps and eight default-config stress misses remain open. Do not
 promise universal PNG recovery, original fonts/live text or unknowable hidden
-authoring geometry. Recommended immediate next investigation: sigma-2 noise's
-auto-denoise blind spot, then tiny-marker/route fitting, with before/after benches.
+authoring geometry. Sigma-2 noise and half-size/blur-.7 markers are fixed. Resume
+the structural/diagnostic queue above with before/after benches.
 
 ## Robustness checkpoint — verification retained; work is now committed
 
@@ -814,13 +865,13 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 | `complex_mission_patch` | 72 objects / 2 radial fragments / 8 strokes; target 45 with one radial planet + one linear hull, craters preserved |
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
 | `complex_storefront` | 73 objects / 3 strokes; target 64, repeated windows/awning/lettering merge or fragment |
-| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 3/7 strokes |
+| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 4/7 strokes |
 | `logo_orbit_wordmark` | 44 objects vs 34; full radial core and all 7/7 strokes recovered; compound emblem and ambiguous patches remain |
 | `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 9/32 strokes, outer circle passes independently |
 | `logo_plate` | PLATE brand fixture (session 24); 11/11 objects but back-P silhouette IoU 0.1387 (visible strips, hidden compound geometry not uniquely recoverable from raster); registration strokes merge, 1/3 strokes. Aspirational authoring target. |
 
 The next stroke work includes ROOT's touching ring/leaves and EMBER's missing
-strokes; EMBER/ORBIT/ROOT need 7/7/32 strokes and recover 3/7/9. The panel's 27 strokes are complete.
+strokes; EMBER/ORBIT/ROOT need 7/7/32 strokes and recover 4/7/9. The panel's 27 strokes are complete.
 Then address branched networks, other cap/join styles and non-circular/multiple
 occluders. `stages/strokes.py` contains straight/open-curve and complete closed-loop recovery.
 

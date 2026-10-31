@@ -43,49 +43,58 @@ exception recording before using it as a fuzzing harness.
   a stroke with a filled path, showing that similar-looking images still fail.
   Missing small details can leave global SSIM above .98.
 
-## Current measurements — 2026-10-30
+## Current measurements — audited 2026-10-31
 
 | Set | Cases | Before fix | After fix |
 | --- | ---: | ---: | ---: |
 | Core: scale/quarter turns and fixed working-size reduction | 36 | 24 pass | **36 pass** |
-| Stress: smaller sizes, arbitrary rotations, seeded noise, blur, contrast, hairlines | 42 | 24 pass | **27 pass / 15 fail** |
-| Combined | 78 | 48 pass | **63 pass / 15 fail** |
+| Stress: smaller sizes, arbitrary rotations, seeded noise, blur, contrast, hairlines | 42 | 24 pass | **34 pass / 8 fail** |
+| Combined | 78 | 48 pass | **70 pass / 8 fail** |
 
 The fix rescues a previously absent unique colour in small isolated alpha
 components. Edge dilation can erase every flat seed; RGB ringing also prevents
 the existing repeated-colour fallback from collecting enough identical pixels.
 Accept a new colour only from a stable eroded near-opaque interior (at least two
-pixels, alpha ≥245, 90th-percentile RGB deviation ≤3), with no flat seed and within
+pixels, alpha ≥245, 90th-percentile RGB deviation ≤6), with no flat seed and within
 the configured palette/speckle budgets. Explicit palettes stay authoritative.
 This restores five objects at native size and makes all 36 core cases pass.
 
-Remaining **15 stress failures** are preserved in the report:
+The subsequent campaign fixed mild sigma-2 noise (two seeds), half-size marker
+geometry (four rotations) and the .7px blurred marker. The Oct-31 exposed-curve
+retry leaves all 78 sweep verdicts unchanged. Fresh evidence:
+`/tmp/plate-oct31-{before,after}-robustness/{report.json,index.html}`.
+
+Remaining **8 stress failures** are preserved in the report:
 
 | Cases | Remaining failure |
 | --- | --- |
-| Quarter-size marks, four rotations | Route and marker vanish at tiny source footprints |
-| Half-size marks, four rotations | Marker source pixels survive, but rectangle snapping of its 12-pixel footprint achieves only about .846 circle coverage, below .90 |
-| Marks blurred .7 / 1.2px | Marker absent / insufficient coverage |
-| Opaque panels, noise sigma 2, two seeds | Jagged geometry, lost primitive form or too many anchors; stronger noise can trigger denoising and perform better |
-| Opaque panels at 1/16 contrast | Foreground objects merge into background despite global SSIM above .98 |
-| 1px / 2px routes | Thin route disappears |
+| Quarter-size marks, four rotations | Route and marker vanish under current speckle/contour floors |
+| Marks blurred 1.2px | Marker is present but insufficient coverage under the current alpha/silhouette model |
+| Opaque panels at 1/16 contrast | Current palette merge threshold absorbs foreground into background despite SSIM above .98 |
+| 1px / 2px routes | Automatic palette admission loses both; explicit palette recovers the 2px route, while current 1px stroke fitting also misses the silhouette gate |
+
+These are measured **default-setting/algorithm limitations**. The earlier claim
+that all eight are "information-theoretic floors" is not established. A threshold
+or unsuccessful attempted fix is not a proof that all automatic recovery methods
+must fail. Preserve independent targets and acceptance gates. Existing pin tests
+assert these failures; review those assertions explicitly if a valid future fix
+improves them rather than treating failure itself as a permanent requirement.
 
 These are **additional measured stress misses**, separate from the seven existing
-strict-xfail authored-logo/scene contracts. They are not hidden with lower
-thresholds or added as ordinary passing tests. Pytest gates the supported subset
-and matcher regressions; the complete sweep remains red until its targets improve.
+strict-xfail authored-logo/scene contracts. Pytest gates the supported subset,
+matcher regressions and current-limit reproductions. The complete sweep remains
+red; passing tests do not turn its eight misses into successful reconstruction.
 
-Evidence: `/tmp/plate-robustness-{before,final}/`, especially `report.json` and
-`index.html`. The final focused robustness/segmentation run is **77 passed**.
-The complete project suite is **519 passed / 7 xfailed**. Before/after original
+Historical initial-marker evidence: `/tmp/plate-robustness-{before,final}/`,
+especially `report.json` and `index.html`. That phase's focused robustness/
+segmentation run was **77 passed**, full suite **519 passed / 7 xfailed**. Its original
 benches preserve all **24 PLATE + 24 VTracer SVGs byte-for-byte**:
 `/tmp/plate-sweeps-benchmark-comparison.json`. Visual review:
 `plate-robustness-marker-review.png` in this chat's visualization directory.
 
 ## Next coverage
 
-Investigate mild-noise auto-denoise thresholds and tiny-marker/source-coverage
-fitting without relaxing the independent contracts. Expand beyond these two
+Mild-noise detection and half-size/.7px marker recovery are fixed. Expand beyond these two
 disjoint scenes to aspect-ratio extremes, gradients, occlusion and real artwork;
 add direct native gradient/hidden-object/4× seam checks. Do not generalize 36 core
 passes to every logo at these scales. Jessica allows scope expansion as useful,
@@ -93,10 +102,10 @@ provided additions and remaining work are recorded in ROADMAP and HANDOFF.
 
 ## Hairline-route floor analysis — 2026-10-31
 
-The last two stress misses, the `marks` route at authored stroke-width 1px and 2px
+Two remaining stress misses, the `marks` route at authored stroke-width 1px and 2px
 (`marks-s1-…-line1` / `line2`), were investigated per-object with the renderer. Both
-are **documented floors**, not fixable retention bugs; no gate-preserving automatic
-change recovers either without regressing a currently-green case. Pinned by
+are **documented current limitations**. No tested automatic change was landed;
+this does not prove every gate-preserving approach impossible. Pinned by
 `test_hairline_route_1px_is_below_the_round_cap_half_width_floor` and
 `test_hairline_route_2px_is_below_the_palette_admission_floor` in
 `tests/test_robustness.py`.
@@ -117,11 +126,11 @@ change recovers either without regressing a currently-green case. Pinned by
   a stroke that passes EVERY route check (editable_stroke, width ≈2.01, silhouette
   IoU 1.0). It stays a floor because the currently-green `marks-s0p5-…-line4` route is
   geometrically identical (2-px band, max distance-transform 1.0, alpha 193/243/243)
-  yet recovers via scene-dependent flat-core seeding; any rule keying on the route's
-  own pixels fires on both, so admitting the 2px route regresses `marks-s0p5 line4`
-  (and broader variants hit the green `panels` blur halos). Per the hard invariants
-  this is classified a floor rather than forced to pass.
+  yet recovers via scene-dependent flat-core seeding. Earlier attempted admission
+  rules changed green cases (including `panels` blur halos). The shared signature
+  alone does not imply every admission rule must regress the half-size scene;
+  retain this as an open algorithmic limitation, not a mathematical impossibility.
 
 The combined sweep therefore stays **70/78** (core **36/36**); the two route cases
 remain the last of the measured stress misses alongside the quarter-size routes, the
-blur-1.2 marker and the four low-contrast panels.
+blur-1.2 marker, the one low-contrast panels case and four quarter-size rotations.

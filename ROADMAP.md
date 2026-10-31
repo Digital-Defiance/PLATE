@@ -1,6 +1,6 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-30. Current verification: **541 passed, 7 expected structural gaps**;
+Updated: 2026-10-31. Final verification: **549 passed, 7 expected structural gaps**;
 full robustness sweep **70/78**, core **36/36**. `STATUS.md` records measurements and
 all seven remaining challenge failures; `docs/challenges.md` links each PNG to its
 independent desired SVG.
@@ -24,10 +24,11 @@ supersedes older statements deferring all engine work to the hosted service.
    edge) OR'd into the denoise trigger, plus `Config.interior_noise=0.002`. Both
    cases pass; clean art and other noise levels protected by regression.
 2. [x] Worked all 15 stress misses: **7 fixed** (sigma-2 noise ×2, half-size markers
-   ×4, blur 0.7px ×1) and **8 documented as information-theoretic floors** (quarter-size
+   ×4, blur 0.7px ×1) and **8 remaining default-config limitations** (quarter-size
    route/marker ×4, blur 1.2px ×1, low contrast 1/16 ×1, hairline routes 1/2px ×2),
    each pinned by a test. Sweep **63/78 → 70/78**, core **36/36**, 24 shipped SVGs
-   byte-identical, no gate weakened. Measured evidence for every floor is in STATUS.
+   byte-identical in that campaign, no gate weakened. These are algorithm/default
+   limits, not proven information-theoretic impossibilities; see the Oct-31 audit.
 3. [~] Per-object challenge diagnostics DONE (`tests/challenge_diff.py` +
    `tests/challenge_report.py`; surfaces missing/extra/split/merged, silhouette IoU,
    topology, primitive/fill, paint order past the first count mismatch). STILL OPEN:
@@ -36,6 +37,12 @@ supersedes older statements deferring all engine work to the hosted service.
    the common blocker is same-colour organic separation and complex-scene gradient
    bands. PLATE identity's exact hidden geometry is ambiguous (document the limit,
    do not invent it). See HANDOFF's gap table and the detailed P1 backlog below.
+   Partial progress Oct-31: EMBER **4/7 strokes**, all whiskers independently pass,
+   **455→447 anchors**; complete target still xfail.
+   - [ ] Fix false split/merge diagnostics on legitimate overlapping objects:
+     identical overlapping back/front rectangles currently report two splits.
+   - [ ] Broaden short curved butt-cap controls: an existing accepted fit emits
+     round caps for the recorded butt-cap probe. Square-cap guards currently pass.
 4. [ ] Add the 10–20-image redistributable real corpus and broader independent
    alpha/gradient/occlusion/aspect-ratio/stroke/lettering contracts. Add per-case
    exception recording before fuzzing.
@@ -45,7 +52,7 @@ supersedes older statements deferring all engine work to the hosted service.
 Each implementation must add bug regressions, pass full tests before/after, retain
 independent targets/VTracer, and show before/after robustness and rendered bench
 results. Current baseline: **36/36 core, 70/78 full sweep, 9/16 structural targets**;
-the **541 passing tests/7 strict xfails** do not hide the remaining sweep floors (all
+the full suite (latest count in STATUS) does not hide the remaining sweep misses (all
 pinned) or the 7 structural gaps. The separate hosted-service milestone below remains
 unimplemented, not a reason to skip this authorized quality work. The next front is
 item 3 (structural targets). Update this queue and HANDOFF as work lands.
@@ -84,9 +91,9 @@ of complete PNG reconstruction. README's coverage table is the public scope.
   both-background SSIM. Reproducible input seeds and JSON/HTML evidence. Fix small
   isolated novel-colour loss: core **24→36/36**, full **48→63/78**. See `docs/ROBUSTNESS.md`.
 - [x] Worked the 15 measured stress misses: sweep 63/78 → 70/78. 7 fixed (sigma-2
-  noise, half-size markers, blur 0.7px); 8 are information-theoretic floors (quarter-
+  noise, half-size markers, blur 0.7px); 8 remain default-config failures (quarter-
   size route/marker, blur 1.2px, 1/16 contrast, 1/2px routes), each with measured
-  evidence and a pin test. The .90 per-object coverage gate and all other gates were
+  evidence and a pin test, without a proof of impossibility. The .90 per-object coverage gate and all other gates were
   preserved; no shipped SVG changed. Mild-noise denoise detection was the sigma-2 fix.
 - [ ] Expand sweeps to real artwork, aspect-ratio extremes, gradients/occlusion
   interactions and more independent geometry. Add per-case exception recording before
@@ -125,9 +132,10 @@ quality queue above. [docs/AUDIT.md](docs/AUDIT.md) records the earlier audit an
 - [ ] Choose deployment/auth, add container/CI/monitoring and measure worker capacity.
 - [ ] Complete Illustrator validation and a representative real-image corpus before beta claims.
 
-Current full suite: **519 passed/7 xfailed**, including the output-permission and
+Audited baseline full suite: **541 passed/7 xfailed**, including the output-permission and
 packaging regressions, 19 audit-bug cases, 26 headless Illustrator/layer cases and
-111 PNG-matrix cases and 56 robustness regression cases. Nine of 16 authored structural targets pass;
+111 PNG-matrix cases and the expanded robustness regressions. See STATUS for the
+latest post-change count. Nine of 16 authored structural targets pass;
 all 16 meet light/dark fidelity floors. Do not lower contracts to clear the hard tail.
 
 ## Done
@@ -167,7 +175,8 @@ results. Retain VTracer as the control and keep target SVGs independent of PLATE
 8. [ ] **Expose partial structural progress.** Extend challenge diagnostics beyond the first count mismatch: report missing/extra/split objects, per-object silhouette error, holes, primitive/fill types and paint order. Keep integrity/fidelity checks active for expected gaps. Promote a strict expected failure only when its independent target is met; do not refresh targets from output or loosen contracts to conceal failures.
 
 Complex logo targets are now available, with fidelity checks active on both backgrounds:
-EMBER **51 target / 51 actual**, but shield full-silhouette IoU is only 0.8383;
+EMBER **51 target / 51 actual**, but shield full-silhouette IoU is only 0.8383
+(4/7 strokes now recovered; all four whiskers pass independently);
 ORBIT **34 / 44**, with compound-emblem/ambiguous-patch fragmentation despite the recovered radial core and all seven strokes; ROOT **56 / 51**, with
 **9 of 32** intended editable strokes recovered. Use these alongside the existing
 scenes for completion, compound paths, gradient separation and stroke work.

@@ -1,11 +1,60 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (stress-miss campaign complete) · Version 0.1.0 · Tests: 541 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-31 (verified wrap-up at 6% usage) · Version 0.1.0 · Tests: 549 passing, 7 expected feature gaps (`pytest -q`)
 
-## Stress-miss campaign complete — 2026-10-30
+## Audit and exposed-curve recovery — 2026-10-31
 
-All 15 robustness "stress misses" recorded at the start of this phase are now
-resolved: **7 fixed, 8 documented as information-theoretic floors** (each pinned by
+- Jessica requested wrap-up at 6% usage. **Final full suite: 549 passed/7 xfailed**,
+  no warnings/skips, 165.32s (`/tmp/plate-oct31-final-tests.txt`); earlier post-fix
+  run also 549/7 (165.48s). Final suite includes the complete-footprint safeguard.
+  Final benches/sweep at `/tmp/plate-oct31-final-{samples,challenges,robustness}/`
+  match the visually/natively checked outputs byte-for-byte; comparison evidence
+  `/tmp/plate-oct31-final-comparison.json`. `git diff --check` passes. All owned
+  jobs completed; no commit/push. HANDOFF lists every pending file and next repro.
+- Started clean at `286c713`. Fresh baseline: **541 passed/7 xfailed**, no warnings/
+  skips, 160.20s (`/tmp/plate-oct31-before-tests.txt`); full sweep reproduced
+  **70/78**, **36/36 core**. Seven complex targets remain strict expected gaps.
+- Fixed EMBER's rejected fourth whisker with a bounded single-cubic retry against
+  the PNG's original subpixel boundary. Retry only a fully exposed curve rejected
+  by existing centreline fitting; require one coherent source contour, boundary
+  RMS ≤.2px/max residual ≤.6px, round-cap evidence, a complete uncropped footprint
+  and the unchanged IoU ≥.95 / boundary-deviation gates. Existing accepted fits
+  and occluded-curve fitting are unchanged. No core dependency added.
+- **EMBER 3→4 strokes, 455→447 anchors, 51 objects unchanged**. All four whiskers
+  meet their independent authored contracts. White/dark SSIM **.9665/.9685 →
+  .9666/.9686**. The full logo still fails shield/stem/merged-object requirements;
+  no structural xfail promoted. All other **23 PLATE** and all **24 VTracer** SVGs
+  byte-identical. Evidence `/tmp/plate-oct31-{before,after}-{samples,challenges}/`,
+  `/tmp/plate-oct31-benchmark-changes.json`, `/tmp/plate-oct31-whisker-metrics.json`.
+- Eight new tests: mirrored opaque/transparent curves, square caps, missing source
+  evidence and EMBER's four whiskers. Disabling the retry gives **4 failed/4 passed**
+  (`/tmp/plate-oct31-refit-isolated-red-tests.txt`); focused suite **50 passed**
+  (`/tmp/plate-oct31-refit-focused-tests.txt`). New test file passes Ruff; the
+  changed source retains the same two pre-existing Ruff findings (I001/B023).
+- Full robustness sweep remains **70/78 with zero per-case verdict changes**:
+  `/tmp/plate-oct31-{before,after}-robustness/`. Visually inspected full and zoomed
+  source/before/after comparison `plate-oct31-whisker-review.png` in this chat's
+  visualization directory. Changed SVG passes Illustrator **30.8.2** import/edit/
+  AI roundtrip (`/tmp/plate-oct31-illustrator/report.json`); no pending script known.
+- Audit corrections: eight sweep failures are measured algorithm/default limits,
+  **not proven information-theoretic impossibilities**. In particular, 2px route
+  geometry passes with an explicit palette; low contrast is merged by a configured
+  threshold. Current pin tests assert these failures and need explicit review if a
+  future gate-preserving method improves them. README/ROBUSTNESS/HANDOFF/ROADMAP
+  now state eight actual misses rather than claiming complete recovery.
+- New follow-ups: `diff_target(svg, svg)` wrongly reports splits for identical
+  overlapping back/front rectangles (100×100 background, 50×50 foreground at
+  (20,20)); overlap-based classification needs regression/fix. A short curved
+  butt-cap probe already emits round caps in an accepted path; square-cap controls
+  remain green. Both are open, not silently certified by the new retry.
+- Work is uncommitted; no commit/push requested. Next: diagnostic false splits,
+  then EMBER's laurel/stem or ORBIT compound-emblem recovery; real artwork, colour
+  management, input limits, broader native editing and hosted service remain open.
+
+## Previous stress-miss campaign — seven fixes, eight measured limits (2026-10-30)
+
+All 15 robustness "stress misses" recorded at the start of this phase were investigated:
+**7 fixed, 8 still failing and documented as current limits** (each pinned by
 a test so it cannot silently drift). The full sweep rose **63/78 → 70/78**; core
 held **36/36** throughout; every landed change kept the **24 shipped sample/challenge
 SVGs byte-identical**, all **7 strict-xfail structural gaps intact**, and **no gate
