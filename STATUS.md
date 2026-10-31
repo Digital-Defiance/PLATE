@@ -1,6 +1,42 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-31 (verified wrap-up at 6% usage) · Version 0.1.0 · Tests: 549 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-31 (diagnostics fix + ORBIT defrag + EMBER limit) · Version 0.1.0 · Tests: 555 passing, 7 expected feature gaps (`pytest -q`)
+
+## Structural-target progress — 2026-10-31 (session continues)
+
+Picked up the handoff queue after the exposed-curve work was committed. On `main`,
+five commits past `origin/main` (NOT pushed; Jessica pushes): `09c2d0a` preserved
+whisker fix + docs, `5692fa9` diagnostics fix, `1390e5b` ORBIT defrag, `6895bfe`
+gap-wording refresh, `02533d1` EMBER limit pin. Suite **555 passed / 7 xfailed /
+0 xpassed**; sweep **70/78**, core **36/36**; 9/16 structural targets still pass
+(none newly promoted — progress is partial and honest).
+
+- **Fixed the split/merge diagnostic bug** (`5692fa9`): `diff_target` counted any
+  IoU≥0.1 overlap as fragmentation, so distinct overlapping objects were miscounted
+  as splits/merges (`diff_target(svg,svg)` reported false splits). Now a split
+  excludes any actual that is another expected's 1:1 match. EMBER false split
+  21→0, merged 4→3 (genuine only). Diagnostics-only; challenge SVGs byte-identical.
+- **ORBIT compound-emblem defrag** (`1390e5b`): `logo_orbit_wordmark` **44→38
+  objects**. New strictly-gated `order._merge_compound_siblings` reunites same-colour
+  interrupted-ring fragments using the existing 15° T-junction/containment gates plus
+  a tight circle-fit; resolved the badge-ring split (1→0) and 4 cutout-tab extras
+  (badge-ring IoU .257→.726). All 34 matched objects + 7 strokes + gradient core
+  unchanged; 23 other challenge SVGs + 8 samples byte-identical. 4 extras remain
+  (monogram-O fragments + flat pink/tan patches) — left unmerged because closing
+  them needs a weakened gate. Still xfail (38≠34), not forced.
+- **EMBER same-colour face merges = measured information limit** (`02533d1`): a
+  read-only investigation (report in `.agents/tasks/ember-separation-investigation.md`)
+  proved cheeks+muzzle are one 23,344px cream component, each pupil is fused into
+  its same-colour navy eye-mask, and nose+mouth are one navy component — the authored
+  sub-shapes exist only in the vector source, not the 1:1 raster. No classical cue;
+  separating them would invent geometry (forbidden). Pinned with a raster-contiguity
+  test (`test_ember_same_colour_face_features_are_one_raster_region`). Stays xfail.
+  Note: the 3 gold laurel-stem *extras* are an optional ORBIT-style compound-merge
+  avenue for a future stroke session — not attempted here.
+
+Next candidates: ROOT / mission-patch / storefront / poster not yet re-measured with
+the fixed diagnostics; most share the same-colour-separation + gradient-band blockers.
+PLATE identity remains aspirational (hidden geometry unrecoverable; leave xfail).
 
 ## Audit and exposed-curve recovery — 2026-10-31
 

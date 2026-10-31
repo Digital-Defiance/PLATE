@@ -1,10 +1,48 @@
-# PLATE handover — 2026-10-31 (audit and exposed-curve recovery)
+# PLATE handover — 2026-10-31 (diagnostics fix + ORBIT defrag + EMBER limit)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Current checkpoint — structural progress; eight default-config misses remain
+## Latest checkpoint — structural-target work (supersedes the section below)
+
+- On `main`, **five commits past `origin/main`, NOT pushed** (Jessica pushes herself):
+  `09c2d0a` (preserved exposed-curve whisker fix + docs — the "uncommitted files" the
+  section below asked to preserve are now committed), `5692fa9` (diagnostics split/merge
+  fix), `1390e5b` (ORBIT defrag), `6895bfe` (gap-wording refresh), `02533d1` (EMBER
+  limit pin + investigation report). Suite **555 passed / 7 xfailed / 0 xpassed**;
+  sweep **70/78**, core **36/36**; **9/16** structural targets pass (none newly promoted).
+- **Diagnostics are now trustworthy.** The split/merge classifier previously counted any
+  IoU≥0.1 overlap as fragmentation (distinct overlapping objects miscounted as splits).
+  Fixed in `tests/challenge_diff.py` (a split now excludes any actual that is another
+  expected's 1:1 match). Use `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib PYTHONPATH=tests
+  .venv/bin/python -m challenge_report <name>` to rank the remaining targets.
+- **ORBIT advanced 44→38 objects** via `order._merge_compound_siblings` (interrupted
+  same-colour ring fragments, existing gates + tight circle-fit). 4 extras remain
+  (monogram-O + flat patches), unmergeable without weakening a gate. Still xfail.
+- **EMBER face same-colour merges are a measured information limit** (not a bug): cheeks+
+  muzzle are one cream raster component, pupils fuse into their navy eye-masks, nose+mouth
+  one navy component — authored sub-shapes exist only in the vector source, not the 1:1
+  raster. Pinned by `test_ember_same_colour_face_features_are_one_raster_region`. Full
+  evidence: `.agents/tasks/ember-separation-investigation.md`. Do NOT invent geometry or
+  use the VLM for geometry; do NOT weaken a gate to force it.
+
+**Do next:** re-measure ROOT / mission-patch / storefront / poster with the fixed
+`challenge_report` diagnostic and pick the one with the most *addressable* (not
+information-limit) gap. ROOT and the scenes share the same-colour-separation and
+gradient-band blockers; apply the EMBER investigation discipline — measure the raster
+signal first, fix only what has a real classical cue, pin the rest as limits. The 3 gold
+EMBER laurel-stem extras are an optional ORBIT-style compound-merge avenue for a stroke
+session. PLATE identity stays aspirational (hidden geometry unrecoverable). Everything in
+the "Structural-target progress" section of STATUS.md is current.
+
+## Prior checkpoint — audit and exposed-curve recovery (historical)
+
+- **Safe wrap-up requested at 6% usage. Final suite: 549 passed/7 xfailed**, no
+  warnings/skips, 165.32s (`/tmp/plate-oct31-final-tests.txt`). No jobs from this
+  session remain running. No further feature work was started during wrap-up.
+- **Uncommitted files to preserve:** `src/plate/stages/strokes.py`, new
+  `tests/test_exposed_curve_refit.py`, `HANDOFF.md`, `STATUS.md`, `ROADMAP.md`,
 
 - **Safe wrap-up requested at 6% usage. Final suite: 549 passed/7 xfailed**, no
   warnings/skips, 165.32s (`/tmp/plate-oct31-final-tests.txt`). No jobs from this
