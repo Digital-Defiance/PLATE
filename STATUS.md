@@ -1,6 +1,48 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (mild-noise auto-denoise blind-spot fix) · Version 0.1.0 · Tests: 522 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (blur & low-contrast robustness) · Version 0.1.0 · Tests: 539 passing, 7 expected feature gaps (`pytest -q`)
+
+## Blur & low-contrast robustness — 2026-10-30 (branch `fix/blur-contrast-detection`)
+
+- Target: 3 stress misses — marks marker blur 0.7 & 1.2, panels 1/16 low-contrast
+  foreground. One is a real segmentation miscalibration (fixed); two are documented
+  floors with measured evidence (NOT faked, no gate weakened).
+- FIXED — blur 0.7 (`marks-...-b0p7`): the 5px gold marker is consumed by edge
+  dilation and has no flat palette seed, so it depends on the isolated-alpha-component
+  fallback in `stages/segment.py`. That fallback rejected it on one gate: interior p90
+  colour spread `> 3`. At sigma 0.7 the stable gold core measures 4.12 — stable, not a
+  ramp — so a legitimate marker was discarded (4 shapes, want 5). Loosened the gate to
+  `> 6` (single line; the `> 8` `_faint_objects` line untouched). Marker now recovers as
+  a native `<circle>` at coverage 1.0. A genuinely variable ramp island (interior spread
+  far above 6) is still rejected — guarded by
+  `test_isolated_island_with_a_variable_ramp_interior_stays_out_of_the_palette`.
+- DOCUMENTED FLOOR — blur 1.2 (`marks-...-b1p2`): the marker IS present (flat seeds
+  survive at sigma 1.2, gold enters the palette normally), but the blur erodes its
+  alpha>=128 opaque silhouette to 44 px vs the target's 52 px -> detail_coverage 0.846 <
+  0.90. Measured threshold sweep: alpha>=128 -> 44px (.846); alpha>=110 -> 52px (1.0);
+  alpha>=96 -> 52px. Reaching .90 requires growing the silhouette below the alpha>=128
+  contract shared by the evaluator and segmentation; that single global threshold would
+  grow every antialiased rim and break the 24 shipped SVGs. Below the recoverable floor
+  for the alpha>=128 silhouette contract. Pinned by
+  `test_blur_1p2_marker_is_below_the_alpha128_silhouette_floor`.
+- DOCUMENTED LIMIT — contrast 1/16 (`panels-...-c0p0625`): every foreground collapses
+  to within ~5 Lab dE of the background (#878788): disc #7a7e84 dE 4.98, panel #857b7c
+  dE 5.81, detail #7a817e dE 4.84 — all below the `color_merge = 8.0` floor, so
+  `_build_palette` merges them into the single background entry (1 shape; reference SSIM
+  still passes, so this is purely object separation). The only separating lever,
+  color_merge <= 4.5, is global and changes shipped `samples/shaded.png` (2533 -> 2100
+  bytes) and splits near-identical colours in real art. A foreground within ~5 dE of its
+  background is below the floor that protects real artwork — a fundamental palette limit,
+  not a bug. Pinned by `test_contrast_1_over_16_foreground_is_below_the_colour_merge_floor`.
+- Results: sweep 69/78 -> 70/78 (core unchanged 36/36; sweep exits 1 by design). The
+  ONLY changed verdict is `marks-...-b0p7` -> PASS; no previously-green case regressed
+  (verified by per-case diff of `/tmp/bc-before` vs `/tmp/bc-after`). Full suite 535 ->
+  539 passed / 7 xfailed, 0 xpassed (the +4 are the new blur-0.7 recovery, the ramp
+  over-loosening guard, and the two measured-floor pin tests). All 24 shipped
+  sample+challenge PLATE SVGs byte-identical to the fdf90d1 baseline. Changed Python:
+  `stages/segment.py` (one line) + `tests/test_robustness.py` (ruff clean). No
+  commit/push beyond the focused branch commit; owner Jessica to decide merge.
+
 
 ## Mild-noise denoise blind spot fixed — 2026-10-30
 

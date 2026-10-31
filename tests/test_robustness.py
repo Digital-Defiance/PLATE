@@ -202,3 +202,103 @@ def test_interior_noise_estimator_separates_mild_noise_from_clean_edges():
         assert interior_noise_fraction(rgb, alpha) < 0.002, family
     rgb, alpha = planes(SweepCase(family='panels', noise=2, seed=17, tier='stress'))
     assert interior_noise_fraction(rgb, alpha) > 0.002
+
+
+def test_blur_0p7_marker_recovers_as_a_full_coverage_circle(tmp_path):
+    """A 5px gold marker blurred at sigma 0.7 has no flat palette seed (edge dilation
+    consumes it), so it depends on the isolated-alpha-component fallback in segment.py.
+    Its stable gold core has an interior p90 colour spread of ~4.12, which the old `> 3`
+    gate rejected as a "variable ramp/noisy island", dropping the marker (4 shapes, want 5).
+    The gate now tolerates a stable core up to 6, admitting the marker at coverage 1.0.
+    FAILS on the `> 3` gate (marker absent); PASSES with the `> 6` gate."""
+    case = SweepCase(family='marks', blur=.7, tier='stress')
+    report = run_case(case, tmp_path/'m')
+    assert report['checks']['object_count'], report
+    marker = next(o for o in report['objects'] if o['name'] == 'marker')
+    assert marker['checks']['present'], report
+    assert marker['checks']['detail_coverage'], marker
+    assert marker['coverage'] >= .9, marker
+    # Per-object recovery, not global SSIM: the emitted element must be a circle.
+    element = next(e for e in ET.fromstring((tmp_path/'m'/'actual.svg').read_text()).iter()
+                   if e.get('id') == marker['actual_name'])
+    assert element.tag.rsplit('}', 1)[-1] == 'circle', ET.tostring(element, encoding='unicode')
+
+
+def test_isolated_island_with_a_variable_ramp_interior_stays_out_of_the_palette(tmp_path):
+    """Over-loosening guard for the `> 6` interior-spread gate in segment.py. A genuinely
+    variable island (a smooth colour ramp, no flat seed) must NOT be admitted as a new flat
+    colour: its interior p90 spread far exceeds 6. A solid flat island supplies the only
+    palette entry; nothing lands near the ramp's mid colour."""
+    import numpy as np
+    from PIL import Image
+
+    from plate import pipeline
+    from plate.config import Config
+
+    rgba = np.zeros((48, 48, 4), np.uint8)
+    rgba[4:44, 4:20] = [30, 95, 195, 255]          # solid flat island -> one palette entry
+    for y in range(30, 40):                        # isolated ramp island, interior spread >> 6
+        v = 40 + (y - 30) * 20
+        rgba[y, 30:40] = [v, 50, 200 - v // 2, 255]
+    source = tmp_path/'ramp.png'
+    Image.fromarray(rgba).save(source)
+    palette = pipeline.run(source, Config()).seg.palette.astype(float)
+    assert palette.shape[0] == 1 and np.allclose(palette[0], [30, 95, 195])
+    ramp_mid = np.array([130., 50., 135.])
+    assert np.linalg.norm(palette - ramp_mid, axis=1).min() > 60
+
+
+def test_blur_1p2_marker_is_below_the_alpha128_silhouette_floor(tmp_path):
+    """DOCUMENTED FLOOR, measured — do NOT weaken the opaque gate to force this.
+    At sigma 1.2 the 5px marker keeps flat seeds (gold enters the palette normally, so it is
+    present and object_count is satisfied), but the blur erodes its alpha>=128 opaque
+    silhouette to 44 px vs the target's 52 px. 44/52 = 0.846 < the 0.90 detail_coverage gate,
+    so the case cannot pass. Measured alpha-threshold sweep on the marker core:
+      alpha>=128 -> 44 px (coverage 0.846); alpha>=110 -> 52 px (1.0); alpha>=96 -> 52 px.
+    Reaching 0.90 requires growing the silhouette below the alpha>=128 contract the evaluator
+    and segmentation share; that single global threshold would grow every antialiased rim and
+    break the 24 shipped SVGs' byte-identity. This test pins the floor so a regression (or a
+    silent gate-weakening) is caught."""
+    case = SweepCase(family='marks', blur=1.2, tier='stress')
+    report = run_case(case, tmp_path/'m')
+    assert report['checks']['object_count'], report           # 5 shapes: marker IS present
+    marker = next(o for o in report['objects'] if o['name'] == 'marker')
+    assert marker['checks']['present'], report
+    assert not marker['checks']['detail_coverage'], marker     # below the alpha>=128 floor
+    assert 0.80 <= marker['coverage'] <= 0.88, marker          # measured 0.846
+    assert not report['passed'], report
+
+
+def test_contrast_1_over_16_foreground_is_below_the_colour_merge_floor(tmp_path):
+    """DOCUMENTED FUNDAMENTAL LIMIT, measured — do NOT lower color_merge to force this.
+    At contrast 1/16 every foreground collapses to within ~5 Lab dE of the background
+    (#878788): disc #7a7e84 dE 4.98, panel #857b7c dE 5.81, detail #7a817e dE 4.84 — all
+    below the color_merge = 8.0 floor, so _build_palette merges them into the single
+    background entry (1 shape, only Background present). Reference SSIM still passes, so this
+    is purely object separation. The only separating lever, color_merge <= 4.5, is a GLOBAL
+    change that alters shipped samples/shaded.png (2533 -> 2100 bytes), breaking byte-identity
+    and splitting genuinely near-identical colours in real art. A foreground within ~5 dE of
+    its background is below the floor that protects real artwork; this is a limit, not a bug.
+    This test pins the merged state and the measured dE evidence."""
+    import cv2
+    import numpy as np
+
+    from plate.robustness import target_svg
+
+    case = SweepCase(family='panels', contrast=.0625, tier='stress')
+    report = run_case(case, tmp_path/'p')
+    assert report['stats']['shapes'] == 1, report              # all foregrounds merge into bg
+    assert report['checks']['reference_white'] and report['checks']['reference_dark'], report
+    assert next(o for o in report['objects'] if o['name'] == 'background')['checks']['present']
+    for name in ('disc', 'panel', 'detail'):
+        assert not next(o for o in report['objects'] if o['name'] == name)['checks']['present'], report
+
+    def lab(value):
+        rgb = np.array(list(bytes.fromhex(value[1:])), np.float32).reshape(1, 1, 3)/255
+        return cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)[0, 0]
+
+    colors = {e.get('id'): (e.get('fill') or e.get('stroke')) for e in ET.fromstring(target_svg(case))}
+    background = lab(colors['background'])
+    deltas = {name: float(np.linalg.norm(lab(colors[name]) - background)) for name in ('disc', 'panel', 'detail')}
+    assert all(d < 8.0 for d in deltas.values()), deltas       # all below color_merge floor
+    assert deltas['disc'] < 6 and deltas['panel'] < 7 and deltas['detail'] < 6, deltas

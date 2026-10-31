@@ -188,7 +188,7 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                 continue
             colors = rgb[y:y+h, x:x+w][confident].astype(float)
             color = np.rint(np.median(colors, axis=0)).astype(np.uint8)
-            if np.percentile(np.linalg.norm(colors-color, axis=1), 90) > 3:
+            if np.percentile(np.linalg.norm(colors-color, axis=1), 90) > 6:
                 continue  # a variable ramp/noisy island is not one new flat colour
             existing = _lab(palette.reshape(-1, 1, 3)).reshape(-1, 3)
             lab_color = _lab(color.reshape(1, 1, 3)).reshape(3)
