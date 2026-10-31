@@ -4,6 +4,72 @@ Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This reco
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
+## Next agent: work the conversion-quality gaps, beyond Homebrew
+
+Jessica's latest direction (2026-10-30): identify and work the remaining gaps;
+Homebrew/executable delivery is a separate packaging track. An installable command
+does not establish reconstruction quality. Finish any concrete installation bug
+already in progress, then follow this queue. This instruction supersedes older
+sections that call engine work deferred or the hosted service the sole priority.
+
+**Repository reconciliation:** at this review the tree was clean, HEAD
+`649343a`. The PNG/marker fixes (`9f0df0f`), robustness runner (`30339d5`) and
+documentation (`649343a`) are now committed. Older uncommitted-work statements
+below describe their original checkpoints. Preserve those commits; these new
+priority-document edits are not a request to commit or push.
+
+**Do these next, in order:**
+
+1. **Fix mild-noise geometry damage.** Reproduce opaque `panels`, noise sigma 2,
+   seeds 17/204 with `plate.robustness`. Investigate why stronger noise can trigger
+   denoising while mild noise loses primitives or inflates anchors. Add a failing
+   regression before the fix; compare clean inputs and other noise levels too.
+2. **Recover small details without inventing geometry.** Work the remaining
+   quarter-size route/marker loss (4 cases), half-size marker coverage (4), blurred
+   markers (2), low-contrast foreground (1), and 1/2px routes (2). Half-size marker
+   segmentation now survives, but its rectangular fit covers only ~.846 of the
+   intended circle. Preserve the .90 detail gate. Together with noise above these
+   are **15 stress misses**, distinct from the seven complex structural gaps.
+3. **Expose and fix complex-object failures.** Extend challenge diagnostics past
+   the first count mismatch to missing/extra/split objects, silhouette, topology,
+   fill/stroke types and paint order. Then take one measurable geometry issue at
+   a time from the table below; complete stroke recovery, same-colour separation,
+   gradient bands, occlusion/completion and corner decisions remain engine work.
+4. **Broaden empirical coverage.** Add a redistributable 10–20-image real-artwork
+   corpus with per-image results. Expand independent fixtures to extreme aspect
+   ratios, overlapping gradients, soft/varying alpha/shadows, branching lines,
+   caps/joins/dashes/widths and lettering. Add per-case exception collection to the
+   robustness runner before malformed-input/fuzzing expansion.
+5. **Close colour/input and native-editing gaps.** Implement/test ICC/gamma-aware
+   sRGB normalization and explicit pre-decode resource limits; expand damaged-file
+   tests. Extend Illustrator automation to direct gradient-stop edits, isolated
+   hidden shapes/compound holes, live-shape controls and 4× seam checks. Broader
+   Illustrator-version validation remains open.
+
+| Independent structural target | Current gap to work |
+| --- | --- |
+| Mission patch | 72 objects vs 45; fragmented planet/gradient bands, missing linear hull ramp, completion and 8/10 strokes |
+| Storefront | 73 vs 64; merged/split repeated details, curves/corners and 3/4 strokes |
+| Event poster | 83 vs 44; crossing type/ribbon fragments underlying objects; 0/6 strokes |
+| EMBER | 51/51 counts conceal shield IoU .8383 and only 3/7 strokes |
+| ORBIT | 44 vs 34; compound emblem/ambiguous ramp fragments; radial core and all 7 strokes already pass |
+| ROOT | 51 vs 56; touching same-colour leaves/rings/branches and only 9/32 strokes |
+| PLATE identity | 11/11 counts conceal rear-P geometry mismatch and 1/3 registration strokes; exact hidden P geometry is not uniquely observable, so document that limit rather than invent evidence |
+
+**Acceptance for each change:** full pytest before/after; a regression for each
+bug; before/after core + full robustness reports; `plate bench samples` and
+`plate bench samples/challenges` retaining VTracer; visual inspection on light/dark
+backgrounds; applicable per-object/topology/stroke checks and native checks for
+affected SVG features. Start from **519 passed/7 strict xfails**, **36/36 core**,
+**63/78 full sweep**, **9/16 structural targets**. Report case-level improvements
+and regressions. Do not lower gates, replace authored targets with traced output,
+or count aggregate SSIM/Illustrator interchange as reconstruction success.
+
+Hosted-service implementation (uploads/queue/isolated workers, accounts/quotas,
+Stripe, deployment/CI/monitoring) remains unbuilt and separately tracked in
+ROADMAP. Packaging and service work do not close this quality queue. Keep STATUS,
+ROADMAP and this handoff current as the scope expands.
+
 ## Authorized expanded scope — explicit owner instruction
 
 Jessica authorizes expanding the quality/coverage quest beyond the initial PNG
@@ -40,20 +106,21 @@ promise universal PNG recovery, original fonts/live text or unknowable hidden
 authoring geometry. Recommended immediate next investigation: sigma-2 noise's
 auto-denoise blind spot, then tiny-marker/route fitting, with before/after benches.
 
-## Latest checkpoint — wrap-up requested at 8% usage; green and ready to continue
+## Robustness checkpoint — verification retained; work is now committed
 
 - **519 passed / 7 xfailed**, no warnings/skips. Final full log
   `/tmp/plate-sweeps-final-tests.txt` (134.87s); baseline 463/7. New robustness tests:
   **56**; focused robustness + segmentation **77 pass**. Changed Python files
   pass Ruff; `git diff --check` clean. No failing ordinary test is being left behind.
-- **HEAD `4f8e8d1`; new work is UNCOMMITTED.** Preserve the previous PNG phase
+- **Original checkpoint HEAD was `4f8e8d1`; work is now committed through
+  `649343a` as recorded above.** Preserve the previous PNG phase
   (`imageio.py`, `tests/png_fixtures.py`, `tests/test_png_matrix.py`, PNG coverage
   docs) AND this phase (`segment.py`, new `plate/robustness.py`,
   `tests/test_robustness.py`, `docs/ROBUSTNESS.md`, updated README/ROADMAP/STATUS).
-  No commit/push was requested for these continuations. No asset/target/golden
-  changes. Jessica permits scope expansion as useful, provided additions and
-  remaining items are tracked in ROADMAP and this handoff. She asked for a safe
-  wrap-up at 8% usage; do not reopen new work before completing this checkpoint.
+  The original continuation stopped before committing; a later session committed
+  it. No asset/target/golden changes. Jessica permits scope expansion as useful,
+  provided additions and remaining items are tracked in ROADMAP and this handoff.
+  Her requested safe wrap-up at 8% usage was completed; resume using the queue above.
 - New independent robustness runner:
   `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python -m plate.robustness --output NEW_DIRECTORY`.
   All 78 cases intentionally include stress failures; **exit 1 is expected**.
@@ -739,16 +806,16 @@ Current numbers in `STATUS.md`'s top table. In rough ROADMAP P1 order:
 
 | Challenge | Gap |
 | --- | --- |
-| `complex_mission_patch` | 72 objects / 2 radial fragments / 7 strokes; target 45 with one radial planet + one linear hull, craters preserved |
+| `complex_mission_patch` | 72 objects / 2 radial fragments / 8 strokes; target 45 with one radial planet + one linear hull, craters preserved |
 | `complex_event_poster` | 83 objects; crossing lettering/ribbon/lines fragment underlying shapes |
-| `complex_storefront` | 73 objects / 2 strokes; target 64, repeated windows/awning/lettering merge or fragment |
-| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 2/7 strokes |
+| `complex_storefront` | 73 objects / 3 strokes; target 64, repeated windows/awning/lettering merge or fragment |
+| `logo_ember_crest` | 51 objects (count matches) but shield full-silhouette IoU 0.8383; 3/7 strokes |
 | `logo_orbit_wordmark` | 44 objects vs 34; full radial core and all 7/7 strokes recovered; compound emblem and ambiguous patches remain |
-| `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 3/32 strokes, outer circle passes independently |
+| `logo_root_seal` | 51 vs 56 objects; touching same-colour organics merge; 9/32 strokes, outer circle passes independently |
 | `logo_plate` | PLATE brand fixture (session 24); 11/11 objects but back-P silhouette IoU 0.1387 (visible strips, hidden compound geometry not uniquely recoverable from raster); registration strokes merge, 1/3 strokes. Aspirational authoring target. |
 
 The next stroke work includes ROOT's touching ring/leaves and EMBER's missing
-strokes; logos need 7/7/32 strokes and recover 2/7/3. The panel's 27 strokes are complete.
+strokes; EMBER/ORBIT/ROOT need 7/7/32 strokes and recover 3/7/9. The panel's 27 strokes are complete.
 Then address branched networks, other cap/join styles and non-circular/multiple
 occluders. `stages/strokes.py` contains straight/open-curve and complete closed-loop recovery.
 

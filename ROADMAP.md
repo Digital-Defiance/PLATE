@@ -10,6 +10,36 @@ Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.
 
+## Immediate handoff priority — conversion quality (2026-10-30)
+
+Jessica asked for the gaps to be made actionable for the next agent, beyond the
+Homebrew executable. Packaging is a separate delivery track; resolve any concrete
+installation bug already underway, then work this queue. This latest direction
+supersedes older statements deferring all engine work to the hosted service.
+
+1. [ ] Reproduce/fix sigma-2 opaque-noise cases (seeds 17/204): investigate the
+   auto-denoise blind spot, primitive loss and excess anchors; protect clean art
+   and other noise levels with regressions.
+2. [ ] Close the other 13 stress cases: quarter-size route/marker loss (4),
+   half-size marker geometry (4), blur (2), low contrast (1), 1/2px routes (2).
+   Retain ≥.90 per-object detail coverage; publish core and full sweep deltas.
+3. [ ] Improve per-object challenge diagnostics, then incrementally close the seven
+   complex targets: patch, storefront, poster, EMBER, ORBIT, ROOT and PLATE identity.
+   The latter's exact hidden geometry is ambiguous; document the information limit.
+   See HANDOFF's current gap table and the detailed P1 backlog below.
+4. [ ] Add the 10–20-image redistributable real corpus and broader independent
+   alpha/gradient/occlusion/aspect-ratio/stroke/lettering contracts. Add per-case
+   exception recording before fuzzing.
+5. [ ] Close ICC/gamma colour-management, pre-decode resource limits and expanded
+   native Illustrator editing/hidden-object/hole/4× seam/live-shape validation.
+
+Each implementation must add bug regressions, pass full tests before/after, retain
+independent targets/VTracer, and show before/after robustness and rendered bench
+results. Current baseline: **36/36 core, 63/78 full sweep, 9/16 structural targets**;
+the **519 passing tests/7 strict xfails** do not hide or resolve the 15 sweep misses.
+The separate hosted-service milestone below remains unimplemented, not a reason
+to skip this authorized quality work. Update this queue and HANDOFF as work lands.
+
 ## Coverage boundary and quality gates
 
 PLATE is not complete across every meaningful PNG. Its intended launch scope is
@@ -63,15 +93,15 @@ of complete PNG reconstruction. README's coverage table is the public scope.
   applicable structural/topology/detail gates and both-background fidelity floors
   to pass for each claimed family. No finite fixture set certifies every PNG.
 
-These validation gates refine the intended product claims. They do not silently
-reverse the existing decision to defer hard geometry research while building the
-hosted service. Photos/textures, exact original fonts/live text and arbitrary
-hidden authoring geometry are not launch guarantees.
+These validation gates refine the intended product claims. The immediate quality
+queue above reflects Jessica's latest direction; the earlier service-first plan
+is retained below as a separate product milestone. Photos/textures, exact original
+fonts/live text and arbitrary hidden authoring geometry are not launch guarantees.
 
-## Current priority — hosted-service milestone
+## Separate product milestone — hosted service (unimplemented)
 
-The agreed direction is the classical hosted service; detailed engine-gap work below
-is a deferred backlog. [docs/AUDIT.md](docs/AUDIT.md) records fresh measurements and
+The product design is a classical hosted service; it is separate from the immediate
+quality queue above. [docs/AUDIT.md](docs/AUDIT.md) records the earlier audit and
 [docs/SERVICE.md](docs/SERVICE.md) records the product design. Service code is not built.
 
 - [x] Fix low-valued 16-bit PNG normalization; cover zero/dark/full range, both byte orders and legacy Pillow integer-PNG decoding.

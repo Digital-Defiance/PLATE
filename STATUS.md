@@ -1,6 +1,26 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-30 (robustness sweep and isolated-marker recovery) · Version 0.1.0 · Tests: 519 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-30 (handoff priorities and remaining-gap review) · Version 0.1.0 · Tests: 519 passing, 7 expected feature gaps (`pytest -q`)
+
+## Handoff priority reconciliation — 2026-10-30
+
+- Jessica requested explicit remaining-gap instructions beyond Homebrew delivery.
+  HANDOFF and ROADMAP now direct the next agent through mild-noise damage, the
+  other 13 stress misses, diagnostics/seven complex structural targets, real-art
+  and broader feature coverage, colour/input limits and native editing checks.
+  Earlier service-first/deferred-engine wording is superseded by this direction;
+  the unimplemented hosted service remains a separate milestone.
+- Review began with a clean tree at `649343a`: prior PNG/marker fixes (`9f0df0f`),
+  robustness runner (`30339d5`) and docs (`649343a`) have been committed by the
+  intervening session. Earlier uncommitted-work notes below are historical.
+- Saved full-sweep JSON independently rechecked: **63/78 pass, 15 fail**; current
+  challenge definitions retain **seven strict expected gaps**. Corrected stale
+  HANDOFF stroke counts (patch 8, storefront 3, EMBER 3, ROOT 9). These edits change
+  documentation only; no engine/targets/packaging changes or commit/push requested.
+- Full suite before and after: **519 passed/7 xfailed**, no warnings/skips
+  (135.13s / 133.60s). Logs `/tmp/plate-handoff-priority-{before,after}.txt`.
+  `git diff --check` passes; only HANDOFF/ROADMAP/STATUS changed. No new pipeline
+  render check was needed for these documentation-only edits.
 
 ## Robustness sweep checkpoint — 2026-10-30
 
@@ -711,7 +731,7 @@ regions (219 opaque pixels lost). Preserve palette/antialias safeguards when fix
   Suite **149 passed, 8 xfailed** (was 148/9). Committed `ca92bbd`.
 
 
-## Current remaining work — start here
+## Earlier geometry backlog — current priorities are at the top of this file
 
 Geometry safety, thin-detail recovery and initial open-stroke support are complete.
 All 18 ticks and four screw slots are editable straight strokes; both panel routes
@@ -720,8 +740,9 @@ The full instrument-panel target passes (59 objects, 27 strokes). The
 independent `stroked_route`, `gradient_badge` and `edge_crossing_type` targets pass.
 The badge has one full radial disc behind its ribbon, and the lettering has one
 full disc behind its three letters. Three original complex logo fixtures are now
-generated and committed (34–56 target objects). The six strict expected failures below
+generated and committed (34–56 target objects). The six historical strict expected failures below
 remain open; they are desired structural targets, not pipeline crashes.
+The PLATE identity is the seventh; see HANDOFF's current seven-gap table.
 Appearance/integrity checks remain active. Current scene SSIM: mission patch
 **0.9815**, storefront **0.9738**, instrument panel **0.9864**, poster **0.9715**.
 All four clear 0.95 on white and dark backgrounds. Current regression floors:
