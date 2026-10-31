@@ -228,24 +228,52 @@ def diff_target(actual_svg, target_svg) -> TargetDiff:
         if gi not in used:
             diff.extra.append(got_labels[gi])
 
-    # Split: one expected overlaps >= 2 actual objects above the floor.
+    # Actual objects that are the primary 1:1 Hungarian match for some
+    # expected object; such an actual is a distinct object in its own right, so
+    # its mere spatial overlap with another expected must not be read as a
+    # fragment of that expected (split).
+    claimed_actual = {gi: wi for wi, gi in primary.items()
+                      if ious[wi, gi] >= PRESENCE_FLOOR}
+
+    # Split: one expected object's silhouette is fragmented across >= 2 actual
+    # objects that EACH account for a meaningful portion of it while NONE is a
+    # good whole-object match -- and excluding any actual that is the primary
+    # 1:1 match for a DIFFERENT expected (a distinct object merely overlapping).
     for wi in range(len(want)):
-        overlapping = [gi for gi in range(len(got))
-                       if ious[wi, gi] >= PRESENCE_FLOOR]
-        if len(overlapping) >= 2:
+        fragments = []
+        for gi in range(len(got)):
+            if ious[wi, gi] < PRESENCE_FLOOR:
+                continue
+            owner = claimed_actual.get(gi)
+            if owner is not None and owner != wi:
+                continue  # distinct object matched 1:1 elsewhere, not a fragment
+            coverage = (np.count_nonzero(gm[gi] & wm[wi])
+                        / max(1, np.count_nonzero(wm[wi])))
+            # A fragment covers part of the expected silhouette but is not a
+            # whole-object match on its own.
+            if coverage >= PRESENCE_FLOOR and ious[wi, gi] < SILHOUETTE_IOU:
+                fragments.append(gi)
+        if len(fragments) >= 2:
             diff.split.append({
                 "expected": want_labels[wi],
-                "actual": [got_labels[gi] for gi in overlapping],
+                "actual": [got_labels[gi] for gi in fragments],
             })
 
-    # Merged: one actual is the best overlap for >= 2 expected objects.
+    # Merged: one actual object subsumes >= 2 expected objects that have no
+    # better individual match. Group expected objects by their best actual, but
+    # exclude an expected whose own 1:1 Hungarian match is a DIFFERENT, distinct
+    # actual (it merely overlaps the shared one; it is not merged into it).
     best_for_expected = {}
     for wi in range(len(want)):
         if not got:
             continue
         gi = int(np.argmax(ious[wi]))
-        if ious[wi, gi] >= PRESENCE_FLOOR:
-            best_for_expected.setdefault(gi, []).append(want_labels[wi])
+        if ious[wi, gi] < PRESENCE_FLOOR:
+            continue
+        own = matches.get(wi)
+        if own is not None and own != gi:
+            continue  # distinct object with its own 1:1 match, not merged
+        best_for_expected.setdefault(gi, []).append(want_labels[wi])
     for gi, labels in best_for_expected.items():
         if len(labels) >= 2:
             diff.merged.append({"expected": labels, "actual": got_labels[gi]})

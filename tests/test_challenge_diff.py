@@ -75,6 +75,40 @@ def test_split_object():
     assert len(disc_split["actual"]) >= 2
 
 
+# A back rectangle spanning the canvas with a distinct smaller front
+# rectangle sitting on top of it. The two overlap spatially (IoU ~0.25) but are
+# genuinely distinct objects -- a self-diff must match both 1:1 with no
+# split/merge noise.
+BACK = '<rect id="back" x="0" y="0" width="100" height="100" fill="blue"/>'
+FRONT = '<rect id="front" x="20" y="20" width="50" height="50" fill="red"/>'
+OVERLAP = _svg(BACK + FRONT)
+
+
+def test_overlapping_objects_self_diff_has_no_split_or_merge():
+    # Regression: a distinct front object overlapping a back object must not be
+    # miscounted as a split of (or merge with) the back object.
+    d = diff_target(OVERLAP, OVERLAP).to_dict()
+    assert len(d["matched"]) == 2
+    assert d["split"] == []
+    assert d["merged"] == []
+    assert d["missing"] == []
+    assert d["extra"] == []
+
+
+def test_genuine_merge_still_detected():
+    # Two distinct, disjoint target squares collapsed into one wide actual rect:
+    # the actual subsumes both expected objects -> a genuine merge.
+    target = _svg('<rect id="a" x="20" y="40" width="28" height="20" fill="red"/>'
+                  '<rect id="b" x="52" y="40" width="28" height="20" fill="red"/>')
+    actual = _svg('<rect id="wide" x="20" y="40" width="60" height="20" fill="red"/>')
+    d = diff_target(actual, target).to_dict()
+    assert len(d["merged"]) == 1
+    merged = d["merged"][0]
+    assert set(merged["expected"]) == {"a", "b"}
+    assert merged["actual"] == "wide"
+    assert d["split"] == []
+
+
 def test_topology_difference():
     # evenodd plate with a hole; actual adds a stray island inside the hole.
     plate = ('<path id="plate" d="M10 10H90V90H10Z M30 30H70V70H30Z" '
