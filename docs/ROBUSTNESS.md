@@ -90,3 +90,38 @@ disjoint scenes to aspect-ratio extremes, gradients, occlusion and real artwork;
 add direct native gradient/hidden-object/4× seam checks. Do not generalize 36 core
 passes to every logo at these scales. Jessica allows scope expansion as useful,
 provided additions and remaining work are recorded in ROADMAP and HANDOFF.
+
+## Hairline-route floor analysis — 2026-10-31
+
+The last two stress misses, the `marks` route at authored stroke-width 1px and 2px
+(`marks-s1-…-line1` / `line2`), were investigated per-object with the renderer. Both
+are **documented floors**, not fixable retention bugs; no gate-preserving automatic
+change recovers either without regressing a currently-green case. Pinned by
+`test_hairline_route_1px_is_below_the_round_cap_half_width_floor` and
+`test_hairline_route_2px_is_below_the_palette_admission_floor` in
+`tests/test_robustness.py`.
+
+- **1px route — geometric floor.** At `work_size` 1536 the 256×144 source is not
+  upscaled (scale 1.0), so the 1px line stays a 2-working-px band at alpha ≈147
+  everywhere (no pixel ≥200). Its colour `#141e2d` is ~129 RGB from the nearest
+  palette entry and never admitted (route absent, 4 shapes, 0 strokes). Even when the
+  palette is force-fed the authored colour, the route emits correctly (`fill=none`,
+  stroke `#141e2d`, width 1.5) but silhouette fails: the thinnest round-capped stroke
+  PLATE can emit is 1.5px (two rows) from `fit_straight`'s 0.75 half-width floor,
+  versus the 1px (one row) authored target, giving IoU 0.5 / boundary deviation 1.0.
+  Matches prior art (the quarter-size 1-working-px route).
+- **2px route — palette-admission floor.** The 2px line is a 2-working-px band at
+  alpha ≈243, again a distinct colour ~129 RGB from the palette, with no flat seed and
+  no erodable interior, so no automatic seeding path admits it (route absent, 4 shapes,
+  0 strokes). This is NOT a geometric floor: force-feeding the authored palette yields
+  a stroke that passes EVERY route check (editable_stroke, width ≈2.01, silhouette
+  IoU 1.0). It stays a floor because the currently-green `marks-s0p5-…-line4` route is
+  geometrically identical (2-px band, max distance-transform 1.0, alpha 193/243/243)
+  yet recovers via scene-dependent flat-core seeding; any rule keying on the route's
+  own pixels fires on both, so admitting the 2px route regresses `marks-s0p5 line4`
+  (and broader variants hit the green `panels` blur halos). Per the hard invariants
+  this is classified a floor rather than forced to pass.
+
+The combined sweep therefore stays **70/78** (core **36/36**); the two route cases
+remain the last of the measured stress misses alongside the quarter-size routes, the
+blur-1.2 marker and the four low-contrast panels.

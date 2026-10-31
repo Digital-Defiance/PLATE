@@ -302,3 +302,92 @@ def test_contrast_1_over_16_foreground_is_below_the_colour_merge_floor(tmp_path)
     deltas = {name: float(np.linalg.norm(lab(colors[name]) - background)) for name in ('disc', 'panel', 'detail')}
     assert all(d < 8.0 for d in deltas.values()), deltas       # all below color_merge floor
     assert deltas['disc'] < 6 and deltas['panel'] < 7 and deltas['detail'] < 6, deltas
+
+
+def test_hairline_route_1px_is_below_the_round_cap_half_width_floor(tmp_path):
+    """DOCUMENTED FLOOR, measured — do NOT lower fit_straight's 0.75 half-width floor nor
+    weaken the silhouette gate to force this. The authored 1px round-capped route renders
+    to a 2-working-px band whose alpha is only ~147 everywhere (no pixel reaches alpha>=200),
+    so it carries no flat seed and no erodable interior and the route colour #141e2d (RGB
+    dist ~129 to the nearest palette entry) is never admitted: on the DEFAULT pipeline the
+    route is absent (4 shapes, 0 strokes, object_count false), while reference SSIM still
+    passes (the hairline is visually negligible).
+    Even if the colour is force-admitted the case cannot pass: the thinnest round-capped
+    stroke PLATE can emit is 1.5px (two rows) from fit_straight's 0.75 half-width lower
+    bound, versus the authored 1px (one row) target in evaluate's authored-base-pixel space,
+    giving silhouette IoU 0.5 / boundary deviation 1.0 (threshold IoU>=.96 or deviation<=.75).
+    This is a geometric floor, matching prior art (the quarter-size 1-working-px route).
+    This test pins the floor so a regression or a silent gate-weakening is caught."""
+    case = SweepCase(route_width=1, tier='stress')
+    report = run_case(case, tmp_path/'r')
+    assert report['stats']['shapes'] == 4, report              # route colour not admitted
+    assert report['stats']['strokes'] == 0, report
+    assert not report['checks']['object_count'], report
+    route = next(o for o in report['objects'] if o['name'] == 'route')
+    assert route['checks'] == {'present': False}, route        # absent on the default pipeline
+    assert report['checks']['reference_white'] and report['checks']['reference_dark'], report
+    assert not report['passed'], report
+
+    # Force-admit the authored palette: the route then emits as an editable stroke with the
+    # right colour and width, but silhouette still fails (1.5px two-row stroke vs 1px target).
+    image, target = make_input(case)
+    source = tmp_path/'forced.png'
+    image.save(source)
+    palette = ('#1e5fc3', '#d43740', '#199364', '#141e2d', '#eaac23', '#ffffff')
+    result = pipeline.run(source, Config(work_size=1536, palette=palette))
+    forced = evaluate(case, result.svg, target, image)
+    forced_route = next(o for o in forced['objects'] if o['name'] == 'route')
+    assert forced_route['checks']['present'], forced
+    assert forced_route['checks']['editable_stroke'] and forced_route['checks']['stroke_width'], forced_route
+    assert not forced_route['checks']['silhouette'], forced_route   # geometric floor: IoU 0.5
+    assert forced_route['iou'] <= 0.6, forced_route                 # measured 0.5
+
+
+def test_hairline_route_2px_is_below_the_palette_admission_floor(tmp_path):
+    """DOCUMENTED FLOOR, measured — do NOT add a palette-admission heuristic to force this;
+    it regresses the currently-green marks-s0p5 line4 route and/or the panels blur cases.
+    The authored 2px round-capped route renders to a 2-working-px band at alpha ~243, a
+    genuinely distinct colour #141e2d (RGB dist ~129 to the nearest palette entry) with no
+    flat seed and no erodable interior, so no automatic palette-seeding path admits it: on
+    the DEFAULT pipeline the route is absent (4 shapes, 0 strokes, object_count false) while
+    reference SSIM still passes.
+    Unlike the 1px case this is NOT a geometric floor: force-admitting the authored palette
+    recovers the route as a correct editable stroke that passes EVERY route check
+    (editable_stroke, stroke_width ~2.01, silhouette IoU 1.0), proving the failure is palette
+    admission, not stroke fitting. It stays a floor because no gate-preserving automatic rule
+    can admit it: the geometrically-identical, currently-green marks-s0p5-r0 line4 route has
+    an IDENTICAL measured signature (2-px band, max distance-transform 1.0, alpha min/med/max
+    193/243/243) yet enters the palette through scene-dependent flat-core seeding; any rule
+    keying on the route's own pixels fires on both, so admitting line2 regresses s0p5 line4
+    (and broader variants hit the green panels blur halos). This test pins that discriminator."""
+    case = SweepCase(route_width=2, tier='stress')
+    report = run_case(case, tmp_path/'r')
+    assert report['stats']['shapes'] == 4, report              # route colour not admitted
+    assert report['stats']['strokes'] == 0, report
+    assert not report['checks']['object_count'], report
+    route = next(o for o in report['objects'] if o['name'] == 'route')
+    assert route['checks'] == {'present': False}, route
+    assert report['checks']['reference_white'] and report['checks']['reference_dark'], report
+    assert not report['passed'], report
+
+    # The discriminator: force the authored palette and the route passes all its checks,
+    # so the only failure is palette admission, not stroke fitting.
+    image, target = make_input(case)
+    source = tmp_path/'forced.png'
+    image.save(source)
+    palette = ('#1e5fc3', '#d43740', '#199364', '#141e2d', '#eaac23', '#ffffff')
+    result = pipeline.run(source, Config(work_size=1536, palette=palette))
+    forced = evaluate(case, result.svg, target, image)
+    forced_route = next(o for o in forced['objects'] if o['name'] == 'route')
+    assert all(forced_route['checks'].values()), forced_route       # every route check passes
+    assert forced_route['checks']['editable_stroke'], forced_route
+    assert forced_route['checks']['silhouette'] and forced_route['iou'] >= 0.95, forced_route
+
+    # The currently-green marks-s0p5-r0 line4 route is geometrically identical yet recovers,
+    # because at that scale the route colour reaches the palette via flat-core seeding. Any
+    # rule that admits line2 fires here too, so this green case guards against forcing line2.
+    green = SweepCase(scale=.5, angle=0, tier='stress')
+    green_report = run_case(green, tmp_path/'g')
+    green_route = next(o for o in green_report['objects'] if o['name'] == 'route')
+    assert green_route['checks']['present'], green_report
+    assert green_report['stats']['strokes'] == 1, green_report

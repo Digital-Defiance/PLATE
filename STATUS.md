@@ -1255,6 +1255,7 @@ out as a live `<circle>` that also carries `fill="url(#...)"`.
 3. VLM naming quality: the model names both eyes "Left Eye" (dedupe suffixes → "Left Eye 2") rather than distinguishing left/right; naming is ~6s/shape (one request per shape → 47–65s for the face). Prompt/throughput tuning is open.
 
 ## Known weaknesses
+- Hairline-route stress cases (`marks` route at authored 1px and 2px) are documented floors, not bugs. At default work_size the 256-wide source is not upscaled, so both render to a 2-working-px band (1px → alpha ≈147, 2px → alpha ≈243) whose distinct colour #141e2d is ~129 RGB from the palette and never admitted. The 1px case is a geometric floor (force-admitted it still fails silhouette: 1.5px min round-cap stroke vs 1px target, IoU 0.5); the 2px case is a palette-admission floor (force-admitted it passes every route check, but the geometrically identical, currently-green marks-s0p5 line4 route blocks any seeding rule). Pinned by `test_hairline_route_1px_is_below_the_round_cap_half_width_floor` and `test_hairline_route_2px_is_below_the_palette_admission_floor`; see docs/ROBUSTNESS.md. Sweep stays 70/78, core 36/36.
 - Basic linear/radial gradients work. Disconnected/occluded ramps and decorated shaded objects can still split or posterize; photos and conic/mesh gradients remain unsupported.
 - Occluder with a bar crossing a circle's edge (badge inner disc) → no completion, stays a Bézier path.
 - Triangle apex can get 2 vertices (bevel from blur); polygon snap keeps them.
