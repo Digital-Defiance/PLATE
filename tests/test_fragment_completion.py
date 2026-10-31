@@ -89,3 +89,102 @@ def test_pooled_completion_keeps_hidden_area_and_containment_guards(problem):
         mask = Mask.from_full(vertical)
         covers = [Shape(1, (40, 70, 190), mask, mask, sil=mask)]
     assert complete.try_complete(shape, covers, *canvas, Config()) is None
+
+
+def _interrupted_ring(cross=True, cover_color=(233, 188, 89)):
+    """A navy ring crossed by a bar that breaks it into four co-circular arcs.
+
+    With ``cross`` the bar is painted, so each arc is occluded by the SAME bar and
+    the four arcs continue one circle -- a genuine compound ring. Without it the
+    bar area is background and the arcs share no occluder.
+    """
+    canvas = (200, 200)
+    outer = raster_prim(Prim("circle", 100, 100, 70, 70), canvas)
+    inner = raster_prim(Prim("circle", 100, 100, 45, 45), canvas)
+    ring = outer & ~inner
+    bar = np.zeros(canvas, bool)
+    bar[:, 92:108] = True
+    bar[92:108, :] = True
+    regions = [(ring & ~bar, (24, 46, 76))]
+    if cross:
+        regions.append((bar, cover_color))
+    occupied = np.logical_or.reduce([m for m, _ in regions])
+    regions.append((~occupied, (255, 255, 255)))
+    rid = np.full(canvas, -1, np.int32)
+    shapes = []
+    for region, color in regions:
+        labels, n = ndi.label(region)
+        for i in range(1, n + 1):
+            mask = Mask.from_full(labels == i)
+            if mask.area < 6:
+                continue
+            s = Shape(len(shapes), color, mask, mask)
+            rid[labels == i] = s.id
+            shapes.append(s)
+    seg = Segmentation(rid, shapes, np.array([c for _, c in regions], np.uint8))
+    order.build(seg, rid < 0, Config())
+    return seg
+
+
+def _merge_to_stable(seg):
+    cfg = Config()
+    while True:
+        merged = order.merge_fragments(seg, seg.rid < 0, cfg)
+        if merged is seg:
+            return seg
+        assert np.array_equal(merged.rid >= 0, seg.rid >= 0)
+        seg = merged
+        order.build(seg, seg.rid < 0, cfg)
+
+
+def test_compound_siblings_reunite_an_interrupted_ring():
+    # Four same-colour arcs of one ring, each occluded by the crossing bar and all
+    # lying on one circle, must merge into a single compound object even though no
+    # primitive fits the open ring.
+    seg = _interrupted_ring(cross=True)
+    navy_before = [s for s in seg.shapes if s.color == (24, 46, 76)]
+    assert len(navy_before) >= 4
+    stable = _merge_to_stable(seg)
+    navy_after = [s for s in stable.shapes if s.color == (24, 46, 76)]
+    assert len(navy_after) == 1
+    # every observed arc pixel is preserved by the union
+    before = np.logical_or.reduce([s.vis.to_full(seg.rid.shape) for s in navy_before])
+    assert np.array_equal(navy_after[0].vis.to_full(stable.rid.shape), before)
+
+
+def test_co_circular_arcs_without_a_shared_occluder_are_not_merged():
+    # The same four arcs, but the crossing region is background rather than a painted
+    # occluder. They lie on a circle yet share no occluder (no T-junction evidence),
+    # so the compound merge must leave them apart.
+    seg = _interrupted_ring(cross=False)
+    assert order.merge_fragments(seg, seg.rid < 0, Config()) is seg
+
+
+def test_two_complete_circles_sharing_an_occluder_are_not_merged():
+    # Two whole same-colour discs crossed by one bar: each disc snaps to a complete
+    # circle on its own, so they are distinct finished objects, not fragments of one
+    # ring -- the compound merge must refuse even though a bar occludes both and their
+    # outer hulls could be read as co-circular.
+    canvas = (160, 300)
+    left = raster_prim(Prim("circle", 70, 80, 45, 45), canvas)
+    right = raster_prim(Prim("circle", 230, 80, 45, 45), canvas)
+    bar = np.zeros(canvas, bool)
+    bar[70:90, :] = True
+    regions = [(left & ~bar, (24, 46, 76)), (right & ~bar, (24, 46, 76)),
+               (bar, (233, 188, 89))]
+    occupied = np.logical_or.reduce([m for m, _ in regions])
+    regions.append((~occupied, (255, 255, 255)))
+    rid = np.full(canvas, -1, np.int32)
+    shapes = []
+    for region, color in regions:
+        labels, n = ndi.label(region)
+        for i in range(1, n + 1):
+            mask = Mask.from_full(labels == i)
+            if mask.area < 6:
+                continue
+            s = Shape(len(shapes), color, mask, mask)
+            rid[labels == i] = s.id
+            shapes.append(s)
+    seg = Segmentation(rid, shapes, np.array([c for _, c in regions], np.uint8))
+    order.build(seg, rid < 0, Config())
+    assert order.merge_fragments(seg, seg.rid < 0, Config()) is seg

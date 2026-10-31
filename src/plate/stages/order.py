@@ -9,14 +9,15 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import cv2
 import numpy as np
 from scipy import ndimage as ndi
 
 from ..config import Config
-from ..geometry import raster_prim
+from ..geometry import fit_circle, raster_prim
 from ..masks import Mask, contains, touches, crop_like, inter_area
 from ..scene import Segmentation, Shape
-from .complete import try_complete
+from .complete import occludes, try_complete
 
 
 def _silhouettes(shapes: list[Shape], transparent: np.ndarray) -> None:
@@ -192,6 +193,115 @@ def merge_fragments(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> 
         shapes = [joint if s.id == joint.id else s for s in seg.shapes
                   if s.id == joint.id or s.id not in ids]
         return seg.rebuilt(shapes)
+    merged = _merge_compound_siblings(seg, transparent, cfg)
+    if merged is not seg:
+        return merged
+    return seg
+
+
+def _cluster_by_shared_occluder(ids: list[int], occ: dict[int, set[int]]) -> list[list[int]]:
+    """Union-find groups of ids whose occluder sets intersect (one shape over both)."""
+    parent = {i: i for i in ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a in range(len(ids)):
+        for b in range(a + 1, len(ids)):
+            if occ[ids[a]] & occ[ids[b]]:
+                parent[find(ids[a])] = find(ids[b])
+    groups: dict[int, list[int]] = {}
+    for i in ids:
+        groups.setdefault(find(i), []).append(i)
+    return list(groups.values())
+
+
+def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
+                             cfg: Config) -> Segmentation:
+    """Reunite same-colour sibling fragments of ONE compound object that no primitive fit.
+
+    Runs only after the parent-island and flat-pool branches have had their turn, so
+    existing behaviour is untouched. A genuine compound object (an interrupted ring, a
+    glyph split by crossing strokes) leaves same-colour fragments that each sit under
+    the SAME intervening occluder and whose outer boundaries continue the same circle.
+    The admission evidence is the SAME the existing passes require -- the relative
+    T-junction test (`complete.occludes`, 15 deg) supplies the occlusion link, and the
+    exact-circle fit used by completion supplies the geometric continuation -- so no gate
+    is relaxed. Side-by-side tiles (no shared occluder, no common circle) and distinct
+    neighbouring arcs (poor common-circle fit) are rejected. The merged result is a
+    compound path; a primitive fit is NOT required for this path.
+    """
+    H, W = transparent.shape
+    groups: dict[tuple, list[Shape]] = {}
+    for s in seg.shapes:
+        if s.grad is None:
+            groups.setdefault((s.parent, s.color), []).append(s)
+    for (parent, color), members in groups.items():
+        if len(members) < 2:
+            continue
+        member_ids = {s.id for s in members}
+        # occluders of each fragment: a non-member whose outline flows past this
+        # fragment at their shared boundary (the owner-blessed relative T-junction test).
+        occ: dict[int, set[int]] = {}
+        for m in members:
+            found = set()
+            for o in seg.shapes:
+                if o.id in member_ids or o.id == m.id:
+                    continue
+                if touches(m.vis, o.vis, (H, W), 3) and occludes(m.vis, o.vis, (H, W)):
+                    found.add(o.id)
+            occ[m.id] = found
+        # link fragments that share an occluder (same thing is painted over both)
+        clusters = _cluster_by_shared_occluder([m.id for m in members], occ)
+        for cluster in clusters:
+            if len(cluster) < 2:
+                continue
+            frag = {m.id: m for m in members}
+            # A genuine interrupted fragment is NOT already a finished object. If any
+            # member snaps to a closed curved/boxed primitive on its own it is a
+            # complete shape, not a sliver of a larger one, so leave the group alone.
+            if cfg.snap_primitives:
+                from .primitives import snap
+                complete_member = False
+                for cid in cluster:
+                    pr = snap(frag[cid].full, cfg)
+                    if pr is not None and pr.kind in ("circle", "ellipse", "rect", "rrect"):
+                        complete_member = True
+                        break
+                if complete_member:
+                    continue
+            # common-circle continuation: the fragments' outer (convex) boundary must
+            # lie on one circle. This is the exact-circle fit completion already trusts;
+            # distinct arcs (light orbit arcs) or glyphs that merely share an occluder
+            # fail it. Normalise the RMS by the radius because disjoint arcs enclose no
+            # area (the area-keyed completion tolerance does not apply to open arcs).
+            vis = np.zeros((H, W), bool)
+            for cid in cluster:
+                vis |= frag[cid].vis.to_full((H, W))
+            ys, xs = np.nonzero(vis)
+            pts = np.c_[xs, ys].astype(np.float32)
+            if len(pts) < 8:
+                continue
+            hull = cv2.convexHull(pts).reshape(-1, 2).astype(np.float64)
+            if len(hull) < 5:
+                continue
+            circ, rms, cov = fit_circle(hull)
+            radius = circ.rx
+            if radius < 1 or rms > 0.02 * radius or cov < np.deg2rad(160):
+                continue
+            # The union keeps every member's visible pixels, so no ownership moves and
+            # no earlier sibling is uncovered (`rebuilt` asserts this). Merge into one
+            # compound shape keyed on the lowest member id.
+            first = min(cluster)
+            vmask = Mask.from_full(vis)
+            joint = Shape(first, color, vmask, vmask, sil=vmask)
+            cset = set(cluster)
+            shapes = [joint if s.id == first else s for s in seg.shapes
+                      if s.id == first or s.id not in cset]
+            return seg.rebuilt(shapes)
     return seg
 
 

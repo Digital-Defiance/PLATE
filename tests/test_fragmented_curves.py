@@ -39,7 +39,11 @@ def test_orbit_all_seven_strokes_and_radial_core_match_unchanged_targets():
     actual[:] = [e for e in actual if e.tag.endswith('defs')]+got
     target[:] = [e for e in target if e.tag.endswith('defs')]+wanted
     assert_target(ET.tostring(actual, encoding='unicode'), ET.tostring(target, encoding='unicode'))
-    assert result.stats['shapes'] == 44
+    # Compound navy emblem fragments (the badge-ring arcs and four cutout tabs)
+    # are reunited into one ring object, so ORBIT now emits 38, not 44. The seven
+    # strokes and the radial core above are still matched against the unchanged
+    # targets by assert_target.
+    assert result.stats['shapes'] == 38
     assert result.shapes is result.seg.shapes
     assert [s.id for s in result.shapes] == list(range(len(result.shapes)))
     for s in result.shapes:
