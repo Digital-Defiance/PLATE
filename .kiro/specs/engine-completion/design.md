@@ -435,6 +435,44 @@ fails", because the honest prior for each is a documented LIMIT.
 
 ---
 
+### 3.7 R9 — Real-artwork clean-line mode (FIX, opt-in)
+
+Every lever is off by default and only `--preset smooth` (or `--set`) turns it on, so GC-4
+holds by construction; the regression question for each lever is only "does it help the
+smooth preset", answered by the logo fixture.
+
+- `upscale` (imageio): Lanczos pre-scale before segmentation; the pipeline's existing `scale`
+  maps coordinates back, so the SVG stays in source units. Gives the tracer sub-pixel room.
+- `jpeg_edges` (segment, decoded JPEG only): the two-working-pixel neighbourhood may have
+  only one flat seed after edge dilation/JPEG chroma blur; luma coverage alone barely changes
+  such pixels. For chromatic pairs (RGB difference channel span ≥25% of its norm) whose
+  BT.601 luma differs by ≥32, use a `max(4, ceil(4*scale))` pixel seed radius. RGB residuals
+  still choose the pair; its luma ratio chooses the ≥50% owner. Keep the same treatment when
+  retrying near rescued cores. Other pairs keep the original neighbourhood/RGB coverage.
+  Widening every pair was rejected because it created a six-pixel dark pocket on the logo.
+  Default off; `smooth` on; PNGs unchanged. `tests/test_jpeg_edges.py` checks independent
+  JPEG line/arc geometry at 1×/2× and negative controls.
+- `edge_smooth` + `straighten` (bezier `contour_to_beziers` "clean mode"): corners are found
+  on a lightly smoothed copy with `corner_k ≈ 3·scale`, refined, and pinned; each
+  corner-to-corner run is Gaussian-smoothed along the outline (odd reflection keeps the ends)
+  and, if it bows < max(0.6·tol, 0.8 % of its length), emitted as one exact line. This removes
+  JPEG ringing wobble without rounding corners.
+- `snap_max_px` (primitives): polygon snaps also need mean deviation ≤ ~0.45·cap and a
+  98th-percentile outline→polygon distance ≤ ~0.75·cap (source px × scale), so a big arc can
+  no longer pass as a 14-gon. Circles/ellipses/rects keep the proportional tolerance.
+- `rescue_detail` (`stages/rescue.py`, after ordering): ink of colour c inside a region of
+  base colour b is a pixel ≥ 45 % of the way from b to c and < 18 % off that line. Ink within
+  3 px of a real region of c (its fringe) or on a two-region boundary (a blend) is dropped,
+  except a **tip**: ink that runs unbroken (through raw ink, fragments or region pixels) into a
+  real region of c is that region's tapering end, so it skips the boundary test and is bridged
+  back by adding nearby ink/region pixels (reach `4 + 2·smooth·scale`). Small childless flat
+  regions of c (`absorbable_ids`) join the ink and are dropped from the tree. One compound path
+  per colour goes into a top "Fine detail" group, traced with a softened config.
+- Bake-off `topology`: palette = 5-bit histogram peaks over flat pixels; a pixel belongs to a
+  colour only within 40 % of the way to the next one; pieces ≥ max(4, 4e-6·HW) px are matched
+  between reference and render by overlap (1 px slack) with union-find; per matched group
+  |pieces_ref − pieces_svg| counts as missing or extra. Weight 0 (report-only).
+
 ## 4. Edge cases & failure-mode handling
 
 Each fix must behave correctly on inputs it should **not** affect:

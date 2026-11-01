@@ -14,6 +14,7 @@ composite renormalises over what exists. Add other tools by exporting their SVGs
 |---|---|---|
 | fidelity | `ssim` | SSIM of the render vs the *clean* reference (truth render if known, else the source). Normalised (ssim−0.85)/0.14 |
 | | `edge_f1` | Canny-edge F1 with 2 px tolerance |
+| topology (report-only, weight 0) | `topology` | same solid pieces as the reference: same-colour pieces matched by overlap; `topo_extra` = specks, pinched-off tips, splits; `topo_missing` = dropped dots/periods, merges. Blend pixels are ignored on both sides, so a soft JPEG and a crisp render compare fairly |
 | structure (truth only) | `obj_visible_f1` | an SVG element whose *visible* region (minus later elements) matches a true object's visible region at IoU ≥ 0.9; F1 over objects vs elements — over-segmentation lowers precision |
 | | `obj_complete_f1` | same, but the element's *whole* shape vs the object's complete silhouette → rewards hidden-part completion |
 | | `hidden_completion` | of objects that are partly hidden, the share recovered whole |
@@ -43,9 +44,70 @@ so you can see whether a ranking is an artefact of the weights.
 
 Not yet in the table (need the Mac): Illustrator Image Trace, Vectorizer.AI, Inkscape trace — **please add them**.
 
+## Real logo: Research Force (2026-11-01, `samples/fixtures/research_force_logo.jpeg`)
+One real JPEG logo, scored against the source (no ground truth, so no structure metrics). The two
+external SVGs were supplied by the user: one from a vectorizer website, one from Adobe.
+
+| tool | SSIM | edge F1 | extra / missing pieces | shapes | anchors | colours | size |
+|---|---|---|---|---|---|---|---|
+| PLATE default | 0.960 | 0.930 | 3 / 32 | 49 | 563 | 4 | 29 KB |
+| PLATE `smooth`, before JPEG edge repair | 0.975 | 1.000 | 0 / 1 | 32 | 662 | 4 | 30 KB |
+| PLATE `--preset smooth --set upscale=2`, JPEG edge repair | **0.976** | **1.000** | **0 / 0** | **32** | **647** | 4 | 29 KB |
+| vectorizer website | 0.719 | 1.000 | 0 / 1 | 371 | 3787 | 46 | 125 KB |
+| Adobe | 0.934 | 0.856 | 2 / 11 | 116 | 1648 | 23 | 125 KB |
+
+What the files show about each process:
+- **Vectorizer**: stacked shapes (no holes, lower shapes run under upper ones), one path per shape,
+  lines and curves mixed. Every small piece survives (periods, the dot in the V, gap tips). It keeps
+  anti-aliased edge colours as separate thin shapes (46 colours), which is where the junk at the book
+  corners comes from, and it shifts the colours (background `#00292d` vs `#0c282c` in the source),
+  which alone drops its SSIM to 0.72.
+- **Adobe**: cut-out model (the background is one compound path with holes where objects sit, so
+  moving an object leaves a hole); every segment is a cubic, even straight ones, written one per line
+  with 6 decimals — hence 2,067 lines, though it has fewer than half the vectorizer's segments. It drops
+  everything under a noise size: the tagline periods, the dot in the V, the ends of the narrow gaps.
+  That is a large part of why it looks clean.
+- **PLATE default** loses the 2 px tagline entirely (32 missing pieces); `--preset smooth` keeps it,
+  draws the fewest shapes, uses only the source's 4 colours, and has no stray pieces. The remaining
+  "missing" piece before JPEG edge repair was a 1 px seam the JPEG only half shows. Not measured by any number here: outline
+  smoothness (see ROADMAP "Outline smoothness metric").
+
+### JPEG colour-edge experiment (2026-11-01, Kiro 13.8)
+
+Opt-in `jpeg_edges` is now enabled by `smooth`. Luma-only coverage barely helped because the
+normal two-pixel neighbourhood often had just one flat colour seed. Chromatic pairs with enough
+luma contrast now use a wider, scale-aware seed search; RGB still ranks pairs and luma places
+their boundary. Achromatic/low-contrast pairs keep the old calculation. All-pair widening was
+rejected because it produced a new dark pocket. Decoded format gates the change; PNGs and
+defaults are unaffected. No bake-off weights or existing regression floors changed.
+
+Independent JPEG-q85 pink/blue line/arc masks: boundary errors **156–236 → 36–60** at 1×,
+**686–810 → 43–86** at 2× (`tests/test_jpeg_edges.py`). Logo MAE **1.39781 → 1.35239**;
+SSIM **0.975168 → 0.976148**, all counted pieces preserved. Enlarged renders show an improved
+blue terminal/colour-band boundary, with some rounded bends and gap-tip joins still imperfect.
+This revision has not been accepted in Illustrator.
+
+The same 24-scene seed-1 corpus, `smooth` at native working scale (not 2×), measures:
+
+| metric | previous `smooth` | JPEG edge repair |
+|---|---:|---:|
+| composite | 0.846317 | 0.846217 |
+| SSIM | 0.989624 | 0.989619 |
+| whole-object F1 | 0.700787 | 0.700787 |
+| hidden completion | 0.548611 | 0.548611 |
+
+All 18 PNG SVGs are byte-identical; the six JPEGs change. The corpus result is effectively flat,
+including a small composite decrease; this is a targeted real-logo/thin-edge improvement,
+not a broad hidden-completion win. Separate default benches confirm all 24 PLATE and 24 VTracer
+SVGs remain byte-identical. Evidence: `/tmp/plate-resume/before-smooth-bakeoff/`,
+`/tmp/plate-resume/after-smooth-bakeoff-final/`, and `/tmp/plate-resume/default-comparison.json`.
+
 ## Where PLATE loses (the useful part)
 Complete-object recovery on the corpus: free circles 13/17, **occluded rect 4/11, occluded polygon 3/10, occluded rrect 5/12**, and
-**JPEG-damaged scenes: 0/10 occluded objects recovered**. Causes found: (1) touching objects of the *same colour* merge into one
+**JPEG-damaged scenes: 3/10 occluded objects recovered** at the original default (aggregate `hidden_completion` 0.33; an earlier
+0/10 here came from a different corpus config), **4/10 (0.42) since the JPEG-keyed denoise** (`load_image` runs one bilateral pass
+when the source is a JPEG; it never fires on PNG). Causes found: (1) touching objects of the *same colour* merge into one
 region (colour-only segmentation can't split them) → needs SAM or geometric splitting; (2) amodal completion is weaker for
-rectangles/polygons than circles; (3) JPEG noise breaks the T-junction occlusion test. These are tracked in ROADMAP.md (P1 "bake-off driven").
+rectangles/polygons than circles; (3) JPEG ringing displaces region boundaries enough that the primitive fit in
+`complete.try_complete` exceeds its tolerance (the T-junction occlusion test is not the cause). These are tracked in ROADMAP.md (P1 "bake-off driven").
 Goal: `hidden_completion` ≥ 0.8 and JPEG parity, tracked by `tests/test_bakeoff.py` + this table.

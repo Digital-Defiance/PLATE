@@ -91,10 +91,13 @@ is in `tasks.md`.
 Source: `.agents/tasks/jpeg-occlusion-investigation.md`, `docs/BAKEOFF.md`,
 `STATUS.md` bake-off section.
 
-The measured reality at the shipped default on the seed-1 bake-off corpus is **3/10**
-occluded objects recovered on JPEG-q55 variants (`hidden_completion` ≈ 0.30), **not** the
-0/10 reported in `docs/BAKEOFF.md` (that figure came from a different corpus config and
-misattributes the cause to the T-junction test). Root cause: the auto-denoiser never
+Before Task 1's format-keyed trigger, the seed-1 bake-off corpus recovered **3/10**
+occluded JPEG-q55 objects (mean per-scene `hidden_completion` **0.333333**), not the
+historically reported 0/10 (a different corpus config, with the cause misattributed to
+the T-junction test). With the trigger it recovers **4/10**, mean **0.416667**; this was
+reproduced 2026-11-01 by disabling/enabling the trigger on the same six JPEGs.
+The Task 1 floor is met; the 0.6 stretch and Task 2 residual pin remain open.
+Original root cause: the auto-denoiser never
 fires on JPEG-q55 (`noise_fraction` 0.011–0.026 < the 0.04 gate; `interior_noise_fraction`
 ≈ 0, below the 0.002 lever), so JPEG ringing displaces the segmentation boundary and the
 free-point primitive fit in `complete.try_complete` exceeds its tolerance and returns
@@ -270,10 +273,47 @@ terminal state.
   - the short curved butt-cap control that emits round caps. (a) fit a butt cap where the
     probe expects one, pinned by a square/butt-cap test; or (b) pin the measured limit.
 
+### R9 — Real-artwork clean-line mode (opt-in `smooth` preset)
+
+Source: the Research Force logo (`samples/fixtures/research_force_logo.jpeg`, a clean
+flat-colour JPEG logo), traced 2026-11-01 and opened in Illustrator. At the shipped default it
+came out with: (1) wobbly outlines and wiggly "straight" circuit lines (JPEG ringing traced
+faithfully); (2) big arcs snapped to faceted ≤14-vertex polygons (the polygon tolerance scales
+with √area, so on a big shape a facet passes for an arc); (3) the 2 px tagline gone
+(segmentation folds strokes that never reach a flat colour into the background); (4) dark
+specks between the page lines — a tapering gap whose last pixels fall below 50 % coverage is
+cut off from its gap, and the fine-detail pass then re-adds the tip as a separate blob.
+Comparing two other tools' SVGs of the same logo (vectorizer: 371 single paths, 46 colours,
+stacked, keeps every dot; Adobe: 116 paths, 23 colours, cut-out holes, drops sub-noise detail
+such as the tagline periods) showed no bake-off metric caught (4) or the dropped periods.
+
+**Acceptance criterion:**
+- **(a) FIXED, opt-in.** New levers, all off by default: `upscale` (Lanczos pre-scale),
+  `edge_smooth` (Gaussian along the outline between pinned corners), `straighten`
+  (near-straight corner-to-corner runs → exact lines), `snap_max_px` (hard px cap on polygon
+  snaps), `rescue_detail` (+ `rescue_min_area`; fine-detail pass with fragment absorption and
+  gap-tip bridging), and `jpeg_edges` (decoded-JPEG-only chromatic-pair seed search and
+  luma boundary placement; RGB still selects the pair). `--preset smooth` turns them on. Default output, the 24 shipped SVGs and
+  the PNG robustness sweep are unchanged **by construction** (GC-4). Includes the
+  `find_corners` dedup fix (circular index distance), which only changes outputs where the
+  old code produced zero-length segments.
+- Pinned by `tests/test_research_force_logo.py` (`smooth`, `upscale=2`): SSIM ≥ 0.97, edge F1
+  ≥ 0.99, bake-off `topology` with **0 extra pieces** and ≤ 1 missing, both tagline periods
+  and the dot in the V present, ≤ 700 anchors.
+- The bake-off gains a **report-only** `topology` metric (solid same-colour pieces matched by
+  overlap; `topo_extra` = specks / pinched tips / splits, `topo_missing` = dropped dots /
+  merges; blend pixels ignored so a soft JPEG and a crisp render compare fairly). Weight 0, so
+  every composite and profile score is unchanged. Pinned by `tests/test_topology_metric.py`.
+- **(b) DOCUMENTED LIMITS:** outline smoothness/wobble is still not measured by any bake-off
+  metric (SSIM and edge F1 cannot see it); bridged gap tips are a separate "fine detail" sliver
+  painted over the region (visually continuous, a separate path in Illustrator); the narrow gaps
+  near the book's spine still come out slightly short and wavy; sub-2 px seams the JPEG only
+  half shows can register as one `topo_missing` merge. Illustrator acceptance is by eye.
+
 ### R8 — Engine-complete audit (closure)
 
 A final audit requirement, not a code change. The engine is declared done only when:
-- every requirement R1–R7 (and each sub-item) is recorded in a terminal state (a) or (b),
+- every requirement R1–R7 and R9 (and each sub-item) is recorded in a terminal state (a) or (b),
   with the moving number or the pin test named;
 - the full regression surface (GC-4) is re-verified green from a clean tree;
 - `STATUS.md` and `README.md` are updated to declare the classical engine complete, with

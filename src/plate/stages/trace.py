@@ -91,7 +91,9 @@ def mask_to_path(mask: Mask, canvas: tuple[int, int], cfg: Config, scale: float)
                 d.append(arc)
                 anchors += 4
                 continue
-        res = contour_to_beziers(c, tol, cfg.corner_threshold)
+        res = contour_to_beziers(c, tol, cfg.corner_threshold, smooth_px=cfg.edge_smooth * scale,
+                                 straighten=cfg.straighten,
+                                 corner_k=max(4, int(round(3 * scale))) if cfg.edge_smooth > 0 else 4)
         if res is None:
             continue
         start, curves = res

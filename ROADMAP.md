@@ -7,6 +7,11 @@ independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
 
+2026-11-01 logo checkpoint: opt-in JPEG chroma-edge repair (Kiro 13.8) implemented under
+`smooth`; SSIM 0.975168 → 0.976148, topology 0 extra/1 missing → 0/0. Default 24 PLATE +
+24 VTracer SVGs unchanged. Next: gap-tip ownership before tracing (13.6), then a smoothness
+metric (13.5). Some high-zoom bends/joins still need work. Full current validation: `STATUS.md`.
+
 Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.
@@ -72,10 +77,15 @@ PLATE ranks first under all five weightings, but the bake-off surfaced concrete 
 are the highest-value next fixes. Re-run `plate bakeoff bo/corpus/images --truth bo/corpus/truth`
 after each change; do NOT tune the composite weights to flatter PLATE — fix the weakness.
 
-- [ ] **JPEG robustness.** JPEG-damaged scenes recover **0/10** occluded objects (SSIM 0.967 vs
-  VTracer 0.985 on damaged input); block/ringing noise breaks the T-junction occlusion test in
-  `complete._junctions`/`_occludes`. Denoise or smooth contours harder before junction analysis.
-  Target: JPEG-variant `hidden_completion` ≥ 0.6.
+- [ ] **JPEG robustness.** JPEG-keyed denoise landed (Kiro engine-completion Task 1): JPEG-variant
+  scenes 3/10 → 4/10 occluded objects recovered (`hidden_completion` 0.33 → 0.42, floor 0.4 pinned in
+  `tests/test_bakeoff.py`). Cause of the rest: JPEG ringing displaces boundaries so the primitive fit in
+  `complete.try_complete` misses its tolerance. Target: JPEG-variant `hidden_completion` ≥ 0.6.
+- [ ] **Outline smoothness metric.** SSIM and edge F1 cannot see wobble; the Research Force logo
+  looked fine on both while Illustrator showed lumpy lines. Add a bake-off smoothness number (Kiro
+  Task 13.5), then measure `--preset smooth` on both corpora before considering any default change.
+- [ ] **Narrow gaps near a junction** come out slightly short and wavy under `--preset smooth`
+  (Research Force logo spine; Kiro Task 13.6).
 - [ ] **Same-colour touching objects merge** (colour-only segmentation can't split them): the
   recurring blocker also behind the EMBER/ROOT/storefront structural limits. Split regions at
   concavities / convexity defects, or via SAM (P2). Add corpus scenes that stress this.

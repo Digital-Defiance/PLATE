@@ -75,24 +75,40 @@ def _fill_unknown(labels: np.ndarray, unknown: np.ndarray) -> np.ndarray:
     return labels[iy, ix]
 
 
-def _edge_labels(pix: np.ndarray, pal: np.ndarray, nearby: np.ndarray):
-    """Best local solid-colour or two-colour coverage explanation per pixel."""
+def _edge_labels(pix: np.ndarray, pal: np.ndarray, nearby: np.ndarray,
+                 *, jpeg_nearby: np.ndarray | None = None):
+    """Best local solid-colour or two-colour coverage explanation per pixel.
+
+    JPEG chroma edges may have no flat seeds in the normal two-pixel radius.
+    Admit the wider neighbourhood only for chromatic, luma-separated pairs;
+    retain RGB residuals for pair selection, using luma only for coverage.
+    Achromatic and near-equal-luma pairs keep their original calculation.
+    """
     count, colors = nearby.shape
     best_res = np.full(count, np.inf, np.float32)
     best_lbl = np.full(count, -2, np.int32)
+    luma_weights = np.array([0.299, 0.587, 0.114], np.float32)
     for i in range(colors):
         for j in range(i, colors):
-            valid = nearby[:, i] & nearby[:, j]
+            A, B = pal[i], pal[j]
+            d = B - A
+            luma_delta = float(d @ luma_weights) if jpeg_nearby is not None else 0.0
+            # Require useful brightness contrast and a substantial chroma change.
+            # In particular, do not disturb clean cream/dark or grayscale edges.
+            chromatic = (jpeg_nearby is not None and i != j and abs(luma_delta) >= 32.0
+                         and np.ptp(d) >= 0.25 * np.linalg.norm(d))
+            candidates = jpeg_nearby if chromatic else nearby
+            valid = candidates[:, i] & candidates[:, j]
             if not valid.any():
                 continue
-            A, B = pal[i], pal[j]
             if i == j:
                 res = np.linalg.norm(pix - A, axis=1)
                 lbl = np.full(count, i, np.int32)
             else:
-                d = B - A
                 coverage = np.clip(((pix - A) @ d) / float(d @ d), 0.0, 1.0)
                 res = np.linalg.norm(pix - (A + coverage[:, None] * d), axis=1) + 1.5
+                if chromatic:
+                    coverage = ((pix - A) @ luma_weights) / luma_delta
                 lbl = np.where(coverage < 0.5, i, j).astype(np.int32)
             better = valid & (res < best_res)
             best_res[better], best_lbl[better] = res[better], lbl[better]
@@ -208,13 +224,20 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
     if ey.size:
         K = len(palette)
         ok = np.zeros((ey.size, K), bool)
+        jpeg_ok = np.zeros_like(ok) if cfg.jpeg_edges and img.is_jpeg else None
+        # Edge dilation and JPEG chroma blur push flat seeds beyond two working
+        # pixels, especially after upscaling. Bound the search in source units.
+        jpeg_radius = max(4, int(np.ceil(4 * img.scale)))
         for k in range(K):
             m = src == k
             if m.any():
                 ok[:, k] = ndi.binary_dilation(m, structure=np.ones((5, 5), bool))[ey, ex]
+                if jpeg_ok is not None:
+                    jpeg_ok[:, k] = ndi.maximum_filter(
+                        m, size=2 * jpeg_radius + 1, mode="constant")[ey, ex]
         pix = rgb[ey, ex].astype(np.float32)
         pal = palette.astype(np.float32)
-        best_lbl, best_res = _edge_labels(pix, pal, ok)
+        best_lbl, best_res = _edge_labels(pix, pal, ok, jpeg_nearby=jpeg_ok)
         # Alpha independently identifies foreground along transparent contours.
         # Keep their repair separate from opaque colour/gradient boundaries.
         alpha_edge = ndi.maximum_filter(~opaque, size=7, mode="constant")[ey, ex]
@@ -308,7 +331,9 @@ def segment(img: Loaded, cfg: Config) -> Segmentation:
                     # Re-estimate coverage only near restored cores; other edges
                     # keep their original assignments. Speckle cleanup still runs.
                     best_lbl[affected], best_res[affected] = _edge_labels(
-                        pix[affected], pal, ok[affected])
+                        pix[affected], pal, ok[affected],
+                        jpeg_nearby=(jpeg_ok[affected] | ok[affected])
+                        if jpeg_ok is not None else None)
         got = best_lbl >= 0
         src[ey[got], ex[got]] = best_lbl[got]
     labels = _fill_unknown(src, src == -2)

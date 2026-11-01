@@ -3,6 +3,7 @@ Digitized Curves", Graphics Gems I), plus corner detection for closed contours."
 from __future__ import annotations
 
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
 
 def _norm(v: np.ndarray) -> np.ndarray:
@@ -151,7 +152,7 @@ def find_corners(P, angle_deg, k=4):
     corners = []
     for i in cand:
         win = [(i + j) % n for j in range(-k, k + 1)]
-        if turn[i] >= turn[win].max() - 1e-9 and all((i - c) % n > k or (c - i) % n > k for c in corners):
+        if turn[i] >= turn[win].max() - 1e-9 and all(min((i - c) % n, (c - i) % n) > k for c in corners):
             corners.append(int(i))
     return sorted(corners)
 
@@ -183,28 +184,76 @@ def refine_corner(P, i, k_in=3, k_out=12):
     return X if np.linalg.norm(X - P[i]) < 2.5 else P[i]
 
 
-def contour_to_beziers(P, tol, corner_deg):
+def smooth_open(pts: np.ndarray, sigma: float) -> np.ndarray:
+    """Gaussian-smooth an open polyline (~1 px spacing) with both end points pinned exactly."""
+    n = len(pts)
+    if sigma < 0.3 or n < 5:
+        return pts
+    r = min(int(np.ceil(4 * sigma)) + 1, n - 1)
+    left = 2 * pts[0] - pts[1:r + 1][::-1]            # odd reflection keeps the ends in place
+    right = 2 * pts[-1] - pts[-r - 1:-1][::-1]
+    ext = np.vstack([left, pts, right])
+    out = gaussian_filter1d(ext, sigma, axis=0, mode="nearest")[r:r + n]
+    out[0], out[-1] = pts[0], pts[-1]
+    return out
+
+
+STRAIGHT_RATIO = 0.008   # a run is straight if it bows < 0.8% of its length (noise, not curvature)
+
+
+def _straight(pts: np.ndarray, tol: float) -> bool:
+    ch = pts[-1] - pts[0]
+    L = np.linalg.norm(ch)
+    if L < 4 * max(tol, 1.0):
+        return False
+    nrm = np.array([-ch[1], ch[0]]) / L
+    return float(np.abs((pts - pts[0]) @ nrm).max()) <= max(tol, STRAIGHT_RATIO * L)
+
+
+def _line_curve(p0, p1):
+    d = p1 - p0
+    return np.array([p0, p0 + d / 3, p0 + 2 * d / 3, p1])
+
+
+def contour_to_beziers(P, tol, corner_deg, smooth_px: float = 0.0, straighten: bool = False,
+                       corner_k: int = 4):
     """Closed contour (N, 2) -> (start_point, [cubic ctrl arrays], closed=True).
-    Corners are detected and kept sharp; smooth stretches are fit with Schneider."""
+    Corners are detected and kept sharp; smooth stretches are fit with Schneider.
+
+    Optional clean-line mode (all off by default, so default output is unchanged):
+      smooth_px  Gaussian sigma ALONG the outline between corners, ends pinned (working px);
+                 corners are then detected on a lightly smoothed copy.
+      straighten corner-to-corner runs that bow < STRAIGHT_RATIO of their length -> exact lines.
+      corner_k   half-window (samples) of the corner detector; scale it with `upscale`."""
     P = resample_closed(P, 1.0)
     n = len(P)
     if n < 6:
         return None
-    corners = find_corners(P, corner_deg)
+    clean = smooth_px >= 0.3 or straighten or corner_k != 4
+    Pd = gaussian_filter1d(P, 1.0, axis=0, mode="wrap") if (clean and n > 12) else P
+    corners = find_corners(Pd, corner_deg, corner_k)
     if corners:
         P = P.copy()
         for i in corners:
-            P[i] = refine_corner(P, i)
+            P[i] = refine_corner(Pd, i, k_in=max(3, corner_k - 1), k_out=max(12, 3 * corner_k)) if clean \
+                else refine_corner(P, i)
         segs = []
         for a, b in zip(corners, corners[1:] + [corners[0] + n]):
             idx = [(j % n) for j in range(a, b + 1)]
             pts = P[idx]
             if len(pts) > 8:  # drop samples sitting on the rounded apex
                 pts = np.vstack([pts[:1], pts[2:-2], pts[-1:]])
+            if clean:
+                pts = smooth_open(pts, smooth_px)
+                if straighten and _straight(pts, 0.6 * tol):
+                    segs.append([_line_curve(pts[0], pts[-1])])
+                    continue
             segs.append(fit_open(pts, tol))
         curves = [c for s in segs for c in s]
         return P[corners[0]], curves
     # smooth closed loop: two halves with shared tangents (G1)
+    if smooth_px >= 0.3:
+        P = gaussian_filter1d(P, smooth_px, axis=0, mode="wrap")
     h = n // 2
     ta = _norm(P[1] - P[-1])
     tb = _norm(P[(h + 1) % n] - P[h - 1])

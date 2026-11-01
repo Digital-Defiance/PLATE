@@ -114,7 +114,7 @@ def summarise(rows: list[dict], weights: dict) -> list[dict]:
         for k in set().union(*[r["norm"].keys() for r in ok]) if ok else []:
             agg[k] = float(np.mean([r["norm"][k] for r in ok if k in r["norm"]]))
         raw = {}
-        for k in ("ssim", "anchors_per_shape", "shapes", "primitive_ratio", "named", "hidden_completion",
+        for k in ("ssim", "topology", "topo_extra", "topo_missing", "anchors_per_shape", "shapes", "primitive_ratio", "named", "hidden_completion",
                   "obj_complete_f1", "primitive_acc"):
             vals = [r["raw"][k] for r in ok if r["raw"].get(k) is not None]
             if vals:
@@ -135,7 +135,7 @@ def _thumb(svg_path: Path, size: int = 200) -> str:
         return ""
 
 
-METRIC_LABEL = dict(ssim="SSIM", edge_f1="Edge F1", obj_visible_f1="Objects found (visible)",
+METRIC_LABEL = dict(ssim="SSIM", edge_f1="Edge F1", topology="Same pieces as source", obj_visible_f1="Objects found (visible)",
                     obj_complete_f1="Objects found (complete)", hidden_completion="Hidden parts completed",
                     order_acc="Stacking order", anchor_eff="Anchor economy", primitive_ratio="True primitives",
                     named="Meaningful names")

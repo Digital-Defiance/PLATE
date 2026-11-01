@@ -103,7 +103,10 @@ plate doctor --vlm-url http://localhost:1234/v1
 plate trace logo.png -o logo.svg --report
 
 # presets tuned for different artwork
-plate trace art.jpg --preset illustration        # logo | illustration | lineart | max | compact
+plate trace art.jpg --preset illustration        # logo | illustration | lineart | max | compact | smooth
+
+# clean flat logos from JPEG: smooth outlines, straight lines stay straight, thin text kept
+plate trace logo.jpeg --preset smooth --set upscale=2
 
 # set ANY config lever ad hoc
 plate trace art.png --set simplify=1.2 --set max_colors=12
@@ -263,7 +266,10 @@ Metrics and per-image stats include
 ## Levers & presets
 
 Every quality lever lives in `src/plate/config.py` (documented inline) and maps 1:1 to a CLI flag,
-a TOML key, and `--set <lever>=<value>`. Presets: `logo`, `illustration`, `lineart`, `max`, `compact`.
+a TOML key, and `--set <lever>=<value>`. Presets: `logo`, `illustration`, `lineart`, `max`, `compact`,
+`smooth` (opt-in clean-line mode for real logos: JPEG chroma-edge repair, outline smoothing, exact straight runs, a hard cap on
+faceted polygon snaps and a fine-detail pass for 2 px text; pair it with `--set upscale=2` on small
+or JPEG sources).
 
 ## Project layout
 

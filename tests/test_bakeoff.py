@@ -63,6 +63,41 @@ def test_external_discovery(tmp_path):
     assert set(found) == {"illustrator", "vectorizer-ai"} and "scene00" in found["illustrator"]
 
 
+@pytest.fixture(scope="module")
+def jpeg_corpus(tmp_path_factory):
+    """The seed-1, 24-scene corpus pinned by docs/BAKEOFF.md; 6 scenes are JPEG-q55 variants."""
+    d = tmp_path_factory.mktemp("jpeg_corpus")
+    corpus.make_corpus(d, n=24, seed=1, noisy_every=4)
+    return d
+
+
+def _plate_hidden_completion(images_dir, truth_dir):
+    """Aggregate (mean per-scene) `hidden_completion` for plate over the JPEG-variant scenes."""
+    from plate import pipeline
+    jpgs = sorted(p for p in images_dir.iterdir() if p.suffix.lower() in (".jpg", ".jpeg"))
+    assert jpgs, "corpus must contain JPEG-damaged variants"
+    vals = []
+    for src in jpgs:
+        tr = corpus.load_truth(truth_dir / f"{src.stem}.json")
+        hc = score.structure(pipeline.run(src).svg, tr)["hidden_completion"]
+        if hc is not None:
+            vals.append(hc)
+    return float(np.mean(vals)), len(vals)
+
+
+def test_jpeg_variant_hidden_completion_meets_floor(jpeg_corpus):
+    """R1 state (a): the format-keyed JPEG denoise trigger (imageio.load_image) raises the
+    JPEG-variant aggregate `hidden_completion` above the 0.4 floor. Pins docs/BAKEOFF.md's
+    measured 3/10 -> 4/10 (aggregate 0.33 -> 0.42). The trigger fires on no PNG, so the 24
+    shipped SVGs stay byte-identical by construction (GC-4).
+
+    Validates: Requirements 1 (R1).
+    """
+    hc, n = _plate_hidden_completion(jpeg_corpus / "images", jpeg_corpus / "truth")
+    assert n == 6
+    assert hc >= 0.4, f"JPEG-variant hidden_completion {hc:.3f} fell below the 0.4 floor"
+
+
 def test_bakeoff_end_to_end_and_plate_beats_baseline(mini, tmp_path):
     summ = runner.run(mini / "images", tmp_path, ["plate", "vtracer"], truth=mini / "truth", log=lambda m: None)
     by = {s["tool"]: s for s in summ}

@@ -1,10 +1,34 @@
-# PLATE handover — 2026-10-31 (diagnostics fix + ORBIT defrag + EMBER limit)
+# PLATE handover — 2026-11-01 (JPEG colour boundaries)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — structural-target work (supersedes the section below)
+## Latest checkpoint — Research Force logo (supersedes historical notes below)
+
+The original Claude session's final messages and saved-file checksums were recovered from
+Jessica's shared conversation. She approved Task 13.8, which was not yet implemented. It is
+now implemented on top of the earlier **uncommitted** smooth-mode work; nothing committed/pushed.
+
+- `smooth` enables `jpeg_edges`: decoded-JPEG-only, wider flat-seed neighbourhood for
+  chromatic/luma-separated colour pairs, RGB pair selection, luma coverage. Luma alone did
+  almost nothing; the missing opposite-colour seeds were the main obstacle. Brightness edges
+  and low-luma-contrast pairs keep their original rules; PNG/default SVGs are unchanged.
+- Logo SSIM 0.975168 → 0.976148; topology 0 extra/1 missing → 0/0, both periods and V dot kept.
+  New output and comparison: `out/research-force/`. Current `STATUS.md` records exact validation,
+  code gates and benchmark tradeoffs; `tests/test_jpeg_edges.py` adds 17 regressions.
+- Same seed-1 `smooth` bake-off: composite 0.846317 → 0.846217 (effectively flat), object F1 and
+  hidden completion unchanged. No weight/acceptance-gate changes.
+- Full before/after suites: **583 → 600 passed**, **7 xfailed**, no exclusions/skips/xpasses.
+  Mock LM Studio test requires loopback access; the first sandbox run denied its bind, then
+  both full reruns passed with that access. All 24 PLATE + 24 VTracer defaults byte-identical.
+- Next is **Kiro 13.6**, gap-tip ownership before tracing; then **13.5**, smoothness scoring.
+  Some joins/bends remain imperfect. Jessica's "decent" Illustrator rating belongs to the
+  previous SVG; no native Illustrator acceptance of this revision is claimed.
+- Do not overwrite Jessica's `research-force/logo.svg`: another app re-saved it. Original
+  `research-force/logo.plate-smooth.svg` was also left intact; the new SVG is under PLATE's `out/`.
+
+## Historical checkpoint — structural-target work
 
 - On `main`, **five commits past `origin/main`, NOT pushed** (Jessica pushes herself):
   `09c2d0a` (preserved exposed-curve whisker fix + docs — the "uncommitted files" the

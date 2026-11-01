@@ -144,12 +144,26 @@ def interior_noise_fraction(rgb: np.ndarray, alpha: np.ndarray | None = None) ->
     return float((diff[interior] > 6).mean())
 
 
+def _is_jpeg(path: Path | str) -> bool:
+    """True when the source file decodes as JPEG (format, not extension)."""
+    try:
+        with Image.open(path) as probe:
+            return (probe.format or "").upper() == "JPEG"
+    except Exception:                                   # noqa: BLE001 - open_rgba reports real errors
+        return False
+
+
 def load_image(path: Path | str, cfg: Config) -> Loaded:
     im = open_rgba(path)
+    jpeg = _is_jpeg(path)
     w, h = im.size
     scale = 1.0
     longest = max(w, h)
-    if longest > cfg.work_size:
+    if cfg.upscale > 1.0:
+        # analyse an enlarged copy: ~2 px strokes and small text survive segmentation
+        scale = float(cfg.upscale)
+        im = im.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
+    elif longest > cfg.work_size:
         scale = cfg.work_size / longest
         im = im.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
     arr = np.asarray(im)
@@ -161,9 +175,13 @@ def load_image(path: Path | str, cfg: Config) -> Loaded:
         # fire on either so the sigma-2 "blind spot" between them no longer slips through.
         noisy = (noise_fraction(rgb, alpha) > 0.04
                  or interior_noise_fraction(rgb, alpha) > cfg.interior_noise)
-        level = 2 if noisy else 0
+        # JPEG ringing around sharp edges is invisible to both estimators but still breaks
+        # segmentation boundaries and primitive-fit completion: JPEG sources get a bilateral pass
+        # (engine-completion R1 / Task 1). Never fires on PNG, so PNG output is unchanged.
+        level = 2 if noisy else (1 if jpeg else 0)
     if level:
         # edge-preserving: bilateral keeps corners and small features that a median erases
         for _ in range(level):
             rgb = cv2.bilateralFilter(rgb, 9, 40, 5)
-    return Loaded(rgb=rgb, alpha=alpha, orig_size=(w, h), scale=scale if scale != 1.0 else 1.0)
+    return Loaded(rgb=rgb, alpha=alpha, orig_size=(w, h), scale=scale if scale != 1.0 else 1.0,
+                  is_jpeg=jpeg)

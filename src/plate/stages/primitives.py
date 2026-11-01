@@ -63,7 +63,18 @@ def _full_primitive_deviation(mask: np.ndarray, pr: Prim) -> float:
     return mean_deviation(reference, candidate)
 
 
-def snap(mask: Mask, cfg: Config) -> Prim | None:
+def _edge_dist(c: np.ndarray, pts: np.ndarray) -> float:
+    """98th-percentile distance from outline points c to the closed polygon pts."""
+    A, B = pts, np.roll(pts, -1, axis=0)
+    AB = B - A
+    L2 = np.maximum((AB ** 2).sum(1), 1e-9)
+    t = np.clip(((c[:, None, :] - A[None]) * AB[None]).sum(2) / L2[None], 0, 1)
+    proj = A[None] + t[..., None] * AB[None]
+    d = np.sqrt(((c[:, None, :] - proj) ** 2).sum(2)).min(1)
+    return float(np.percentile(d, 98))
+
+
+def snap(mask: Mask, cfg: Config, scale: float = 1.0) -> Prim | None:
     if mask.empty():
         return None
     if mask.area < 30:
@@ -150,7 +161,16 @@ def snap(mask: Mask, cfg: Config) -> Prim | None:
         if not 3 <= len(pts) <= 14:
             continue
         pg = Prim("polygon", pts=pts)
-        if ok(pg, 0.45) and (best is None or len(pts) < len(best.pts)):
+        if not ok(pg, 0.45):
+            continue
+        if cfg.snap_max_px > 0:
+            # size-proportional tolerance lets a big arc-bounded region pass as a faceted
+            # 14-gon (visible in Illustrator); cap mean AND worst-case error in source px
+            cap = cfg.snap_max_px * scale
+            if (_full_primitive_deviation(a, pg) > max(0.5, 0.45 * cap)
+                    or _edge_dist(c, pts) > max(1.5, 0.75 * cap)):
+                continue
+        if best is None or len(pts) < len(best.pts):
             best = pg
     if best is not None:
         return finish(best)

@@ -18,6 +18,7 @@ except ModuleNotFoundError:  # pragma: no cover
 class Config:
     # --- working resolution ---
     work_size: int = 1536           # longest side used internally; larger = finer, slower
+    upscale: float = 1.0            # >1: analyse an enlarged copy (thin strokes / small text); slower
     denoise: int = -1                # -1 auto (by measured noise), 0 off, N = N bilateral passes
     interior_noise: float = 0.002    # auto-denoise also fires when interior (edge-free) noise exceeds this
     # --- color / segmentation ---
@@ -26,6 +27,7 @@ class Config:
     palette: tuple[str, ...] = ()   # fixed hex palette; empty = auto
     filter_speckle: int = 6         # drop regions smaller than N working px
     edge_threshold: float = 10.0    # gradient level that marks anti-aliased edges
+    jpeg_edges: bool = False        # wider chroma-edge seed search + luma coverage; JPEG sources only
     # --- structure ---
     group_depth: int = 3            # nesting depth of groups (0 = flat list of shapes)
     complete_hidden: bool = True    # reconstruct hidden parts of occluded shapes
@@ -36,10 +38,17 @@ class Config:
     smooth: float = 0.8             # contour smoothing sigma (px) before fitting
     corner_threshold: float = 55.0  # degrees; turns sharper than this stay corners
     path_precision: int = 2         # decimals in path coordinates
+    edge_smooth: float = 0.0        # px (source) of smoothing ALONG outlines between corners (0 = off);
+                                    # removes JPEG/edge wobble. See preset 'smooth'.
+    straighten: bool = False        # corner-to-corner runs that bow < 0.8% of their length become exact lines
     strokes: bool = True            # round-capped lines, open curves, thin closed loops
     # --- primitives ---
     snap_primitives: bool = True    # circles/ellipses/rects/polygons -> real elements
     snap_tolerance: float = 0.012   # mean edge deviation as a fraction of shape size
+    snap_max_px: float = 0.0        # >0: cap POLYGON snap error in source px (stops big arcs becoming
+                                    # faceted polygons); 0 = off (size-proportional only)
+    rescue_detail: bool = False     # trace thin strokes / small text the colour segmentation absorbed
+    rescue_min_area: int = 6        # smallest rescued blob, working px
     # --- naming / AI ---
     name_layers: bool = True        # classical color+shape names; VLM refines if enabled
     vlm_url: str = ""               # OpenAI-compatible endpoint, e.g. http://localhost:1234/v1
@@ -81,6 +90,11 @@ PRESETS: dict[str, dict] = {
     "lineart": dict(group_depth=1, max_colors=2, simplify=0.5, snap_primitives=False),
     "max": dict(work_size=3072, simplify=0.35, smooth=0.7, max_colors=32),
     "compact": dict(simplify=1.6, smooth=1.0, max_colors=12, filter_speckle=12),
+    # Illustrator-grade clean lines for logos / line art, especially from JPEG. Opt-in because it
+    # changes PNG output (GC-4); tuned on the Research Force logo (docs/BAKEOFF.md). Add
+    # --set upscale=2 for small text and ~2 px strokes.
+    "smooth": dict(edge_smooth=3.0, straighten=True, corner_threshold=28.0, snap_max_px=1.0,
+                   rescue_detail=True, jpeg_edges=True),
 }
 
 

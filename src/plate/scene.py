@@ -15,6 +15,7 @@ class Loaded:
     alpha: np.ndarray            # (H, W) uint8
     orig_size: tuple[int, int]   # (w, h) of the source image
     scale: float                 # work px per source px
+    is_jpeg: bool = False        # decoded source format, independent of its filename
 
 
 @dataclass

@@ -1,6 +1,79 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-31 (objective bake-off harness) · Version 0.1.0 · Tests: 565+ passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-11-01 (JPEG colour boundaries, Task 13.8) · Version 0.1.0 · Tests: 600 passed, 7 expected feature gaps.
+
+## JPEG colour-boundary repair — 2026-11-01
+
+Task 1 re-audit (owner requested before committing this checkpoint): exactly reproduced
+3/10 → 4/10 JPEG objects, mean per-scene hidden completion 0.333333 → 0.416667 with
+the format-keyed trigger disabled/enabled. **Task 1 is done at its ≥0.4 floor**; the
+≥0.6 stretch and Task 2 residual-limit pin remain open. Evidence:
+`/tmp/plate-continue/task1-audit.json`. This checkpoint is being committed on
+`codex/logo-quality`; subsequent gap-tip work will be recorded separately.
+
+Resumed from Jessica's approval at the end of the shared Claude conversation. The current
+`STATUS.md` and spec task list matched that session's final checksums; `HANDOFF.md` predated it.
+Preserved all earlier uncommitted work. No push requested or performed.
+
+- Added opt-in `Config.jpeg_edges`, enabled by `smooth`, gated on decoded JPEG format via
+  `Loaded.is_jpeg` (renamed JPEG/PNG files are tested). Defaults and all PNG paths are unchanged.
+- The previous diagnosis was incomplete: **luma alone barely helped**. The two-working-pixel
+  seed neighbourhood often contained only one colour after edge dilation/chroma blur. For
+  chromatic pairs, search up to `max(4, ceil(4*scale))` working pixels; retain RGB residuals to
+  select the pair, then use BT.601 luma for its 50% boundary. Require luma separation ≥32 and
+  RGB-difference channel span ≥25% of its norm. Cream/dark, grayscale and near-equal-luma
+  pairs retain the old neighbourhood and coverage. The detail-core retry retains these rules.
+- All-pair widening was rejected: it added a six-pixel dark pocket near (592, 829). The
+  chromatic-pair gate preserves the brightness edges and avoids that regression.
+- Independent JPEG-q85 pink/blue line/arc fixtures: boundary errors fall **156–236 → 36–60**
+  at 1× and **686–810 → 43–86** at 2×. Seventeen regressions also protect luma/chroma
+  disagreement, multi-colour pair selection, low contrast, PNG identity, format gating and overrides.
+- Research Force logo, `--preset smooth --set upscale=2`: SSIM **0.975168 → 0.976148**,
+  MAE **1.39781 → 1.35239**, topology **0 extra / 1 missing → 0 / 0**. Output: 32 shapes,
+  647 serialized anchors. Rendered and inspected the full logo and enlarged colour/spine crops.
+  This is an improvement, not a claim that all bends/junctions are clean or Illustrator-certified.
+- Same 24-scene seed-1 bake-off, `smooth` at native working scale: composite
+  **0.846317 → 0.846217**, SSIM **0.989624 → 0.989619**; whole-object F1 **0.700787** and
+  hidden completion **0.548611** unchanged. All 18 PNG SVGs byte-identical; six JPEGs change.
+  Weights untouched. Corpus results are effectively flat; the gain is on the real logo/thin edges.
+- **Validation:** full baseline **583 passed / 7 xfailed** (366.12 s), final full suite
+  **600 passed / 7 xfailed** (367.62 s), no exclusions/skips/xpasses. All 28 focused tests pass;
+  all **24 PLATE + 24 VTracer default SVGs** byte-identical to the pre-session source snapshot.
+  Rendered and inspected the sample contact sheet; new segmentation/test code passes Ruff;
+  `git diff --check` passes. The 17 new tests failed before the implementation was added.
+  The first sandbox suite had 582 pass/7 xfail and one local-server bind denial; that test passes
+  with loopback access. Full reruns use that access rather than excluding the test.
+- Artifacts: `out/research-force/logo.plate-smooth.{svg,png,report.html}` and
+  `out/research-force/logo-jpeg-edges-comparison.png`, with measurements in `validation.json`.
+  Detailed before/after evidence and logs:
+  `/tmp/plate-resume/`, `/tmp/plate-resume-{before-tests-unrestricted,after-tests}.txt`.
+- Next: **13.6** (assign supported gap-tip pixels to their owning region before tracing,
+  rather than overlaying separate slivers) and **13.5** (a genuine smoothness metric).
+  The earlier Illustrator rating applies to the previous SVG; this revision needs a fresh look.
+
+## Clean-line mode for real logos (`--preset smooth`) + topology metric — 2026-11-01
+
+Driven by the Research Force logo (now a fixture: `samples/fixtures/research_force_logo.jpeg`,
+`tests/test_research_force_logo.py`). Kiro spec: engine-completion **R9 / Task 13** (13.1–13.4
+done; 13.5 smoothness metric and 13.6 junction waviness open; 13.7 checked as "decent"). Task 1 (R1,
+JPEG-keyed denoise) done and `docs/BAKEOFF.md` corrected (3/10 → 4/10, 0.33 → 0.42).
+
+- New opt-in levers (all off by default, so default output and the 24 shipped SVGs are unchanged):
+  `upscale`, `edge_smooth`, `straighten`, `snap_max_px`, `rescue_detail`, `rescue_min_area`;
+  `PRESETS["smooth"]`. New `stages/rescue.py` (fine detail such as a 2 px tagline; absorbs small
+  same-colour fragments; bridges tapering gap tips back to their region so they no longer float as
+  specks). `find_corners` dedup fix (circular index distance).
+- Bake-off: report-only `topology` metric (`topo_extra` / `topo_missing`; weight 0, composites
+  unchanged); `tests/test_topology_metric.py`.
+- Logo, `--preset smooth --set upscale=2`: SSIM 0.975, edge F1 1.000, 0 extra / 1 missing piece,
+  32 shapes, 4 colours (default: 0.960 / 0.930 / 3 extra, 32 missing — the tagline is lost).
+  Comparison with a vectorizer website and Adobe in `docs/BAKEOFF.md`.
+- Tried and rejected: capping smoothing moves at 35 % of the gap across a fold (no gain on a
+  synthetic noisy-wedge test). The dark specks came from the fine-detail pass, not from smoothing.
+- Illustrator check by the user (Kiro 13.7): **"decent"**. Cream edges smooth; pink/blue edges
+  lumpy and thin, blue bar end rounded — traced to JPEG's half-resolution colour: the pink band's
+  segmentation mask is ragged while a luma threshold of the same image is clean. Next: Kiro 13.8
+  (place colour edges from luma on JPEG), then 13.6 (gap tips owned by the gap's region).
 
 ## Objective bake-off harness — 2026-10-31
 

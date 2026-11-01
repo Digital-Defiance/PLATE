@@ -13,7 +13,7 @@ from .geometry import GradientFill, GradientStop, Prim
 from .imageio import load_image
 from .masks import Mask
 from .scene import Loaded, Node, Segmentation, Shape
-from .stages import emit, name, order
+from .stages import emit, name, order, rescue
 from .stages.primitives import snap, snap_ring
 from .stages.segment import segment
 from .stages.trace import mask_to_path
@@ -105,7 +105,7 @@ def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
     if cfg.snap_primitives:
         from .stages.primitives import normalize
         # exact primitive from completion if we have one; otherwise try to snap the silhouette
-        prim = normalize(shape.prim) if shape.prim is not None else snap(shape.full, cfg)
+        prim = normalize(shape.prim) if shape.prim is not None else snap(shape.full, cfg, scale)
     S = lambda v: v / scale
     P = lambda v: (v + 0.5) / scale
     node: Node | None = None
@@ -371,7 +371,12 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
         for s in shapes:
             if s.is_background:
                 leaves.pop(s.id, None)
+    rescued, absorbed = rescue.run(img, seg, cfg) if cfg.rescue_detail else (None, set())
+    for sid in absorbed:                 # fragments now drawn whole by the fine-detail layer
+        leaves.pop(sid, None)
     tree = _build_tree(shapes, roots, leaves, cfg, H * W)
+    if rescued is not None:
+        tree.append(rescued)
 
     # classical base names, then optional semantic overrides
     for n in leaves.values():
@@ -397,5 +402,8 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                  gradients=sum(n.grad is not None for n in leaves.values()),
                  strokes=sum(n.stroke_width is not None for n in leaves.values()),
                  t_segment=t1 - t0, t_order=t2 - t1, t_trace=t3 - t2, t_total=time.time() - t0)
+    if cfg.rescue_detail:
+        stats["rescued"] = len(rescued.children) if rescued is not None else 0
+        stats["absorbed"] = len(absorbed)
     stats["vlm_names"] = len(labels or {})
     return Result(svg, tree, shapes, seg, img, cfg, stats)

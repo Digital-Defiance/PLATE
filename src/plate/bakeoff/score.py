@@ -2,6 +2,8 @@
 
 Three families, all in [0,1] after normalisation (raw values are kept too):
   FIDELITY    ssim, edge_f1            how close the render is to the reference image
+  TOPOLOGY    topology                 same number of solid same-colour pieces as the reference
+                                       (report-only by default: weight 0, so composites are unchanged)
   EDITABILITY anchor_eff, primitive_ratio, named
   STRUCTURE   obj_visible_f1, obj_complete_f1, hidden_completion, order_acc, primitive_acc
               (needs truth: compares the SVG's elements with the known objects)
@@ -121,7 +123,113 @@ def fidelity(svg: str, ref_rgb: np.ndarray) -> dict:
     p = (re_ & dg).sum() / max(re_.sum(), 1) if re_.any() else 1.0
     r = (ge & dr).sum() / max(ge.sum(), 1) if ge.any() else 1.0
     return dict(ssim=float(ssim(ref_rgb, ren, channel_axis=2)), mae=mae,
-                edge_f1=float(2 * p * r / max(p + r, 1e-9)))
+                edge_f1=float(2 * p * r / max(p + r, 1e-9)), **topology(ren, ref_rgb))
+
+
+# ---------------------------------------------------------------- topology
+def _ref_palette(ref: np.ndarray, max_colors: int = 12) -> np.ndarray:
+    """Dominant colours of the reference: 5-bit histogram peaks holding >= 0.2% of its flat
+    pixels (3x3 neighbourhood within 12 RGB), at least 40 RGB apart. Only flat pixels vote, so
+    the repeated blend along a long straight anti-aliased edge never becomes a colour."""
+    k = np.ones((3, 3), np.uint8)
+    flat = (cv2.dilate(ref, k).astype(int) - cv2.erode(ref, k).astype(int)).max(2) <= 12
+    px = ref[flat] if flat.sum() >= 0.05 * flat.size else ref.reshape(-1, 3)
+    q = (px >> 3).reshape(-1, 3).astype(np.int32)
+    vals, counts = np.unique((q[:, 0] << 10) | (q[:, 1] << 5) | q[:, 2], return_counts=True)
+    pal: list[np.ndarray] = []
+    for i in np.argsort(-counts):
+        if counts[i] < 0.002 * len(q) or len(pal) >= max_colors:
+            break
+        c = np.array([(vals[i] >> 10) & 31, (vals[i] >> 5) & 31, vals[i] & 31], float) * 8 + 4
+        if all(np.linalg.norm(c - p) >= 40 for p in pal):
+            pal.append(c)
+    return np.array(pal, float).reshape(-1, 3)
+
+
+TOPO_SHARE = 0.4    # a pixel belongs to a colour only within 40% of the way to the next palette colour
+
+
+def _class_map(img: np.ndarray, pal: np.ndarray) -> np.ndarray:
+    """Nearest palette index per pixel, or -1 where the pixel is a blend (anti-aliasing, JPEG ringing)."""
+    x = img.astype(np.float32)
+    d = np.sqrt(np.stack([((x - c) ** 2).sum(2) for c in pal]))
+    gap = np.linalg.norm(pal[:, None] - pal[None], axis=2)
+    np.fill_diagonal(gap, np.inf)
+    lab = d.argmin(0)
+    return np.where(d.min(0) <= TOPO_SHARE * gap.min(1)[lab], lab, -1)
+
+
+def _labels(m: np.ndarray, min_area: int) -> tuple[np.ndarray, int]:
+    n, cc, stats, _ = cv2.connectedComponentsWithStats(m.astype(np.uint8), connectivity=8)
+    small = np.flatnonzero(stats[:, cv2.CC_STAT_AREA] < min_area)
+    cc[np.isin(cc, small[small > 0])] = 0
+    return cc, n
+
+
+def topology_pieces(ren: np.ndarray, ref_rgb: np.ndarray) -> list[dict]:
+    """Pieces that do not line up one-to-one between reference and render, with their colour,
+    kind ('extra' or 'missing'), centre (x, y) and size: for reports and debugging."""
+    pal = _ref_palette(ref_rgb)
+    if len(pal) < 2:
+        return []
+    min_area = max(4, int(4e-6 * ref_rgb.shape[0] * ref_rgb.shape[1]))
+    ca, cb = _class_map(ref_rgb, pal), _class_map(ren, pal)
+    out = []
+    for k in range(len(pal)):
+        A, na = _labels(ca == k, min_area)
+        B, nb = _labels(cb == k, min_area)
+        Bd = cv2.dilate(B.astype(np.float32), np.ones((3, 3), np.uint8)).astype(np.int64)  # 1 px slack
+        Ad = cv2.dilate(A.astype(np.float32), np.ones((3, 3), np.uint8)).astype(np.int64)
+        parent = list(range(na + nb))
+
+        def find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+        for X, Y in ((A, Bd), (Ad, B)):          # (reference label, render label) pairs that touch
+            both = (X > 0) & (Y > 0)
+            for a, b in set(zip(X[both].tolist(), Y[both].tolist())):
+                parent[find(a)] = find(na + b)
+        present_a = set(np.unique(A[A > 0]).tolist())
+        present_b = set(np.unique(B[B > 0]).tolist())
+        groups: dict[int, tuple[list, list]] = {}
+        for a in present_a:
+            groups.setdefault(find(a), ([], []))[0].append(a)
+        for b in present_b:
+            groups.setdefault(find(na + b), ([], []))[1].append(b)
+        for ga, gb in groups.values():
+            if len(gb) > len(ga):
+                pick, L, kind = gb, B, "extra"
+            elif len(ga) > len(gb):
+                pick, L, kind = ga, A, "missing"
+            else:
+                continue
+            sizes = sorted(((int((L == i).sum()), i) for i in pick))      # smallest pieces are the odd ones
+            for area, i in sizes[:abs(len(gb) - len(ga))]:
+                ys, xs = np.nonzero(L == i)
+                out.append(dict(color=tuple(int(v) for v in pal[k]), kind=kind,
+                                at=(float(xs.mean()), float(ys.mean())), area=area))
+    return out
+
+
+def topology(ren: np.ndarray, ref_rgb: np.ndarray) -> dict:
+    """Do the same pieces exist? Solid same-colour pieces (per dominant reference colour) are
+    matched by overlap. topo_extra counts pieces the SVG adds (specks, pinched-off wedge tips,
+    shapes split in two); topo_missing counts pieces it loses (dropped dots and periods, shapes
+    merged together). topology = 1 - (extra + missing) / reference pieces, clipped to [0, 1].
+    Blend pixels are ignored on both sides, so a soft JPEG and a crisp render compare fairly."""
+    pal = _ref_palette(ref_rgb)
+    if len(pal) < 2:
+        return dict(topology=1.0, topo_extra=0, topo_missing=0)
+    min_area = max(4, int(4e-6 * ref_rgb.shape[0] * ref_rgb.shape[1]))
+    ca = _class_map(ref_rgb, pal)
+    total = sum(len(np.unique(_labels(ca == k, min_area)[0])) - 1 for k in range(len(pal)))
+    odd = topology_pieces(ren, ref_rgb)
+    extra = sum(p["kind"] == "extra" for p in odd)
+    missing = sum(p["kind"] == "missing" for p in odd)
+    return dict(topology=float(max(0.0, 1 - (extra + missing) / max(total, 1))),
+                topo_extra=extra, topo_missing=missing)
 
 
 # ---------------------------------------------------------------- structure vs truth
@@ -221,6 +329,7 @@ def normalise(raw: dict) -> dict:
     n = {}
     if "ssim" in raw: n["ssim"] = c((raw["ssim"] - 0.85) / 0.14)
     if "edge_f1" in raw: n["edge_f1"] = c(raw["edge_f1"])
+    if "topology" in raw: n["topology"] = c(raw["topology"])
     if "anchors_per_shape" in raw: n["anchor_eff"] = c(1 - (raw["anchors_per_shape"] - 4) / 36)
     if "primitive_ratio" in raw: n["primitive_ratio"] = c(raw["primitive_ratio"])
     if "named" in raw: n["named"] = c(raw["named"])

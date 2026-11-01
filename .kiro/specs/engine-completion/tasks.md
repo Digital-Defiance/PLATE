@@ -15,7 +15,14 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
 
 ---
 
-- [ ] 1. JPEG robustness: format-keyed denoise trigger + correct the docs (R1).
+- [x] 1. JPEG robustness: format-keyed denoise trigger + correct the docs (R1).
+      Done 2026-11-01: `_is_jpeg` + `level = 2 if noisy else (1 if jpeg else 0)` in
+      `load_image`; pinned by `test_jpeg_variant_hidden_completion_meets_floor` (3/10 → 4/10,
+      0.33 → 0.42; floor met, 0.6 stretch not); `docs/BAKEOFF.md` corrected.
+      Re-audited 2026-11-01 against the exact seed-1/q55 corpus with the JPEG trigger
+      disabled vs enabled: 3/10 → 4/10 objects, mean per-scene 0.333333 → 0.416667.
+      Task 1's ≥0.4 acceptance floor is met; the ≥0.6 stretch and Task 2 residual pin
+      are NOT done. Evidence: `/tmp/plate-continue/task1-audit.json`.
       Measure first: `plate corpus -o /tmp/jpeg-bo -n 24 --seed 1` then
       `plate bakeoff /tmp/jpeg-bo/images --truth /tmp/jpeg-bo/truth -o /tmp/jpeg-bo/out`;
       confirm JPEG-variant aggregate `hidden_completion` ≈ 0.30 (3/10). Add a JPEG-keyed
@@ -177,8 +184,52 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
       (b) pinned).
       Verify: focused `pytest -q` for the touched tests; REGS holds.
 
+- [ ] 13. Real-artwork clean-line mode, opt-in `smooth` preset (R9).
+  - [x] 13.1 Levers + preset: `upscale`, `edge_smooth`, `straighten`, `snap_max_px`,
+        `rescue_detail`, `rescue_min_area`; `PRESETS["smooth"]`; `find_corners` dedup fix.
+        Files: `config.py`, `imageio.py`, `bezier.py`, `stages/trace.py`, `stages/primitives.py`.
+  - [x] 13.2 Fine-detail rescue (`stages/rescue.py`, wired in `pipeline.py`): per-pixel best-fit
+        ink, fringe/boundary-blend exclusion, absorption of small same-colour fragments, and
+        bridging of tapering gap tips back to their region (fixes the floating specks).
+  - [x] 13.3 Bake-off `topology` metric, report-only (`bakeoff/score.py`, `bakeoff/runner.py`);
+        `tests/test_topology_metric.py`.
+  - [x] 13.4 Research Force logo fixture (`samples/fixtures/`) + `tests/test_research_force_logo.py`.
+  - [ ] 13.5 Smoothness metric for the bake-off (e.g. curvature sign changes or deviation from a
+        locally fitted line/arc per unit outline length) so wobble is a number, not an eyeball;
+        then measure `--preset smooth` on the synthetic corpus and the real corpus.
+  - [ ] 13.6 Narrow gaps near the logo's spine come out slightly short and wavy (mask blur +
+        along-outline smoothing). Investigate width-aware smoothing. Tried and rejected
+        2026-11-01: clamping each smoothing move to 35 % of the gap across a fold — no gain on a
+        synthetic noisy-wedge test (1/12 vs 0/12 pinched), so do not re-try it as-is.
+        Also: a bridged gap tip is a separate "fine detail" sliver over the covering shape, so at
+        high zoom its join shows a small knob/step. Cleaner fix: give the tip pixels to the gap's
+        region before tracing (update `seg.rid` and the shape masks), so the covering shape's own
+        outline carries the whole notch and no sliver is needed.
+  - [x] 13.7 User check in Illustrator of `plate trace logo.jpeg --preset smooth --set upscale=2`.
+        2026-11-01, rated "decent": cream (luma) edges smooth; pink and blue (colour) edges lumpy
+        and slightly thin; blue bar's square end rounded; small knobs at bridged gap tips; dark
+        slivers under the blue bar step where a tip is bridged. Recorded in STATUS.md.
+  - [x] 13.8 JPEG colour-edge repair (2026-11-01): opt-in `jpeg_edges`, enabled by `smooth`,
+        decoded-JPEG-only. Luma alone barely helped: edge dilation/chroma blur often puts the
+        opposite flat seed beyond the old two-working-pixel neighbourhood. Chromatic pairs
+        (RGB-difference channel span ≥25% of norm) with BT.601 luma separation ≥32 use seed
+        radius `max(4, ceil(4*scale))`; RGB residuals still choose the pair, luma assigns its
+        ≥50% owner, including the detail-core retry. Other pairs retain the old rules.
+        Rejected widening every pair: it created a six-pixel dark pocket near (592, 829).
+        Seventeen regressions (`tests/test_jpeg_edges.py`): independent pink/blue JPEG-q85 line/
+        arc masks at 1×/2×, luma/chroma disagreement, low contrast, RGB pair choice, PNG identity,
+        format-not-extension gating, override. Boundary errors 156–236 → 36–60 (1×),
+        686–810 → 43–86 (2×). Logo SSIM .975168 → .976148, topology 0 extra/1 missing → 0/0.
+        Same-corpus `smooth` bake-off .846317 → .846217 (flat, not a structural gain); weights
+        unchanged. All 24 PLATE + 24 VTracer default SVGs byte-identical. Some bends/joins remain
+        imperfect; 13.6 and 13.5 stay open. New output in `out/research-force/`; see STATUS for
+        the final full-suite validation: 583 → 600 passed, 7 xfailed, no exclusions. No native
+        Illustrator acceptance of this revision yet.
+      Acceptance: R9 (a) pins green; 13.5–13.7 each end in (a) or (b).
+      Verify: `pytest -q tests/test_research_force_logo.py tests/test_topology_metric.py`; REGS holds.
+
 - [ ] 12. Engine-complete audit + declare done (R8).
-      Confirm every requirement R1–R7 (and each sub-item) is recorded in a terminal state
+      Confirm every requirement R1–R7 and R9 (and each sub-item) is recorded in a terminal state
       (a) or (b) with its moving number or pin test named. Re-verify the full regression
       surface from a clean tree. Update `STATUS.md` and `README.md` to declare the classical
       engine complete, with an honest ceiling statement (count of FIXED vs DOCUMENTED LIMIT
@@ -203,3 +254,4 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
 - R6 → Tasks 5 (R6a), 6 (R6b)
 - R7 → Tasks 9 (R7a/b/c), 10 (R7d/e/f), 11 (R7g)
 - R8 → Task 12
+- R9 → Task 13
