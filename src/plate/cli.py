@@ -11,7 +11,7 @@ import numpy as np
 from . import __version__
 from .config import PRESETS, Config, load
 
-IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
+IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
 
 def _coerce(cfg_field: dataclasses.Field, raw: str):
@@ -167,9 +167,33 @@ def _bench(args) -> int:
     return 0
 
 
+def _corpus(args) -> int:
+    from .bakeoff.corpus import make_corpus
+    paths = make_corpus(Path(args.output), n=args.n, seed=args.seed)
+    print(f"{len(paths)} scenes -> {args.output}/images (ground truth in {args.output}/truth)")
+    return 0
+
+
+def _bakeoff(args) -> int:
+    from .bakeoff import adapters, runner
+    tools = [t.strip() for t in args.tools.split(",") if t.strip()]
+    bad = [t for t in tools if t not in adapters.BUILTIN]
+    if bad:
+        raise SystemExit(f"plate: unknown tool(s) {bad}. Built in: {', '.join(adapters.BUILTIN)}")
+    out = Path(args.output)
+    summ = runner.run(Path(args.images), out, tools, Path(args.truth) if args.truth else None,
+                      Path(args.external) if args.external else None, runner.load_weights(args.weights),
+                      log=(lambda m: None) if args.quiet else print)
+    print(f"\n{'tool':16} {'composite':>9}  anchors/shape  time")
+    for s in summ:
+        print(f"{s['tool']:16} {s['composite']:9.3f}  {s['raw'].get('anchors_per_shape', 0):13.1f}  {s['seconds']:.1f}s")
+    print(f"\nreport: {out / 'report.html'}   data: {out / 'results.csv'}")
+    return 0
+
+
 def _doctor(args) -> int:
     ok = True
-    for mod, need in (("numpy", 1), ("PIL", 1), ("scipy", 1), ("cv2", 1), ("skimage", 0),
+    for mod, need in (("numpy", 1), ("PIL", 1), ("scipy", 1), ("cv2", 1), ("skimage", 1),
                       ("vtracer", 0)):
         try:
             __import__(mod); print(f"  ok        {mod}")
@@ -261,6 +285,18 @@ def main(argv: list[str] | None = None) -> int:
 
     be = sub.add_parser("bench", help="PLATE vs plain VTracer on a folder (editability + fidelity)")
     be.add_argument("input"); be.add_argument("-o", "--output"); _common(be); be.set_defaults(fn=_bench)
+
+    co = sub.add_parser("corpus", help="generate a synthetic bake-off corpus with exact ground truth")
+    co.add_argument("-o", "--output", required=True); co.add_argument("-n", type=int, default=24)
+    co.add_argument("--seed", type=int, default=1); co.set_defaults(fn=_corpus)
+
+    bk = sub.add_parser("bakeoff", help="score PLATE and other tools objectively on a folder of images")
+    bk.add_argument("images"); bk.add_argument("-o", "--output", required=True)
+    bk.add_argument("--truth", help="folder from `plate corpus` (…/truth) to enable structure scoring")
+    bk.add_argument("--external", help="folder of IMAGE.TOOL.svg exports from other tools (Illustrator, Vectorizer.AI…)")
+    bk.add_argument("--tools", default="plate,vtracer,vtracer-cutout,potrace-color")
+    bk.add_argument("--weights", type=Path, help="TOML overriding metric weights")
+    bk.add_argument("--quiet", action="store_true"); bk.set_defaults(fn=_bakeoff)
 
     d = sub.add_parser("doctor", help="check dependencies and LM Studio")
     d.add_argument("--vlm-url", dest="vlm_url"); d.set_defaults(fn=_doctor)

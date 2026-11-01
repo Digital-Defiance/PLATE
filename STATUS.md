@@ -1,6 +1,32 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-31 (structural audit closed + real-artwork corpus) · Version 0.1.0 · Tests: 565 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-31 (objective bake-off harness) · Version 0.1.0 · Tests: 565+ passing, 7 expected feature gaps (`pytest -q`)
+
+## Objective bake-off harness — 2026-10-31
+
+Added `plate corpus` + `plate bakeoff` (new `src/plate/bakeoff/` package: `corpus.py`,
+`score.py`, `adapters.py`, `runner.py`; `docs/BAKEOFF.md`; `tests/test_bakeoff.py`) to
+score PLATE against other tools on a synthetic corpus with EXACT ground truth across
+fidelity, structure (object/complete/hidden/order via visible-region IoU) and editability,
+with a weighted composite re-ranked under five weight profiles and an HTML report.
+
+**Results (24-scene corpus, seed 1; 6 JPEG-damaged):** PLATE composite **0.79**, first under
+ALL five weightings — vtracer-stacked 0.50, vtracer-cutout 0.49, potrace-color 0.43. PLATE
+anchors/shape 10 vs 23/34/100; hidden-parts recovered 46% vs ~8%; clean SSIM 0.988 (near-tie
+with VTracer 0.990). Full method + table in `docs/BAKEOFF.md`.
+
+**Weaknesses the bake-off surfaced (now the top ROADMAP "P1 — bake-off driven" items):**
+JPEG-damaged scenes recover 0/10 occluded objects and score worse than VTracer on damaged
+input (T-junction occlusion test breaks on block noise); occluded rect/polygon/rrect completion
+lags circles (4/11, 3/10, 5/12); touching same-colour objects merge (the same blocker behind the
+EMBER/ROOT/storefront structural limits).
+
+**Reconcile note:** the bake-off work arrived as an uncommitted pile that had also reverted
+several shipped fixes. Those were restored while keeping the bake-off feature: `cli.py` uses
+`open_rgba` again (16-bit/EXIF/clean-error loader), batch exit code, `main()` error handling,
+macOS dyld re-exec and the robust doctor cairosvg probe; `pyproject.toml` keeps version 0.1.0,
+`scikit-image` as a core dep, and authors/Homepage, plus the new `bakeoff` extra (+`potracer`).
+The new CLI keeps `.gif` out of `IMG_EXT` (bake-off-era choice). Packaging guards pass.
 
 ## Structural audit closed + real-artwork corpus — 2026-10-31
 

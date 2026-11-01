@@ -8,7 +8,7 @@ You are continuing **PLATE**, a CLI that converts raster images to Illustrator-f
 - Visual check is mandatory for pipeline changes: `plate bench samples -o /tmp/b` then open `/tmp/b/*.plate.svg` (or `plate trace X --report`).
 - Never commit/push unless the owner (Jessica) asks. At end of session update `STATUS.md`.
 - Don't delete the plain-VTracer baseline; it is the control in `plate bench`.
-- Prefer small, measurable changes; every change should move a number in `plate bench`.
+- Prefer small, measurable changes; every change should move a number in `plate bench` or `plate bakeoff` (see `docs/BAKEOFF.md`). Don't tune the bake-off weights to flatter PLATE; fix the weakness instead.
 
 ## Map of the code (`src/plate/`)
 | file | role |
@@ -24,8 +24,9 @@ You are continuing **PLATE**, a CLI that converts raster images to Illustrator-f
 | `pipeline.py` | `run(path, cfg, labels)` orchestrates; returns `Result` (svg, nodes, shapes, stats) |
 | `vlm.py` | LM Studio client: `name_shapes`, `group_shapes`, `apply_groups`, `describe` |
 | `metrics.py`, `report.py`, `raster.py` | editability + fidelity metrics, HTML report, cairosvg render |
-| `cli.py` | trace / batch / sweep / bench / doctor |
-| `tests/` | `test_pipeline.py` (ground truth), `test_vlm.py` (+`mock_vlm.py`), `test_config.py` |
+| `bakeoff/` | `corpus.py` (synthetic truth scenes), `score.py` (metrics, composite, weights), `adapters.py` (plate/vtracer/potrace + external discovery), `runner.py` (run, summary, profiles, HTML report) |
+| `cli.py` | trace / batch / sweep / bench / corpus / bakeoff / doctor |
+| `tests/` | `test_bakeoff.py`, `test_pipeline.py` (ground truth), `test_vlm.py` (+`mock_vlm.py`), `test_config.py` |
 | `scripts/make_samples.py` | generates synthetic `samples/*.png` (has ground truth numbers) |
 
 ## Conventions (easy to get wrong)
@@ -40,6 +41,6 @@ You are continuing **PLATE**, a CLI that converts raster images to Illustrator-f
 The original author's sandbox could not reach LM Studio; later sessions verified a real naming/grouping connection (see `STATUS.md`). Automated tests use `tests/mock_vlm.py`; current live availability was not rechecked in the project audit. LM Studio serves an OpenAI-style API at `http://localhost:1234/v1` (start the server in the LM Studio "Developer" tab and load a vision model).
 
 ## Suggested first session
-1. `pip install -e ".[dev,render]" && pytest -q && plate bench samples`
-2. Do the P0 items in ROADMAP.md (Illustrator checklist, real LM Studio, real images). Record outcomes in STATUS.md.
-3. Then P1 in order. Gradients is the biggest quality gap.
+1. `pip install -e ".[dev,render]" && pytest -q && plate bench samples`; then `plate corpus -o /tmp/bo/corpus && plate bakeoff /tmp/bo/corpus/images --truth /tmp/bo/corpus/truth -o /tmp/bo/out` to see the objective bake-off scores (PLATE vs VTracer/Potrace; `docs/BAKEOFF.md`).
+2. Do the P0 items in ROADMAP.md (real LM Studio naming accuracy/latency, real-image corpus). Record outcomes in STATUS.md.
+3. Then the bake-off-driven P1 items in ROADMAP (JPEG robustness, same-colour splitting, rect/polygon completion). Re-run `plate bakeoff` after each and update `docs/BAKEOFF.md`.

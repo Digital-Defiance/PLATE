@@ -64,6 +64,35 @@ pinned) or the 7 structural gaps. The separate hosted-service milestone below re
 unimplemented, not a reason to skip this authorized quality work. The next front is
 item 3 (structural targets). Update this queue and HANDOFF as work lands.
 
+## P1 — bake-off driven (do these first; re-run `plate bakeoff` after each and update `docs/BAKEOFF.md`)
+
+An objective bake-off harness now scores PLATE against other tools on a synthetic corpus with
+exact ground truth (`plate corpus` + `plate bakeoff`; method and results in `docs/BAKEOFF.md`).
+PLATE ranks first under all five weightings, but the bake-off surfaced concrete weaknesses that
+are the highest-value next fixes. Re-run `plate bakeoff bo/corpus/images --truth bo/corpus/truth`
+after each change; do NOT tune the composite weights to flatter PLATE — fix the weakness.
+
+- [ ] **JPEG robustness.** JPEG-damaged scenes recover **0/10** occluded objects (SSIM 0.967 vs
+  VTracer 0.985 on damaged input); block/ringing noise breaks the T-junction occlusion test in
+  `complete._junctions`/`_occludes`. Denoise or smooth contours harder before junction analysis.
+  Target: JPEG-variant `hidden_completion` ≥ 0.6.
+- [ ] **Same-colour touching objects merge** (colour-only segmentation can't split them): the
+  recurring blocker also behind the EMBER/ROOT/storefront structural limits. Split regions at
+  concavities / convexity defects, or via SAM (P2). Add corpus scenes that stress this.
+- [ ] **Rect/polygon amodal completion** is weaker than circles (occluded rect 4/11, polygon 3/10,
+  rrect 5/12 on the corpus). Extend the free edges of a partly-hidden rect/polygon by line
+  intersection rather than only fitting on free points. Target overall `hidden_completion` ≥ 0.8.
+- [ ] **Add external tools to the bake-off** (`--external DIR` with `IMAGE.TOOL.svg` exports):
+  Illustrator Image Trace, Vectorizer.AI, Inkscape trace. Needs a Mac with those apps; record in
+  `docs/BAKEOFF.md`.
+- [ ] **Real-image bake-off** (20–30 images, no ground truth): run `plate bakeoff` to check the
+  synthetic result is not flattering; structure metrics skip and the composite renormalises.
+- [ ] **Extend the corpus generator** (`bakeoff/corpus.py`) with gradients, strokes, text-like
+  shapes and shadows so these weaknesses stay visible under scoring.
+
+All of these are tracked by `tests/test_bakeoff.py` (which also asserts the ground-truth SVG scores
+perfect structure and a cutout-only tool loses completion credit — the method's own safeguards).
+
 ## Coverage boundary and quality gates
 
 PLATE is not complete across every meaningful PNG. Its intended launch scope is

@@ -26,8 +26,9 @@ Homepage = "https://github.com/Digital-Defiance/PLATE"
 [project.optional-dependencies]
 # LM Studio needs no extra deps (stdlib urllib); heavy model deps stay optional.
 render = ["cairosvg"]                   # SSIM metrics, reports, `plate bench` (needs libcairo)
+bakeoff = ["cairosvg", "potracer"]      # + pure-Python Potrace comparison tool for `plate bakeoff`
 sam = ["torch", "transformers"]         # optional SAM-family segmenter (not built yet)
-dev = ["pytest", "ruff", "cairosvg"]
+dev = ["pytest", "ruff", "cairosvg", "potracer"]
 
 [project.scripts]
 plate = "plate.cli:main"

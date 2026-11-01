@@ -126,6 +126,11 @@ plate bench samples
 
 # plain VTracer output only (the control used by `bench`)
 plate trace art.png --baseline
+
+# objective bake-off: generate a synthetic corpus with exact ground truth, then score
+# PLATE against other tools (VTracer, Potrace) on fidelity, structure and editability
+plate corpus -o bo/corpus -n 24 --seed 1
+plate bakeoff bo/corpus/images --truth bo/corpus/truth -o bo/out   # open bo/out/report.html
 ```
 
 `plate batch` continues after individual failures and prints totals. Its exit code is
@@ -188,6 +193,34 @@ generated-realistic corpus (gradients, soft shadows, noise, JPEG-like artifacts,
 near-duplicate palettes, extreme aspect ratios, translucent overlaps). This is a diagnostic,
 not a gate: per-image numbers are in `docs/REAL-CORPUS.md`, and provenance plus the CC0
 drop-in instructions are in `samples/real/CREDITS.md`.
+
+## Bake-off against other tools
+
+Objective scoring on 24 synthetic scenes with **exact ground truth** (`plate corpus` +
+`plate bakeoff`). Every metric is normalised to 0–1 (higher is better); the composite weights
+and full method are in [`docs/BAKEOFF.md`](docs/BAKEOFF.md).
+
+| tool | composite | geometry-only\* | anchors / shape | hidden parts recovered | SSIM (clean) |
+|---|---|---|---|---|---|
+| **PLATE** | **0.79** | **0.79** | **10** | 46% | 0.988 |
+| VTracer (stacked) | 0.50 | 0.64 | 23 | 8% | 0.990 |
+| VTracer (cutout) | 0.49 | 0.63 | 34 | 9% | — |
+| Potrace (8-colour stack) | 0.43 | 0.56 | 100 | 8% | — |
+
+\*geometry-only removes credit for layer names and true primitives, which only PLATE produces.
+PLATE ranks first under all five weightings (balanced, geometry-only, fidelity-first,
+editability-first, structure-first).
+
+**Read it honestly:**
+- PLATE's win is editability and structure — fewer anchors, real primitives, named layers, hidden
+  parts completed. On pixel fidelity it is a near-tie with VTracer on clean images (SSIM 0.988 vs
+  0.990, with lower mean pixel error) and **worse on JPEG-damaged input** (SSIM 0.967 vs 0.985).
+- Weak spots the bake-off surfaced: only ~46% of hidden objects are recovered (occluded
+  rectangles/polygons are worst), **0 of 10** on JPEG-damaged scenes, and touching same-colour
+  objects merge. These are the top [ROADMAP](ROADMAP.md) items.
+- The corpus is flat vector art, so it says nothing yet about photos/gradients, and Illustrator
+  Image Trace / Vectorizer.AI are not in the table yet (they need manual exports; see
+  [`docs/BAKEOFF.md`](docs/BAKEOFF.md)).
 
 ## Testing
 
@@ -256,5 +289,5 @@ and `.ai` copies. All eight currently pass. To run the full 24-image corpus, app
 `samples/*.png samples/challenges/*.png` before or after the options.
 Full usage and remaining checks: `docs/illustrator-checklist.md`.
 
-`AGENTS.md` (agent handoff) · `ROADMAP.md` · `STATUS.md` · `docs/SPEC.md` · `docs/METRICS.md` ·
-`docs/illustrator-checklist.md`
+`AGENTS.md` (agent handoff) · `ROADMAP.md` · `STATUS.md` · `docs/BAKEOFF.md` · `docs/SPEC.md` ·
+`docs/METRICS.md` · `docs/illustrator-checklist.md`
