@@ -183,6 +183,12 @@ or posterize. Independent desired-SVG challenges and remaining failures are in `
 The UI card now has three editable straight strokes in place of filled pill approximations;
 its lower primitive percentage reflects that representation change.
 
+For a tougher read, `plate bench samples/real` runs PLATE on a deliberately messy,
+generated-realistic corpus (gradients, soft shadows, noise, JPEG-like artifacts, busy and
+near-duplicate palettes, extreme aspect ratios, translucent overlaps). This is a diagnostic,
+not a gate: per-image numbers are in `docs/REAL-CORPUS.md`, and provenance plus the CC0
+drop-in instructions are in `samples/real/CREDITS.md`.
+
 ## Testing
 
 ```bash
@@ -234,6 +240,7 @@ scripts/            synthetic sample + control generators
 tests/              pytest suite, incl. the control regression suite
 docs/               SPEC, METRICS protocol, Illustrator import checklist
 samples/            generated synthetic test images
+samples/real/       messy real-style evaluation corpus (diagnostic; see docs/REAL-CORPUS.md)
 ```
 
 ## Docs

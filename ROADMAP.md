@@ -43,9 +43,16 @@ supersedes older statements deferring all engine work to the hosted service.
      identical overlapping back/front rectangles currently report two splits.
    - [ ] Broaden short curved butt-cap controls: an existing accepted fit emits
      round caps for the recorded butt-cap probe. Square-cap guards currently pass.
-4. [ ] Add the 10–20-image redistributable real corpus and broader independent
+4. [~] Add the 10–20-image redistributable real corpus and broader independent
    alpha/gradient/occlusion/aspect-ratio/stroke/lettering contracts. Add per-case
    exception recording before fuzzing.
+   DONE (generated portion): a redistributable, deliberately messy 14-image
+   generated-realistic corpus now ships in `samples/real/` via
+   `scripts/make_real_corpus.py`; run it as a diagnostic with
+   `plate bench samples/real`, per-image numbers in `docs/REAL-CORPUS.md`. It is
+   diagnostic only (no structural oracle, no gate). REMAINING: genuine CC0/PD
+   drop-ins (slot + manifest ready in `samples/real/CREDITS.md`) and the broader
+   independent structural contracts.
 5. [ ] Close ICC/gamma colour-management, pre-decode resource limits and expanded
    native Illustrator editing/hidden-object/hole/4× seam/live-shape validation.
 
@@ -70,9 +77,14 @@ of complete PNG reconstruction. README's coverage table is the public scope.
 - [x] Correct actual Illustrator layer import with Adobe namespace markers and
   explicit containers for standalone top-level shapes. Preserve original IDs,
   geometry, stacking, gradients, nested groups and existing-document state.
-- [ ] Add a representative, redistributable 10–20-image real-artwork corpus,
+- [~] Add a representative, redistributable 10–20-image real-artwork corpus,
   tagged by artwork family and difficulty; report per-image failures, not just
   aggregate scores. Independent authored fixtures remain the structural oracle.
+  DONE (generated portion): a 14-image generated-realistic corpus ships in
+  `samples/real/` (`scripts/make_real_corpus.py`) with a committed per-image
+  diagnostic table in `docs/REAL-CORPUS.md`; it is diagnostic only, so the
+  independent authored fixtures in `samples/challenges/` remain the structural
+  oracle. REMAINING: genuine CC0/PD drop-ins per `samples/real/CREDITS.md`.
 - [x] Explicit static PNG decode matrix: all 15 legal colour/depth combinations,
   ordinary/Adam7 rows, tRNS/palette alpha, packing/filter/IDAT cases, exact 16-bit
   transparency, equivalent-encoding traces, hidden RGB, EXIF and selected malformed
@@ -193,7 +205,7 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 - [x] **Actual Illustrator layers.** `i:layer="yes"` in Adobe's 10.0 namespace imports real named layers directly. Standalone roots use layer containers; nested semantic groups remain groups. All 24 render identically before/after; layer names/order and object membership are checked explicitly. Raw imports and AI reopening pass without native postprocessing.
 - [x] **Existing-document preservation.** A separate-call native probe verified that the normal runner preserves an already-open copied AI with unsaved changes, marker geometry/colour, active document and interaction setting. Only owned test documents close. Evidence: `/tmp/plate-illustrator-preservation/preservation.json`. An earlier nested wrapper timed out without a visible dialog; cause remains unidentified.
 - [ ] **Remaining Illustrator validation.** Live-shape widgets, direct gradient edits, wider opacity/blend inputs, native hidden-shape/hole isolation and high-zoom seams. Inspect app state after any timeout before retrying. The full 24-case run and post-fix preservation test completed normally.
-- [ ] **Real-world corpus.** Gather 10–20 logos, clipart and scans in `samples/real/`; run `plate bench samples/real` and record failures. Current benchmark results are synthetic.
+- [~] **Real-world corpus.** Gather 10–20 logos, clipart and scans in `samples/real/`; run `plate bench samples/real` and record failures. Current benchmark results are synthetic. DONE (generated portion): a redistributable, deliberately messy 14-image generated-realistic corpus now ships in `samples/real/` (`scripts/make_real_corpus.py`); run `plate bench samples/real`, per-image results in `docs/REAL-CORPUS.md`. Diagnostic only, no gate. REMAINING: genuine CC0/PD drop-ins (slot + manifest ready in `samples/real/CREDITS.md`).
 - [ ] **Real VLM quality/performance.** Connection/naming/grouping work; improve left/right names, grouping accuracy and one-request-per-shape latency (earlier face run ≈6s/shape). Verify on real images.
 
 ## P1 — further robustness
