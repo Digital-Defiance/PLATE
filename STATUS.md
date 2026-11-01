@@ -1,6 +1,53 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-31 (patch/poster limits + ellipse-merge) · Version 0.1.0 · Tests: 560 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-31 (structural audit closed + real-artwork corpus) · Version 0.1.0 · Tests: 565 passing, 7 expected feature gaps (`pytest -q`)
+
+## Structural audit closed + real-artwork corpus — 2026-10-31
+
+Two things landed since the complex-scene round. `main` is further past `origin/main`
+(NOT pushed; Jessica pushes). Suite **565 passed / 7 xfailed / 0 xpassed**.
+
+### Structural-target audit CLOSED (all 7 dispositioned, honestly)
+Every strict-xfail target now has a definitive disposition — addressed where a real
+classical cue exists, pinned as a measured information limit otherwise, with no gate
+weakened and no geometry invented:
+- ORBIT 44→38 (compound-ring defrag) + residual monogram/flat-patch limits
+- mission_patch 72→70 (ellipse compound-merge) + pinned planet/poster gradient limits
+- EMBER face merges, ROOT tree+leaves, storefront cream-awnings+teal-leaves — all
+  same-colour information limits, pinned with raster-measured tests (`9d0ef62`,
+  `79ef445`, the EMBER pin). poster gradient-disc — overlay-sliced limit, pinned.
+- PLATE identity — aspirational (hidden geometry unrecoverable), stays xfail.
+Optional scoped engine work remaining (NOT limits, NOT quick wins): the ROOT
+inner-seal interrupted circular ring (compound-ring arm) and the ROOT leaf-vein-11
+thin-stroke split. Investigation reports: `.agents/tasks/{ember-separation,
+patch-poster-fragmentation,root-storefront}-investigation.md`.
+
+### Real-artwork evaluation corpus ADDED (`9ddea19`, diagnostic, not a gate)
+`scripts/make_real_corpus.py` authors 14 deterministic, deliberately-messy PNGs under
+`samples/real/` (gradients, soft shadows, sensor noise, JPEG artifacts, anti-aliased
+type/thin strokes, >16-colour/near-duplicate palettes, extreme aspect ratios,
+translucent overlaps, textured backgrounds). `plate bench samples/real` + the
+per-image table in `docs/REAL-CORPUS.md` are the diagnostic; `samples/real/CREDITS.md`
+holds the CC0 drop-in manifest (zero real images placed — sandbox can't fetch; slot
+ready). No oracle, no SSIM floor, no CI gate (`tests/test_real_corpus.py` only asserts
+existence + bench runs without crashing). 24 engine SVGs byte-identical; engine untouched.
+
+**What the corpus revealed (the point — PLATE's untuned real-world weak spots):**
+- **Sensor noise is catastrophic:** `real_sensor_noise_badge` SSIM **0.355**, collapses
+  to 5 objects. Denoising copes with mild noise (the sigma-2 fix) but not heavy noise.
+- **JPEG block artifacts explode segmentation:** `real_jpeg_artifacts` **269 objects /
+  1679 anchors / 13.7s**, SSIM 0.554 — hundreds of junk objects, slow.
+- **Realistic gradients are under-detected:** only 2/14 images emit any gradient;
+  `real_radial_orb` (a smooth radial) collapses to **1 object**, SSIM 0.83. Smooth
+  real-world shading is not triggering gradient detection.
+- **Texture/thin-type flatten:** `real_textured_bg` and `real_thin_strokes_type` each
+  collapse to 1 object. Clean-ish graphic art still scores 0.91–0.96 (fine).
+
+These are the highest-value next targets (far more impactful than the structural long
+tail): a heavy-noise/JPEG-robustness pass (pre-decode or segmentation guard against
+artifact explosion) and realistic-gradient detection sensitivity. See docs/REAL-CORPUS.md.
+
+
 
 ## Complex-scene progress — 2026-10-31 (session continues)
 

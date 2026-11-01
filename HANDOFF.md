@@ -36,18 +36,30 @@ native `<ellipse>` strokes — **mission_patch 72 → 70, split 3 → 1** — as
 circle arm, with a positive + two negative regressions. Suite 560/7/0, sweep 70/78,
 all non-patch SVGs byte-identical.
 
-**Do next:** only ROOT and storefront remain among the scenes. Both are dominated by
-same-colour-separation and thin-feature loss (ROOT especially: 12 missing thin
-roots/branches). Apply the measure-first discipline that this session established —
-run `challenge_report`, then a read-only raster investigation BEFORE any fix; fix only
-what has a real classical cue under existing gates, and pin the rest as information
-limits (EMBER-style) rather than forcing them or weakening a gate. The patch/poster
-residual and EMBER face merges are already documented limits. The 3 gold EMBER
-laurel-stem extras are an optional ORBIT-style compound-merge avenue for a stroke
-session. PLATE identity stays aspirational (hidden geometry unrecoverable). Be aware
-the structural long tail is at diminishing returns: most remaining gaps are genuine
-information limits, not bugs. Everything in STATUS.md's "Complex-scene progress" and
-"Structural-target progress" sections is current.
+**Structural audit is CLOSED** — all 7 strict-xfail targets are dispositioned (see
+STATUS "Structural audit closed + real-artwork corpus"): ORBIT and mission_patch were
+advanced by the compound-ring/ellipse merges; EMBER, poster, ROOT and storefront's
+remaining gaps are documented same-colour/gradient-overlay information limits, all
+pinned with raster-measured tests; PLATE identity is aspirational. Only optional scoped
+engine work remains on the structural side (ROOT inner-seal ring, ROOT leaf-vein-11
+split) — real work, not limits, not quick wins. Do NOT re-litigate the pinned limits.
+
+**Do next — the real-artwork corpus (`docs/REAL-CORPUS.md`) is now the priority signal,
+far higher value than the structural long tail.** It surfaced concrete untuned
+real-world failures the synthetic fixtures hid:
+1. **Heavy sensor noise is catastrophic** (`real_sensor_noise_badge` SSIM 0.355). The
+   sigma-2 interior-noise denoise fix handles mild noise; heavy noise still collapses
+   the image. Investigate a stronger-noise detection/denoise path (measure first).
+2. **JPEG block artifacts explode segmentation** (`real_jpeg_artifacts` 269 objects/
+   1679 anchors/13.7s, SSIM 0.554). A pre-decode or segmentation guard against
+   artifact-driven over-segmentation.
+3. **Realistic smooth gradients under-detect** (`real_radial_orb` → 1 object, SSIM 0.83;
+   only 2/14 images emit any gradient). Gradient-detection sensitivity on real shading.
+Apply the same measure-first discipline: run `plate bench samples/real`, investigate the
+specific failure in the raster, fix what has a real classical cue under existing gates,
+and do NOT add CI gates to the corpus (it is a diagnostic, no oracle). Keep bench output
+under `/tmp` or `out/`. The corpus is extensible: drop genuine CC0 images into
+`samples/real/` per `CREDITS.md` and rerun `scripts/real_corpus_report.py`.
 
 ## Prior checkpoint — audit and exposed-curve recovery (historical)
 
