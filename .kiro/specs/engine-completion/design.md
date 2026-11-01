@@ -462,11 +462,16 @@ smooth preset", answered by the logo fixture.
   no longer pass as a 14-gon. Circles/ellipses/rects keep the proportional tolerance.
 - `rescue_detail` (`stages/rescue.py`, before and after ordering): before ordering,
   `reconnect_tips` finds the same source-supported ink described below and gives a connected
-  tip to its one non-fragment, flat, same-colour region. Rebuild visible/full masks and rid
-  together; do not merge multiple targets, change nonopaque/gradient pixels, split donors
-  or erase a whole foreign-colour region. Isolated detail stays in the later pass. This
-  removes separate overlays/knobs at supported joins; small-anchor and donor-split cases
-  are deliberately rejected and remain open in Task 13.6.
+  tip to its one non-fragment, flat, same-colour region, or to a unique small anchor with an
+  opaque nearly-unmixed source-colour core (RGB distance ≤12, erosion ceil(scale), core area
+  ≥ max(rescue_min_area, 6 source px² scaled to working area)). Mark promoted small regions
+  `Shape.detail_owner`; preserve this flag on reindex, exclude from later absorption, and
+  use the fine-detail trace profile in `_leaf`. Rebuild visible/full masks and rid together.
+  Do not merge multiple targets, change nonopaque/gradient pixels or erase a foreign region.
+  Substantial donor splits reject; a prospective lobe below the same area threshold can try
+  a subset using target-adjacent pixels whose removal leaves the local four-connected donor
+  neighbourhood connected. Keep articulation pixels, so donors never split. Isolated detail
+  stays in the later pass. Some guarded residual cases remain open in Task 13.6.
   After ordering, ink of colour c inside a region of
   base colour b is a pixel ≥ 45 % of the way from b to c and < 18 % off that line. Ink within
   3 px of a real region of c (its fringe) or on a two-region boundary (a blend) is dropped,

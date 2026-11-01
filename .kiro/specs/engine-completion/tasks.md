@@ -206,10 +206,18 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
         615 passed/7 xfailed, full/core sweep 70/78 and 36/36, all 48 default/control SVGs
         byte-identical. Logo 246 working pixels reassigned; spine overlay pixels 35 → 0;
         anchors 647 → 624, topology stays 0/0. Bake-off composite .846217 → .848961.
-        **Still open:** the under-bar component with only small fragment anchors; another
-        reassignment would detach an 8-working-pixel blue island, so keep rejecting it.
-        Vertical gap ends remain 1–2 source pixels short. Do not relax connectivity guards
-        to force these cases; see `/tmp/plate-continue/inspect-blue2.log` and STATUS.
+        Follow-up done: a unique opaque source-colour core can anchor a small gap; mark its
+        region `detail_owner` to avoid later fragment absorption and use fine-detail tracing.
+        Require eroded nearly-unmixed core area ≥ max(rescue_min_area, 6 source px² scaled).
+        When only a tiny lobe would detach, recover a safe subset pixel by pixel, requiring
+        target adjacency and connected four-neighbour donor pixels; keep articulation pixels.
+        Substantial splits and whole foreign-object erasure remain rejected; no prior test/gate
+        weakened. Seven new cases, full suite 622/7 xfail, same sweep/default outputs.
+        Under-bar overlays 141 → 50, anchors 624 → 600, SSIM .976205 → .977287, topology 0/0.
+        **Still open:** remaining 50 under-bar overlay pixels and 1–2px-short vertical gap ends.
+        Global spatial-blur reduction and blanket final-pass tip suppression each created two
+        extra pieces and were rejected. Do not relax guards to force closure; `/tmp/plate-tips2/`
+        holds both experiments and current source/before/after crop measurements.
         Investigate width-aware smoothing. Tried and rejected
         2026-11-01: clamping each smoothing move to 35 % of the gap across a fold — no gain on a
         synthetic noisy-wedge test (1/12 vs 0/12 pinched), so do not re-try it as-is.

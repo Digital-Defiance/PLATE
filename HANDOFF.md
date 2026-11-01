@@ -4,7 +4,29 @@ Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This reco
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — Task 1 audited; gap-tip ownership improved
+## Latest checkpoint — small-gap anchors and safe partial transfers
+
+- Continued from signed commits `c036114` and `4c887d3` on `codex/logo-quality`; nothing pushed.
+- Small regions can own a connected gap if there is one unique solid, opaque source-colour core.
+  Promoted `Shape.detail_owner` regions survive reindexing, skip later fragment absorption, and
+  get the existing fine-detail trace profile. Multiple qualifying anchors still reject.
+- A full join that would detach only a tiny lobe may transfer a subset, one pixel at a time,
+  preserving local four-connected donor paths and target attachment. Articulation pixels stay;
+  whole foreign-object removal and substantial donor splits remain forbidden. Previous tests intact.
+- Logo SSIM .976205 → .977287, MAE 1.344313 → 1.285311, anchors 624 → 600; 39 editable shapes
+  versus 32 because some gaps now have individual regions. Under-bar overlays 141 → 50, spine 0,
+  topology 0/0. Output: `out/research-force/logo.plate-small-gaps.*`, comparison/validation alongside.
+- Full tests **622 passed / 7 xfailed**, sweep **70/78**, core **36/36**, 48 default/control SVGs
+  unchanged. `smooth` bake-off .848961 → .849341; scene03 JPEG improves, scene23 JPEG regresses.
+- **Still open in 13.6:** 50 under-bar overlay pixels and 1–2px short vertical tips. Global mask-blur
+  reduction and blanket removal of connected tip overlays each created 2 extra pieces and were
+  rejected. Keep topology/foreign-object safeguards; these are algorithm cases, not proven limits.
+  Next also includes 13.5 smoothness scoring and Task 2's residual pin. Task 1's 0.4 floor remains
+  verified; its 0.6 stretch is unmet. Native Illustrator review is still pending for this revision.
+- Exact results, test durations and evidence paths are in the latest STATUS section and
+  `/tmp/plate-tips2/`. Browser draft specs/Kiro execution metadata remain outside the scoped work.
+
+## Prior checkpoint — Task 1 audited; gap-tip ownership improved
 
 - Prior verified work committed as **`c036114`** on **`codex/logo-quality`**; no push.
 - Task 1 is done at its written **0.4 floor**: disabling/enabling the JPEG trigger on the same

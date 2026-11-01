@@ -1,6 +1,48 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-01 (gap-tip ownership, Task 13.6 partial) · Version 0.1.0 · Tests: 615 passed, 7 expected feature gaps.
+Last updated: 2026-11-01 (small-gap anchors, Task 13.6 partial) · Version 0.1.0 · Tests: 622 passed, 7 expected feature gaps.
+
+## Small-gap anchors and safe partial reconnection — 2026-11-01
+
+Continued on `codex/logo-quality` from **`4c887d3`** (the preceding ownership checkpoint).
+Both preceding commits, `c036114` and `4c887d3`, are committed/signed; nothing pushed.
+
+- Small gaps no longer require a large region when there is **one unique solid source core**.
+  Erode the candidate by `ceil(scale)` working pixels; require opaque pixels within 12 RGB of
+  the region colour, with area ≥ max(`rescue_min_area`, 6 source pixels² scaled to work area).
+  Multiple solid-core anchors remain ambiguous and are rejected. A promoted `Shape.detail_owner`
+  survives reindexing, is not absorbed into the later fine-detail overlay, and uses the same
+  gentler trace profile as fine detail. No new public lever or default behaviour.
+- If a proposed full transfer would split off only a tiny donor lobe (below that area threshold),
+  attempt a **safe subset**: each transferred pixel must touch the target and leave the donor's
+  local four-connected neighbourhood connected. Keep articulation pixels/foreign objects.
+  Larger donor splits still reject the entire proposal. All previous guards/tests retained.
+- Logo: under-bar overlay pixels **141 → 50**; spine overlays stay **0**. SSIM
+  **0.976205 → 0.977287**, MAE **1.344313 → 1.285311**, serialized anchors **624 → 600**.
+  There are **39 separately editable shapes** (previously 32; several gaps now have their own
+  region rather than sharing a compound detail path), 4 colours, topology still **0 extra / 0 missing**.
+- Same 24-scene `smooth` bake-off: composite **0.848961 → 0.849341**, whole-object F1
+  **0.706323 → 0.707264**, hidden completion unchanged **0.548611**; SSIM slightly lower
+  **0.989577 → 0.989570**. Scene03 JPEG improves (.753250 → .772350); scene23 JPEG regresses
+  (.687155 → .677159). Keep both results visible; no weights or acceptance floors changed.
+- Rejected scratch experiments: reducing spatial mask blur globally recovered one vertical tip
+  but introduced **2 extra pieces**; suppressing all connected tips in the final detail pass also
+  introduced **2 extra dark pieces**, at approximately (259,671) and (342,672). Neither is shipped.
+  Do not claim the remaining overlay can simply be deleted, or retry the earlier fold clamp as-is.
+- **13.6 remains open:** 50 under-bar overlay pixels and the **1–2 source pixel vertical-tip
+  shortfall** remain. Source-luma bottom y=807; current left/right y=805/806. These are measured
+  algorithm cases, not claimed information limits. 13.5 smoothness scoring and Task 2's clean-render
+  residual pin also remain open; native Illustrator acceptance of the new logo is outstanding.
+- **Validation:** before **615 passed / 7 xfailed** (322.25s), after **622 passed / 7 xfailed**
+  (321.90s), no exclusions/skips/xpasses; focused **45 passed**. Seven new cases cover unique/weak/
+  ambiguous small anchors, safe partial transfer, whole foreign-object preservation and owned
+  tracing; four failed before implementation, three protected already-correct behaviour.
+  Full/core sweep **70/78 / 36/36**; all **24 PLATE + 24 VTracer default SVGs byte-identical**.
+  Samples and enlarged source/before/after logo crops rendered and inspected; Ruff for new rescue/
+  test code and `git diff --check` pass.
+- New artifacts: `out/research-force/logo.plate-small-gaps.{svg,png,report.html}`,
+  `logo-small-gaps-comparison.png`, `small-gaps-validation.json`. Earlier artifacts preserved.
+  Detailed evidence: `/tmp/plate-tips2/`, `/tmp/plate-tips2-{before,after}-tests.txt`.
 
 ## Gap-tip ownership + Task 1 audit — 2026-11-01
 

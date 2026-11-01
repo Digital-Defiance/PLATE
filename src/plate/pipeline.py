@@ -98,6 +98,8 @@ def _opacity(shape: Shape, alpha: np.ndarray) -> float:
 
 
 def _leaf(shape: Shape, canvas, cfg: Config, scale: float) -> Node | None:
+    if shape.detail_owner:
+        cfg = rescue.detail_trace_config(cfg)
     mask = shape.draw or shape.full
     if mask.empty():
         return None

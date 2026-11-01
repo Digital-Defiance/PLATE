@@ -54,6 +54,7 @@ external SVGs were supplied by the user: one from a vectorizer website, one from
 | PLATE `smooth`, before JPEG edge repair | 0.975 | 1.000 | 0 / 1 | 32 | 662 | 4 | 30 KB |
 | PLATE `--preset smooth --set upscale=2`, JPEG edge repair | **0.976** | **1.000** | **0 / 0** | **32** | **647** | 4 | 29 KB |
 | PLATE `smooth`, JPEG repair + supported tip ownership | **0.976** | **0.999** | **0 / 0** | **32** | **624** | 4 | 28 KB |
+| PLATE `smooth`, plus small-core anchors / safe partial tips | **0.977** | **0.999** | **0 / 0** | **39** | **600** | 4 | 28 KB |
 | vectorizer website | 0.719 | 1.000 | 0 / 1 | 371 | 3787 | 46 | 125 KB |
 | Adobe | 0.934 | 0.856 | 2 / 11 | 116 | 1648 | 23 | 125 KB |
 
@@ -122,6 +123,30 @@ detach an 8-working-pixel blue island, so the guard rejects it. The under-bar de
 remains, and vertical gap ends remain 1–2 source pixels short. These are unresolved algorithm
 cases, not claimed information limits. Evidence: `/tmp/plate-continue/` (especially
 `inspect-blue2.log`, `after-smooth-bakeoff/`, `default-comparison.json`, `robustness/`).
+
+### Small-core gap anchors and partial transfers (2026-11-01, Task 13.6 follow-up)
+
+A small gap can now retain its own region when it has one unique, opaque, nearly-unmixed
+source-colour core. The promoted region uses fine-detail tracing and is not reabsorbed into
+the overlay. Where a full proposal would detach only a tiny donor lobe, transfer a safe subset
+while preserving four-connected donor paths pixel by pixel. Keep ambiguity, whole-object and
+connectivity guards; all previous tests remain intact.
+
+Logo: under-bar overlay pixels **141 → 50**, spine overlays still 0; SSIM **0.976205 → 0.977287**,
+MAE **1.344313 → 1.285311**, anchors **624 → 600**, topology **0/0**. Shape count rises **32 → 39**
+because some gaps now have separate editable regions rather than sharing a compound detail path.
+
+Same 24-scene `smooth` bake-off: composite **0.848961 → 0.849341**, whole-object F1
+**0.706323 → 0.707264**, hidden completion unchanged **0.548611**, SSIM slightly lower
+**0.989577 → 0.989570**. Scene03 JPEG improves **.753250 → .772350**; scene23 JPEG regresses
+**.687155 → .677159**. Weights and existing floors unchanged. Full tests **622/7 xfail**,
+sweep **70/78**, core **36/36**, all 48 default/control SVGs byte-identical.
+
+Remaining: 50 under-bar overlay pixels and vertical tips still 1–2 source pixels short.
+Lowering mask blur globally and suppressing all final connected-tip overlays each created
+two extra pieces; both were rejected. No native Illustrator acceptance is claimed for the new
+SVG. Source/before/after comparison and validation: `out/research-force/logo-small-gaps-comparison.png`,
+`small-gaps-validation.json`; full evidence `/tmp/plate-tips2/`.
 
 ## Where PLATE loses (the useful part)
 Complete-object recovery on the corpus: free circles 13/17, **occluded rect 4/11, occluded polygon 3/10, occluded rrect 5/12**, and

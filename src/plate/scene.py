@@ -37,6 +37,7 @@ class Shape:
     grad: GradientFill | None = None  # smooth-ramp fill (linear/radial), None = flat
     verified_prim: Prim | None = None  # source-validated gradient completion, retained on reindex
     closed_stroke: object | None = None  # stages.strokes.ClosedStroke for a merged ring, retained on reindex
+    detail_owner: bool = False   # source-core-anchored small region; keep out of later fragment absorption
 
 
 @dataclass

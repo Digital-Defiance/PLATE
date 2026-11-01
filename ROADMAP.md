@@ -18,6 +18,12 @@ spine overlay knobs (35 → 0 overlay pixels); **13.6 remains open** for the und
 donor-connectivity cases and 1–2px-short vertical tips. Full tests **615/7 xfail**, sweep **70/78**,
 core **36/36**, all 48 default/control SVGs unchanged. New artifact: `out/research-force/`.
 
+Small-gap follow-up: unique source cores can anchor small regions, and tiny prospective donor
+splits can recover a safe subset while retaining every donor connection. Under-bar overlays
+141 → 50, logo SSIM .976205 → .977287, anchors 624 → 600, topology 0/0. Tests **622/7 xfail**,
+same sweep/default outputs. **13.6 still open** for the remaining 50 overlay pixels and 1–2px-short
+tips; two broad cleanup experiments created specks and were rejected. See latest STATUS.
+
 Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.

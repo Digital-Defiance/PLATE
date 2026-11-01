@@ -144,3 +144,94 @@ def test_pipeline_reconnects_before_tracing_and_keeps_dot_detail(tmp_path, monke
     dark = next(mask for color, mask in found if color == DARK)
     assert not dark[38:43, 56:65].any(), "no separate overlay at the gap tip"
     assert dark[18:23, 93:98].any(), "the real dot remains available for the fine-detail layer"
+
+
+def _small_gap(rotation=0):
+    y, x = np.indices((80, 120))
+    owned = (x >= 15) & (x < 21) & (y >= 35) & (y < 41)
+    tail = (x >= 21) & (x < 30) & (np.abs(y - 37.5) < (30 - x) * .17)
+    expected = owned | tail
+    rid = owned.astype(np.int32)
+    rgb = np.where(expected[..., None], DARK, CREAM).astype(np.uint8)
+    rid, rgb, expected = [np.rot90(a, rotation).copy() for a in (rid, rgb, expected)]
+    return (*_scene(rid, rgb, [CREAM, DARK]), expected)
+
+
+@pytest.mark.parametrize("rotation", [0, 1])
+def test_solid_core_anchors_a_small_gap_without_later_absorption(rotation):
+    img, seg, expected = _small_gap(rotation)
+    assert 6 < seg.shapes[1].vis.area < 60
+    new, count = rescue.reconnect_tips(img, seg, load("smooth"))
+    assert count > 0
+    assert np.all(new.rid[expected] == 1)
+    assert new.shapes[1].detail_owner
+    assert 1 not in rescue.absorbable_ids(new, img.alpha.shape, img.scale)
+    _assert_partition(new)
+
+
+def test_two_small_solid_cores_are_still_ambiguous():
+    rid = np.zeros((80, 120), np.int32)
+    rid[35:41, 15:21], rid[35:41, 43:49] = 1, 2
+    ink = rid > 0
+    ink[37:39, 21:43] = True
+    rgb = np.where(ink[..., None], DARK, CREAM).astype(np.uint8)
+    img, seg = _scene(rid, rgb, [CREAM, DARK, DARK])
+    new, count = rescue.reconnect_tips(img, seg, load("smooth"))
+    assert new is seg and count == 0
+
+
+def test_small_fragment_without_a_solid_core_is_not_promoted():
+    rid = np.zeros((80, 120), np.int32)
+    rid[39:41, 15:35] = 1
+    ink = rid > 0
+    ink[39:41, 35:45] = True
+    rgb = np.where(ink[..., None], DARK, CREAM).astype(np.uint8)
+    img, seg = _scene(rid, rgb, [CREAM, DARK])
+    new, count = rescue.reconnect_tips(img, seg, load("smooth"))
+    assert new is seg and count == 0
+
+
+def test_safe_part_of_a_tip_preserves_a_tiny_donor_lobe(monkeypatch):
+    rid = np.ones((60, 100), np.int32)
+    rid[10:35, 10:40] = 0
+    rid[20:23, 40:46] = 0
+    rid[19:24, 46:49] = 0  # 15px lobe connected through the 3px-high neck
+    proposed = np.zeros(rid.shape, bool)
+    proposed[18:25, 45] = True
+    source = rid.copy()
+    source[proposed] = 1
+    rgb = np.where((source == 0)[..., None], CREAM, DARK).astype(np.uint8)
+    img, seg = _scene(rid, rgb, [CREAM, DARK])
+    img.scale, img.orig_size = 2., (50, 30)
+    monkeypatch.setattr(rescue, "find", lambda *args, **kwargs: ([(DARK, proposed)], set()))
+    new, count = rescue.reconnect_tips(img, seg, load("smooth"))
+    assert 0 < count < np.count_nonzero(proposed & (rid == 0))
+    assert ndi.label(new.rid == 0)[1] == 1, "retain the original donor connection"
+    assert np.all(new.rid[19:24, 46:49] == 0), "never discard the tiny donor lobe"
+    assert ndi.label(new.rid == 1)[1] == 1
+    _assert_partition(new)
+
+
+def test_whole_foreign_object_is_not_erased_even_if_tiny(monkeypatch):
+    rid = np.ones((60, 100), np.int32)
+    rid[28:31, 48:51] = 0
+    proposed = np.zeros(rid.shape, bool)
+    proposed[27:32, 47:52] = True
+    rgb = np.full((*rid.shape, 3), DARK, np.uint8)
+    img, seg = _scene(rid, rgb, [CREAM, DARK])
+    monkeypatch.setattr(rescue, "find", lambda *args, **kwargs: ([(DARK, proposed)], set()))
+    new, count = rescue.reconnect_tips(img, seg, load("smooth"))
+    assert new is seg and count == 0
+
+
+def test_promoted_small_gap_is_traced_as_its_own_region(tmp_path, monkeypatch):
+    img, seg, expected = _small_gap()
+    path = tmp_path / "small-gap.png"
+    Image.fromarray(img.rgb).save(path)
+    monkeypatch.setattr(pipeline, "segment", lambda image, cfg: seg)
+    cfg = load("smooth", denoise=0, gradients=False, complete_hidden=False, strokes=False)
+    result = pipeline.run(path, cfg)
+    owner = int(result.seg.rid[expected][0])
+    assert result.seg.shapes[owner].detail_owner
+    assert result.stats["rescued"] == 0 and result.stats["absorbed"] == 0
+    assert np.all(result.seg.rid[expected] == owner)

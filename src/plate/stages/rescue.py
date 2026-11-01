@@ -15,6 +15,7 @@ the region's flat colour).
 """
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import replace
 
 import numpy as np
@@ -117,15 +118,59 @@ def absorbable_ids(seg: Segmentation, canvas: tuple[int, int], scale: float) -> 
     limit = max(60.0, 0.00025 * H * W)
     return {s.id for s in seg.shapes
             if not s.children and not s.is_background and getattr(s, "grad", None) is None
-            and s.vis is not None and s.vis.area <= limit}
+            and not s.detail_owner and s.vis is not None and s.vis.area <= limit}
+
+
+def _core_anchor(shape, img: Loaded, min_area: int) -> bool:
+    """A small region needs a real, nearly unmixed source-colour interior."""
+    box = tuple(slice(a, b) for a, b in zip(shape.vis.bbox[:2], shape.vis.bbox[2:]))
+    inner = ndi.binary_erosion(shape.vis.a, iterations=max(1, int(np.ceil(img.scale))))
+    distance = np.linalg.norm(img.rgb[box].astype(np.float32) - shape.color, axis=2)
+    return int(np.count_nonzero(inner & (distance <= 12) & (img.alpha[box] == 255))) >= min_area
+
+
+def _peel_tip(rid: np.ndarray, box, candidate: np.ndarray, target: int, colors: np.ndarray) -> int:
+    """Transfer a safe subset, retaining every donor connection pixel by pixel."""
+    y0, x0 = box[0].start, box[1].start
+    h, w = candidate.shape
+    H, W = rid.shape
+    queue = deque(zip(*np.nonzero(candidate)))
+    queued = set(queue)
+    moved = 0
+    steps = ((-1, 0), (1, 0), (0, -1), (0, 1))
+    while queue:
+        y, x = queue.popleft()
+        queued.discard((y, x))
+        gy, gx = y0 + y, x0 + x
+        donor = rid[gy, gx]
+        if donor == target:
+            continue
+        if not any(0 <= gy + dy < H and 0 <= gx + dx < W
+                   and rid[gy + dy, gx + dx] == target for dy, dx in steps):
+            continue
+        sy, sx = max(0, gy - 1), max(0, gx - 1)
+        local = (rid[sy:min(H, gy + 2), sx:min(W, gx + 2)] == donor)
+        local[gy - sy, gx - sx] = False
+        components = ndi.label(local)[1]
+        if components > 1 or (components == 0 and not np.array_equal(colors[donor], colors[target])):
+            continue
+        rid[gy, gx] = target
+        moved += 1
+        for dy, dx in steps:
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx < w and candidate[ny, nx] and (ny, nx) not in queued:
+                queue.append((ny, nx))
+                queued.add((ny, nx))
+    return moved
 
 
 def reconnect_tips(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Segmentation, int]:
     """Give source-supported gap tips to their region before ordering and tracing.
 
-    A rescued component must physically touch exactly one non-fragment region of
-    its own colour. Isolated detail stays in the later rescue layer. Reject joins
-    between separate regions, gradient pixels, and cuts which split a donor.
+    A rescued component needs one non-fragment region or one unique solid-core
+    small anchor of its own colour. Isolated detail stays in the later rescue
+    layer. Reject ambiguous joins, gradient pixels and cuts which split a donor.
+    For tiny prospective splits only, a partial transfer may retain the bridge.
     Return a rebuilt partition and the number of reassigned working pixels.
     """
     if not cfg.rescue_detail or not seg.shapes:
@@ -139,6 +184,8 @@ def reconnect_tips(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Segment
     flat = np.array([s.grad is None for s in seg.shapes], bool)
     rid = seg.rid.copy()
     affected = set()
+    promoted = set()
+    source_area = max(cfg.rescue_min_area, int(np.ceil(6 * img.scale**2)))
     for color, ink in found:
         targets = np.all(colors == color, axis=1) & flat
         targets[list(small)] = False
@@ -148,8 +195,12 @@ def reconnect_tips(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Segment
                 continue
             member = labels[box] == label
             owners = seg.rid[box]
-            attached = np.unique(owners[member & (owners >= 0)])
-            attached = attached[targets[attached]]
+            parents = np.unique(owners[member & (owners >= 0)])
+            attached = parents[targets[parents]]
+            if len(attached) == 0:
+                attached = np.array([sid for sid in parents if sid in small and flat[sid]
+                                     and np.array_equal(colors[sid], color)
+                                     and _core_anchor(seg.shapes[sid], img, source_area)], dtype=int)
             if len(attached) != 1:
                 continue
             target = int(attached[0])
@@ -161,24 +212,47 @@ def reconnect_tips(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Segment
                 continue
             donors = np.unique(current[candidate])
             safe = True
+            peel = True
             for donor in donors:
                 before = rid == donor
                 after = before.copy()
                 after[box] &= ~candidate
-                if ((not after.any() and not np.array_equal(colors[donor], color))
-                        or ndi.label(after)[1] > ndi.label(before)[1]):
+                if not after.any() and not np.array_equal(colors[donor], color):
                     safe = False
+                    peel = False
                     break
+                labels_after, n_after = ndi.label(after)
+                n_before = ndi.label(before)[1]
+                if n_after > n_before:
+                    safe = False
+                    areas = np.bincount(labels_after.ravel())[1:]
+                    if n_before != 1 or np.any(np.sort(areas)[:-1] >= source_area):
+                        peel = False
+                        break
+            moved = 0
             if safe:
                 current[candidate] = target
+                moved = int(candidate.sum())
+            elif peel:
+                moved = _peel_tip(rid, box, candidate, target, colors)
+            if moved:
                 affected.update(donors.tolist())
                 affected.add(target)
+                if target in small:
+                    promoted.add(target)
     if not affected:
         return seg, 0
-    shapes = [replace(s, vis=Mask.from_full(rid == s.id)) if s.id in affected else s
+    shapes = [replace(s, vis=Mask.from_full(rid == s.id),
+                      detail_owner=s.detail_owner or s.id in promoted) if s.id in affected else s
               for s in seg.shapes]
     shapes = [s for s in shapes if not s.vis.empty()]
     return seg.rebuilt(shapes), int(np.count_nonzero(rid != seg.rid))
+
+
+def detail_trace_config(cfg: Config) -> Config:
+    """The same fine-detail trace profile for owned regions and residual overlays."""
+    return cfg.merged(smooth=min(cfg.smooth, 0.4), simplify=min(cfg.simplify, 0.5),
+                      edge_smooth=min(cfg.edge_smooth, 0.8), snap_primitives=False)
 
 
 def run(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Node | None, set[int]]:
@@ -188,8 +262,7 @@ def run(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Node | None, set[i
     if not found:
         return None, set()
     H, W = img.alpha.shape
-    tcfg = cfg.merged(smooth=min(cfg.smooth, 0.4), simplify=min(cfg.simplify, 0.5),
-                      edge_smooth=min(cfg.edge_smooth, 0.8), snap_primitives=False)
+    tcfg = detail_trace_config(cfg)
     kids = []
     for color, m in found:
         d, anchors, _ = mask_to_path(Mask.from_full(m), (H, W), tcfg, img.scale)
