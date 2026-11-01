@@ -53,6 +53,7 @@ external SVGs were supplied by the user: one from a vectorizer website, one from
 | PLATE default | 0.960 | 0.930 | 3 / 32 | 49 | 563 | 4 | 29 KB |
 | PLATE `smooth`, before JPEG edge repair | 0.975 | 1.000 | 0 / 1 | 32 | 662 | 4 | 30 KB |
 | PLATE `--preset smooth --set upscale=2`, JPEG edge repair | **0.976** | **1.000** | **0 / 0** | **32** | **647** | 4 | 29 KB |
+| PLATE `smooth`, JPEG repair + supported tip ownership | **0.976** | **0.999** | **0 / 0** | **32** | **624** | 4 | 28 KB |
 | vectorizer website | 0.719 | 1.000 | 0 / 1 | 371 | 3787 | 46 | 125 KB |
 | Adobe | 0.934 | 0.856 | 2 / 11 | 116 | 1648 | 23 | 125 KB |
 
@@ -101,6 +102,26 @@ including a small composite decrease; this is a targeted real-logo/thin-edge imp
 not a broad hidden-completion win. Separate default benches confirm all 24 PLATE and 24 VTracer
 SVGs remain byte-identical. Evidence: `/tmp/plate-resume/before-smooth-bakeoff/`,
 `/tmp/plate-resume/after-smooth-bakeoff-final/`, and `/tmp/plate-resume/default-comparison.json`.
+
+### Gap-tip ownership (2026-11-01, partial Task 13.6)
+
+With `rescue_detail`, source-supported tips now join their one non-fragment same-colour
+region before ordering/tracing; no separate overlay is needed there. Gradients/nonopaque
+pixels, ambiguous targets, whole foreign-object removal and donor splits are rejected.
+Logo: 246 working pixels reassigned, spine overlay pixels **35 → 0**, serialized anchors
+**647 → 624**, SSIM **0.976148 → 0.976205**, MAE **1.35239 → 1.34431**, topology still **0/0**.
+The dot/periods survive. Enlarged renders were inspected; native Illustrator review is pending.
+
+Same 24-scene seed-1 `smooth` bake-off: composite **0.846217 → 0.848961**, whole-object F1
+**0.700787 → 0.706323**, hidden completion unchanged **0.548611**, SSIM slightly down
+**0.989619 → 0.989577**. Weights and acceptance gates unchanged. Full tests **615 passed /
+7 xfailed**; sweep **70/78**, core **36/36**; all 24 PLATE + 24 VTracer defaults byte-identical.
+
+Task 13.6 remains open: an under-bar gap has only small fragment anchors; another join would
+detach an 8-working-pixel blue island, so the guard rejects it. The under-bar detail overlay
+remains, and vertical gap ends remain 1–2 source pixels short. These are unresolved algorithm
+cases, not claimed information limits. Evidence: `/tmp/plate-continue/` (especially
+`inspect-blue2.log`, `after-smooth-bakeoff/`, `default-comparison.json`, `robustness/`).
 
 ## Where PLATE loses (the useful part)
 Complete-object recovery on the corpus: free circles 13/17, **occluded rect 4/11, occluded polygon 3/10, occluded rrect 5/12**, and

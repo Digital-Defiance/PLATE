@@ -193,6 +193,9 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     if cfg.gradients:
         from .stages.gradient import detect
         seg = detect(seg, img, cfg)
+    reconnected = 0
+    if cfg.rescue_detail:
+        seg, reconnected = rescue.reconnect_tips(img, seg, cfg)
     t1 = time.time()
     transparent = seg.rid == -1
     roots = order.build(seg, transparent, cfg)
@@ -405,5 +408,6 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     if cfg.rescue_detail:
         stats["rescued"] = len(rescued.children) if rescued is not None else 0
         stats["absorbed"] = len(absorbed)
+        stats["reconnected"] = reconnected
     stats["vlm_names"] = len(labels or {})
     return Result(svg, tree, shapes, seg, img, cfg, stats)

@@ -1,6 +1,48 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-01 (JPEG colour boundaries, Task 13.8) · Version 0.1.0 · Tests: 600 passed, 7 expected feature gaps.
+Last updated: 2026-11-01 (gap-tip ownership, Task 13.6 partial) · Version 0.1.0 · Tests: 615 passed, 7 expected feature gaps.
+
+## Gap-tip ownership + Task 1 audit — 2026-11-01
+
+- Owner requested a commit, Task 1 verification and continued work. Committed the smooth-logo,
+  topology and JPEG-edge checkpoint as **`c036114`** on **`codex/logo-quality`**. No push.
+  Browser-page draft specs and Kiro execution metadata were left outside this scoped commit.
+- **Task 1 really meets its written floor:** same six seed-1/q55 JPEGs with the format trigger
+  disabled/enabled recover **3/10 → 4/10** objects; mean per-scene `hidden_completion`
+  **0.333333 → 0.416667**, above the **0.4** floor. The **0.6 stretch remains unmet**, and
+  Task 2's residual clean-render pin remains open. `/tmp/plate-continue/task1-audit.json`.
+- Implemented the ownership part of **13.6**: after segmentation/gradient detection, before
+  ordering/tracing, `rescue.reconnect_tips` gives a connected source-supported tip to its one
+  non-fragment same-colour region. Rebuild visible/full masks and region IDs together. Reject
+  ambiguous multiple targets, gradient/nonopaque pixels, whole foreign-object erasure and
+  donor splits. Fine isolated dots/periods remain in the later rescue pass. Default off under
+  the existing `rescue_detail` lever; no new default behaviour.
+- Logo: **246 working pixels** reassigned; the separate dark fine-detail pixels at the spine
+  joins fall **35 → 0**. Enlarged renders show the knobs gone at those joins. Topology stays
+  **0 extra / 0 missing**, both periods/V dot survive; SSIM **0.976148 → 0.976205**, MAE
+  **1.35239 → 1.34431**, serialized anchors **647 → 624**, 32 shapes, 4 colours.
+- **13.6 stays open for measured residuals.** Under the blue bar, one gap has only small
+  fragment anchors, so no eligible target; extending another would detach an **8-working-pixel
+  blue island**, so the connectivity guard rejects it. Those overlays remain (141 source
+  pixels in the inspected under-bar crop). Vertical gap ends remain 1–2 source pixels short
+  by a source-luma crop check. These are remaining algorithm cases, not claimed information
+  limits; do not relax topology safeguards or repeat the rejected fold clamp.
+- Same 24-scene `smooth` bake-off: composite **0.846217 → 0.848961**, whole-object F1
+  **0.700787 → 0.706323**, hidden completion unchanged **0.548611**; SSIM slightly lower
+  **0.989619 → 0.989577**. No weight/target changes; improvements on scenes 11/21/23.
+- **Validation:** baseline **600 passed / 7 xfailed** (366.77 s), after **615 passed /
+  7 xfailed** (368.61 s), no exclusions/skips/xpasses. Fifteen new ownership regressions
+  cover rotations, fragments/reindexing, dots, ambiguous joins, donor bridges, gradients,
+  alpha and pre-trace integration (14 original cases failed before implementation; the
+  fragment/reindex case was then added). Full sweep **70/78**, core **36/36**. All **24 PLATE
+  + 24 VTracer default SVGs byte-identical**. Sample/full-logo/enlarged crops rendered and
+  inspected; new rescue/test code passes Ruff, `git diff --check` passes.
+- New artifact: `out/research-force/logo.plate-gap-tips.{svg,png,report.html}`;
+  comparison `out/research-force/logo-gap-tips-comparison.png`. Previous SVGs preserved.
+  Evidence/logs: `/tmp/plate-continue/`, `/tmp/plate-continue-{before,after}-tests.txt`.
+  A fresh native Illustrator review is still outstanding for the new logo.
+- Next: remaining under-bar/short-tip cases in **13.6**, smoothness metric **13.5**, and
+  Task 2's explicit residual pin. Do not describe all of R1 or R9 as complete.
 
 ## JPEG colour-boundary repair — 2026-11-01
 

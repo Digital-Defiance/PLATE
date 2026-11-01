@@ -15,6 +15,8 @@ the region's flat colour).
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 from scipy import ndimage as ndi
 
@@ -116,6 +118,67 @@ def absorbable_ids(seg: Segmentation, canvas: tuple[int, int], scale: float) -> 
     return {s.id for s in seg.shapes
             if not s.children and not s.is_background and getattr(s, "grad", None) is None
             and s.vis is not None and s.vis.area <= limit}
+
+
+def reconnect_tips(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Segmentation, int]:
+    """Give source-supported gap tips to their region before ordering and tracing.
+
+    A rescued component must physically touch exactly one non-fragment region of
+    its own colour. Isolated detail stays in the later rescue layer. Reject joins
+    between separate regions, gradient pixels, and cuts which split a donor.
+    Return a rebuilt partition and the number of reassigned working pixels.
+    """
+    if not cfg.rescue_detail or not seg.shapes:
+        return seg, 0
+    small = absorbable_ids(seg, img.alpha.shape, img.scale)
+    found, _ = find(img, seg, cfg.rescue_min_area, small,
+                    bridge_px=int(np.ceil(4 + 2 * max(cfg.smooth, 0.45) * img.scale)))
+    if not found:
+        return seg, 0
+    colors = np.array([s.color for s in seg.shapes])
+    flat = np.array([s.grad is None for s in seg.shapes], bool)
+    rid = seg.rid.copy()
+    affected = set()
+    for color, ink in found:
+        targets = np.all(colors == color, axis=1) & flat
+        targets[list(small)] = False
+        labels, _ = ndi.label(ink)
+        for label, box in enumerate(ndi.find_objects(labels), 1):
+            if box is None:
+                continue
+            member = labels[box] == label
+            owners = seg.rid[box]
+            attached = np.unique(owners[member & (owners >= 0)])
+            attached = attached[targets[attached]]
+            if len(attached) != 1:
+                continue
+            target = int(attached[0])
+            current = rid[box]
+            valid = (owners >= 0) & (img.alpha[box] == 255)
+            valid[valid] &= flat[owners[valid]]
+            candidate = member & valid & (current != target) & (current == owners)
+            if not candidate.any():
+                continue
+            donors = np.unique(current[candidate])
+            safe = True
+            for donor in donors:
+                before = rid == donor
+                after = before.copy()
+                after[box] &= ~candidate
+                if ((not after.any() and not np.array_equal(colors[donor], color))
+                        or ndi.label(after)[1] > ndi.label(before)[1]):
+                    safe = False
+                    break
+            if safe:
+                current[candidate] = target
+                affected.update(donors.tolist())
+                affected.add(target)
+    if not affected:
+        return seg, 0
+    shapes = [replace(s, vis=Mask.from_full(rid == s.id)) if s.id in affected else s
+              for s in seg.shapes]
+    shapes = [s for s in shapes if not s.vis.empty()]
+    return seg.rebuilt(shapes), int(np.count_nonzero(rid != seg.rid))
 
 
 def run(img: Loaded, seg: Segmentation, cfg: Config) -> tuple[Node | None, set[int]]:

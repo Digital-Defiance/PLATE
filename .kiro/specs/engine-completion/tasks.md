@@ -198,13 +198,24 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
         locally fitted line/arc per unit outline length) so wobble is a number, not an eyeball;
         then measure `--preset smooth` on the synthetic corpus and the real corpus.
   - [ ] 13.6 Narrow gaps near the logo's spine come out slightly short and wavy (mask blur +
-        along-outline smoothing). Investigate width-aware smoothing. Tried and rejected
+        along-outline smoothing). **Ownership sub-fix done 2026-11-01:** `rescue.reconnect_tips`
+        runs before ordering/tracing, assigns supported connected tips to one non-fragment
+        same-colour region, rebuilds masks/rid, rejects multiple targets, gradient/nonopaque
+        pixels, donor splits and whole foreign-object erasure. Isolated dots/periods remain
+        in the fine-detail pass. Fifteen regressions in `tests/test_rescue.py`; full suite
+        615 passed/7 xfailed, full/core sweep 70/78 and 36/36, all 48 default/control SVGs
+        byte-identical. Logo 246 working pixels reassigned; spine overlay pixels 35 → 0;
+        anchors 647 → 624, topology stays 0/0. Bake-off composite .846217 → .848961.
+        **Still open:** the under-bar component with only small fragment anchors; another
+        reassignment would detach an 8-working-pixel blue island, so keep rejecting it.
+        Vertical gap ends remain 1–2 source pixels short. Do not relax connectivity guards
+        to force these cases; see `/tmp/plate-continue/inspect-blue2.log` and STATUS.
+        Investigate width-aware smoothing. Tried and rejected
         2026-11-01: clamping each smoothing move to 35 % of the gap across a fold — no gain on a
         synthetic noisy-wedge test (1/12 vs 0/12 pinched), so do not re-try it as-is.
-        Also: a bridged gap tip is a separate "fine detail" sliver over the covering shape, so at
-        high zoom its join shows a small knob/step. Cleaner fix: give the tip pixels to the gap's
-        region before tracing (update `seg.rid` and the shape masks), so the covering shape's own
-        outline carries the whole notch and no sliver is needed.
+        Historical cause: a bridged tip was a separate "fine detail" sliver over the covering
+        shape. The implemented ownership fix removes this at supported spine joins; cases
+        rejected by the safety checks still use the prior detail layer.
   - [x] 13.7 User check in Illustrator of `plate trace logo.jpeg --preset smooth --set upscale=2`.
         2026-11-01, rated "decent": cream (luma) edges smooth; pink and blue (colour) edges lumpy
         and slightly thin; blue bar's square end rounded; small knobs at bridged gap tips; dark

@@ -12,6 +12,12 @@ Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality w
 24 VTracer SVGs unchanged. Next: gap-tip ownership before tracing (13.6), then a smoothness
 metric (13.5). Some high-zoom bends/joins still need work. Full current validation: `STATUS.md`.
 
+Follow-up: Task 1's floor re-audited at **0.416667 ≥ 0.4** (0.6 stretch still open). Checkpoint
+committed as `c036114` on `codex/logo-quality`. Pre-trace gap-tip ownership now removes the
+spine overlay knobs (35 → 0 overlay pixels); **13.6 remains open** for the under-bar small-anchor /
+donor-connectivity cases and 1–2px-short vertical tips. Full tests **615/7 xfail**, sweep **70/78**,
+core **36/36**, all 48 default/control SVGs unchanged. New artifact: `out/research-force/`.
+
 Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.

@@ -460,7 +460,14 @@ smooth preset", answered by the logo fixture.
 - `snap_max_px` (primitives): polygon snaps also need mean deviation ≤ ~0.45·cap and a
   98th-percentile outline→polygon distance ≤ ~0.75·cap (source px × scale), so a big arc can
   no longer pass as a 14-gon. Circles/ellipses/rects keep the proportional tolerance.
-- `rescue_detail` (`stages/rescue.py`, after ordering): ink of colour c inside a region of
+- `rescue_detail` (`stages/rescue.py`, before and after ordering): before ordering,
+  `reconnect_tips` finds the same source-supported ink described below and gives a connected
+  tip to its one non-fragment, flat, same-colour region. Rebuild visible/full masks and rid
+  together; do not merge multiple targets, change nonopaque/gradient pixels, split donors
+  or erase a whole foreign-colour region. Isolated detail stays in the later pass. This
+  removes separate overlays/knobs at supported joins; small-anchor and donor-split cases
+  are deliberately rejected and remain open in Task 13.6.
+  After ordering, ink of colour c inside a region of
   base colour b is a pixel ≥ 45 % of the way from b to c and < 18 % off that line. Ink within
   3 px of a real region of c (its fringe) or on a two-region boundary (a blend) is dropped,
   except a **tip**: ink that runs unbroken (through raw ink, fragments or region pixels) into a

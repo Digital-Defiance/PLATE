@@ -4,11 +4,32 @@ Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This reco
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — Research Force logo (supersedes historical notes below)
+## Latest checkpoint — Task 1 audited; gap-tip ownership improved
+
+- Prior verified work committed as **`c036114`** on **`codex/logo-quality`**; no push.
+- Task 1 is done at its written **0.4 floor**: disabling/enabling the JPEG trigger on the same
+  corpus reproduces 3/10 → 4/10 objects, mean 0.333333 → 0.416667. The 0.6 stretch and Task 2
+  residual pin are open; R1 as a whole is not closed. Evidence `/tmp/plate-continue/task1-audit.json`.
+- The ownership part of 13.6 now assigns unambiguous, source-supported tips before ordering
+  and tracing, keeping region/mask partitions consistent. Multiple targets, donor splits,
+  gradients and nonopaque pixels are protected. Logo: 246 working pixels reassigned, spine
+  fine-overlay pixels 35 → 0, 647 → 624 serialized anchors, topology 0/0 preserved.
+- Full tests **615 passed / 7 xfailed**, sweep **70/78**, core **36/36**, all 24 PLATE + 24
+  VTracer default SVGs byte-identical. `smooth` bake-off composite .846217 → .848961,
+  whole-object F1 .700787 → .706323, hidden completion unchanged; SSIM slightly lower.
+- **13.6 remains open:** the under-bar small-anchor case, a join that would detach an 8px blue
+  island, and vertical tips 1–2 source pixels short. Preserve the connectivity guard; the
+  earlier fold-clamp experiment failed and should not be repeated as-is. Next also includes
+  13.5 smoothness scoring and Task 2's residual pin.
+- New SVG/report/comparison: `out/research-force/logo.plate-gap-tips.*` and
+  `logo-gap-tips-comparison.png`; exact metrics and logs in STATUS and `/tmp/plate-continue/`.
+  Native Illustrator acceptance of this revision has not been claimed.
+
+## Prior checkpoint — Research Force JPEG boundaries
 
 The original Claude session's final messages and saved-file checksums were recovered from
 Jessica's shared conversation. She approved Task 13.8, which was not yet implemented. It is
-now implemented on top of the earlier **uncommitted** smooth-mode work; nothing committed/pushed.
+was implemented on top of the earlier smooth-mode work, then committed as `c036114`; no push.
 
 - `smooth` enables `jpeg_edges`: decoded-JPEG-only, wider flat-seed neighbourhood for
   chromatic/luma-separated colour pairs, RGB pair selection, luma coverage. Luma alone did

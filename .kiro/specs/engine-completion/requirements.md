@@ -305,8 +305,9 @@ such as the tagline periods) showed no bake-off metric caught (4) or the dropped
   merges; blend pixels ignored so a soft JPEG and a crisp render compare fairly). Weight 0, so
   every composite and profile score is unchanged. Pinned by `tests/test_topology_metric.py`.
 - **(b) DOCUMENTED LIMITS:** outline smoothness/wobble is still not measured by any bake-off
-  metric (SSIM and edge F1 cannot see it); bridged gap tips are a separate "fine detail" sliver
-  painted over the region (visually continuous, a separate path in Illustrator); the narrow gaps
+  metric (SSIM and edge F1 cannot see it); unsupported/small-anchor or donor-splitting gap-tip
+  cases still use separate "fine detail" slivers (supported spine joins now belong to their
+  owning regions before tracing); the narrow gaps
   near the book's spine still come out slightly short and wavy; sub-2 px seams the JPEG only
   half shows can register as one `topo_missing` merge. Illustrator acceptance is by eye.
 
