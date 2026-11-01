@@ -1,6 +1,37 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-10-31 (diagnostics fix + ORBIT defrag + EMBER limit) · Version 0.1.0 · Tests: 555 passing, 7 expected feature gaps (`pytest -q`)
+Last updated: 2026-10-31 (patch/poster limits + ellipse-merge) · Version 0.1.0 · Tests: 560 passing, 7 expected feature gaps (`pytest -q`)
+
+## Complex-scene progress — 2026-10-31 (session continues)
+
+Re-measured the four remaining structural targets with the trustworthy diagnostic,
+then a read-only investigation (`.agents/tasks/patch-poster-fragmentation-investigation.md`)
+separated addressable work from information limits. Outcome: three limits pinned, one
+genuine engine win landed. On `main`, now nine commits past `origin/main` (NOT pushed).
+
+- **Target landscape (trustworthy diffs):** event_poster 83/44 (0 missing, 39 extra —
+  26 are one overlay-sliced gradient disc); mission_patch 72/45 (1 missing, 28 extra,
+  3 splits); storefront 73/64 (8 missing awning/leaves, 2 same-colour leaf merges);
+  root_seal 51/56 (12 missing thin roots/branches — the hardest, thin-feature + same-colour).
+- **Pinned two gradient-object limits** (`9d0ef62`): mission_patch shaded-planet (rim
+  360-enclosed by sky → 0 free boundary points, `_grow_radial_bands` can't fit) and
+  event_poster gradient-disc (sliced into ≥2 disconnected components by opaque overlays,
+  fails `_single_object`). Both are single authored objects the raster faithfully
+  fragments; reunion needs inventing occluded geometry. Raster-measured pins added.
+- **Landed the ellipse-compound-merge** (`1717bd7`): the one addressable win. Extended
+  `order._merge_compound_siblings` with an ellipse admission arm (as strict as the circle
+  arm: RMS ≤ 0.02·min-axis, arc ≥ 160°, shared-occluder via the unchanged 15° T-junction,
+  angle normalization + plausibility bounds). **mission_patch 72 → 70, split 3 → 1**:
+  back-orbit and front-orbit reunite as native `<ellipse>` strokes. 3 regressions
+  (1 positive, 2 negative rejecting contaminated/no-occluder hulls). ORBIT's circle-arm
+  result and all other 23 SVGs byte-identical; patch SSIM 0.9755. Still xfail (70≠45).
+- **Residual patch/poster gap is now dominated by documented limits:** overlay-sliced
+  gradient objects and letter/stroke-interrupted fills, with no gate-preserving reunion.
+  The honest position is diminishing returns on the structural long tail.
+
+Next: ROOT and storefront remain, both dominated by same-colour-separation and thin-feature
+loss (ROOT especially — 12 missing thin roots/branches). Apply the measure-first discipline:
+pin genuine limits rather than force them. PLATE identity stays aspirational.
 
 ## Structural-target progress — 2026-10-31 (session continues)
 

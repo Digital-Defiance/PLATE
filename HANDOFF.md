@@ -27,14 +27,27 @@ rendering.
   evidence: `.agents/tasks/ember-separation-investigation.md`. Do NOT invent geometry or
   use the VLM for geometry; do NOT weaken a gate to force it.
 
-**Do next:** re-measure ROOT / mission-patch / storefront / poster with the fixed
-`challenge_report` diagnostic and pick the one with the most *addressable* (not
-information-limit) gap. ROOT and the scenes share the same-colour-separation and
-gradient-band blockers; apply the EMBER investigation discipline — measure the raster
-signal first, fix only what has a real classical cue, pin the rest as limits. The 3 gold
-EMBER laurel-stem extras are an optional ORBIT-style compound-merge avenue for a stroke
-session. PLATE identity stays aspirational (hidden geometry unrecoverable). Everything in
-the "Structural-target progress" section of STATUS.md is current.
+**Done since:** mission_patch and event_poster were re-measured and investigated
+(`.agents/tasks/patch-poster-fragmentation-investigation.md`). Two gradient-object
+limits pinned (`9d0ef62`: planet rim fully enclosed → no free boundary; poster disc
+sliced into disconnected components). The one addressable win landed (`1717bd7`): an
+ellipse arm in `order._merge_compound_siblings` reunites patch's back/front orbits as
+native `<ellipse>` strokes — **mission_patch 72 → 70, split 3 → 1** — as strict as the
+circle arm, with a positive + two negative regressions. Suite 560/7/0, sweep 70/78,
+all non-patch SVGs byte-identical.
+
+**Do next:** only ROOT and storefront remain among the scenes. Both are dominated by
+same-colour-separation and thin-feature loss (ROOT especially: 12 missing thin
+roots/branches). Apply the measure-first discipline that this session established —
+run `challenge_report`, then a read-only raster investigation BEFORE any fix; fix only
+what has a real classical cue under existing gates, and pin the rest as information
+limits (EMBER-style) rather than forcing them or weakening a gate. The patch/poster
+residual and EMBER face merges are already documented limits. The 3 gold EMBER
+laurel-stem extras are an optional ORBIT-style compound-merge avenue for a stroke
+session. PLATE identity stays aspirational (hidden geometry unrecoverable). Be aware
+the structural long tail is at diminishing returns: most remaining gaps are genuine
+information limits, not bugs. Everything in STATUS.md's "Complex-scene progress" and
+"Structural-target progress" sections is current.
 
 ## Prior checkpoint — audit and exposed-curve recovery (historical)
 
