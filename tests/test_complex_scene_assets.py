@@ -120,3 +120,62 @@ def test_event_poster_gradient_disc_is_fragmented_by_opaque_overlays():
     assert substantial >= 2, (
         f"gradient disc ramp is one region ({substantial} substantial components); "
         "the overlay-fragmentation limit no longer holds")
+
+
+def test_storefront_cream_awning_panels_merge_with_the_background():
+    """DOCUMENTED INFORMATION LIMIT, measured — do NOT weaken color_merge or invent geometry
+    to force complex_storefront's missing awning panels.
+
+    The awning alternates red (#bb4b45, odd panels) and cream (#f5edda, even panels), and the
+    scene background is ALSO #f5edda. The PNG maps 1:1 to the 960x800 viewBox. The red panels
+    are each a distinct component and all match; the cream panels are the same colour as each
+    other AND the background, drawn abutting with no separator, so adjacent cream panels fuse
+    (2+4 into one region) and the edge panel fuses straight into the background. The
+    alternation survives for red only; the cream panels cannot be recovered without inventing
+    boundaries present only in the vector source. Pins the fusion; the target stays xfail.
+    """
+    import numpy as np
+    from scipy import ndimage as ndi
+
+    with Image.open(DIRECTORY / "complex_storefront.png") as image:
+        rgba = np.asarray(image.convert("RGBA"))
+    rgb, alpha = rgba[..., :3].astype(int), rgba[..., 3]
+
+    def labels_at(colour, probes, tol):
+        hexed = np.array(list(bytes.fromhex(colour[1:])))
+        mask = (np.abs(rgb - hexed).max(axis=2) <= tol) & (alpha >= 128)
+        labelled, _ = ndi.label(mask, np.ones((3, 3)))
+        return [int(labelled[y, x]) for x, y in probes]
+
+    # panel-2 and panel-4 (even, cream) share one #f5edda component; panel-14 and the corner
+    # background share another -> cream awning panels are not separable from each other/the bg.
+    p2, p4, p14, corner = labels_at("#f5edda", [(205, 410), (305, 410), (805, 410), (10, 10)], 24)
+    assert 0 not in (p2, p4, p14, corner), "a cream probe landed off the cream mask"
+    assert p2 == p4, f"adjacent cream panels 2 and 4 are separable: {p2} vs {p4}"
+    assert p14 == corner, f"edge cream panel 14 does not fuse into the background: {p14} vs {corner}"
+    # A red panel between them IS a distinct object (alternation survives for red).
+    (red3,) = labels_at("#bb4b45", [(255, 410)], 24)
+    assert red3 != 0, "red panel-3 probe missed the red mask"
+
+
+def test_storefront_same_colour_plant_leaves_are_one_region():
+    """DOCUMENTED INFORMATION LIMIT, measured — like EMBER's cheeks: adjacent same-colour
+    organics fuse. plant-1-leaf-1/leaf-3 and plant-2-leaf-1/leaf-3 are each authored #267d83
+    and render as one teal component (the right pair also fuses into the same-colour #267d83
+    building). No separating cue; separating them would invent geometry. Target stays xfail.
+    """
+    import numpy as np
+    from scipy import ndimage as ndi
+
+    with Image.open(DIRECTORY / "complex_storefront.png") as image:
+        rgba = np.asarray(image.convert("RGBA"))
+    rgb, alpha = rgba[..., :3].astype(int), rgba[..., 3]
+    hexed = np.array([0x26, 0x7d, 0x83])
+    mask = (np.abs(rgb - hexed).max(axis=2) <= 24) & (alpha >= 128)
+    labelled, _ = ndi.label(mask, np.ones((3, 3)))
+
+    left = {int(labelled[y, x]) for x, y in [(120, 610), (140, 580)]}
+    right = {int(labelled[y, x]) for x, y in [(800, 610), (820, 580)]}
+    assert 0 not in left and 0 not in right, "a teal-leaf probe landed off the teal mask"
+    assert len(left) == 1, f"left plant leaves are separable: {left}"
+    assert len(right) == 1, f"right plant leaves are separable: {right}"
