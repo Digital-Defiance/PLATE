@@ -24,6 +24,14 @@ splits can recover a safe subset while retaining every donor connection. Under-b
 same sweep/default outputs. **13.6 still open** for the remaining 50 overlay pixels and 1–2px-short
 tips; two broad cleanup experiments created specks and were rejected. See latest STATUS.
 
+Sharp-corner follow-up: clean-mode reference refinement restores the left vertical tip to the
+source position; right tip remains 1px short, under-bar overlays remain 50. Logo SSIM .977287 →
+.977355, anchors/topology unchanged. Tests **651/7 xfail**, sweep **70/78**, core **36/36**, all
+48 default/control SVGs unchanged. **Task 2's clean-render residual pin is now done**: 14 tests
+show scene15/23's three hidden-object misses persist without JPEG damage at all tested denoise
+levels. These belong to R2/Task 4, not a proven information limit; Task 1's .6 stretch remains
+unmet. **13.6 and 13.5 remain open**. Smooth bake-off effectively flat (.849341 → .849337).
+
 Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.

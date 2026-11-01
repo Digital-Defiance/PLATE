@@ -456,7 +456,11 @@ smooth preset", answered by the logo fixture.
   on a lightly smoothed copy with `corner_k ≈ 3·scale`, refined, and pinned; each
   corner-to-corner run is Gaussian-smoothed along the outline (odd reflection keeps the ends)
   and, if it bows < max(0.6·tol, 0.8 % of its length), emitted as one exact line. This removes
-  JPEG ringing wobble without rounding corners.
+  JPEG ringing wobble without rounding corners. To recover tips shortened by spatial mask blur,
+  clean mode can refine existing ≥90° outer corners against an unblurred contour with the same
+  contour count and outer area within 5%. Match convex/concave sense; reuse straight-flank fit
+  gates; require outward extension >0.25 working px and displacement ≤max(2.5, 3·mask sigma).
+  Do not add corners or alter masks; holes and default mode keep their existing tracing.
 - `snap_max_px` (primitives): polygon snaps also need mean deviation ≤ ~0.45·cap and a
   98th-percentile outline→polygon distance ≤ ~0.75·cap (source px × scale), so a big arc can
   no longer pass as a 14-gon. Circles/ellipses/rects keep the proportional tolerance.

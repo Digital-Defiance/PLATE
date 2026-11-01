@@ -148,6 +148,31 @@ two extra pieces; both were rejected. No native Illustrator acceptance is claime
 SVG. Source/before/after comparison and validation: `out/research-force/logo-small-gaps-comparison.png`,
 `small-gaps-validation.json`; full evidence `/tmp/plate-tips2/`.
 
+### Bounded sharp corners and clean-render pins (2026-11-01)
+
+Clean-mode tracing now refines existing sharp outer corners against an unblurred contour,
+with matching contour count/area, convexity, straight-flank fit and bounded displacement.
+Independent triangles/notches at 2×/4× improve from >1 source-pixel endpoint error to <0.2px;
+round curves, distant references and over-limit tips stay unchanged. Defaults are untouched.
+
+Logo SSIM **.977286920 → .977354943**, MAE **1.285310984 → 1.281820893**, left tip bottom
+**805 → 807** (source 807); right remains 806. Still 39 shapes, 600 anchors, topology **0/0**,
+spine overlays 0, under-bar overlays 50. Task 13.6 remains open, as does 13.5 smoothness scoring.
+
+Same 24-scene `smooth` bake-off: composite **.849340515 → .849336896**, SSIM
+**.989570306 → .989566773**, whole-object F1 **.707263801** and hidden completion **.548611111**
+unchanged. Scene16 improves, scene19 JPEG slightly regresses. Weights/floors unchanged.
+
+**Task 2 complete:** 14 clean-render pins generate PNGs directly from the independent truth
+SVGs. Scene15's two hidden objects and scene23's one still recover 0 at denoise -1/0/1/2/3/4/6.
+This establishes a measured R2/Task 4 completion/matching limit, not an information-theoretic
+impossibility; update pins when completion improves. Task 1's .4 floor holds; .6 stretch unmet.
+
+Full tests **651 passed / 7 xfailed**, robustness **70/78**, core **36/36**, all 48 default/control
+SVGs byte-identical. Sample and logo crops rendered/inspected; native Illustrator review pending.
+Artifacts `out/research-force/logo.plate-corner-reference.*`, `logo-corner-reference-comparison.png`,
+`corner-reference-validation.json`; evidence `/tmp/plate-tips3/`.
+
 ## Where PLATE loses (the useful part)
 Complete-object recovery on the corpus: free circles 13/17, **occluded rect 4/11, occluded polygon 3/10, occluded rrect 5/12**, and
 **JPEG-damaged scenes: 3/10 occluded objects recovered** at the original default (aggregate `hidden_completion` 0.33; an earlier

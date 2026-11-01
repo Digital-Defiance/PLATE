@@ -98,6 +98,45 @@ def test_jpeg_variant_hidden_completion_meets_floor(jpeg_corpus):
     assert hc >= 0.4, f"JPEG-variant hidden_completion {hc:.3f} fell below the 0.4 floor"
 
 
+@pytest.fixture(scope="module")
+def clean_completion_limits(jpeg_corpus, tmp_path_factory):
+    """Render clean PNGs from independent truth, never by decoding/re-saving the JPEG."""
+    import cairosvg
+
+    clean = tmp_path_factory.mktemp("clean_completion_limits")
+    scenes = {}
+    for stem in ("scene15_jpg", "scene23_jpg"):
+        path = clean / f"{stem}.png"
+        truth = corpus.load_truth(jpeg_corpus / "truth" / f"{stem}.json")
+        svg = (jpeg_corpus / "truth" / f"{stem}.svg").read_bytes()
+        cairosvg.svg2png(bytestring=svg, write_to=str(path))
+        scenes[stem] = path, truth
+    return scenes
+
+
+@pytest.mark.parametrize("stem,occluded_count", [("scene15_jpg", 2), ("scene23_jpg", 1)])
+@pytest.mark.parametrize("denoise", [-1, 0, 1, 2, 3, 4, 6])
+def test_clean_completion_floor_is_not_a_jpeg_failure(clean_completion_limits, stem, occluded_count, denoise):
+    """R1(b) / Task 2: three misses persist on clean truth, owned by R2 / Task 4.
+
+    This pins the measured completion limit, not an information-theoretic impossibility.
+    Update the pin when Task 4 legitimately improves these independent truth matches;
+    broadening JPEG denoise is not the fix. Includes every level tried in the investigation.
+    """
+    from plate import pipeline
+    from plate.config import Config
+
+    path, truth = clean_completion_limits[stem]
+    with Image.open(path) as image:
+        assert image.format == "PNG"
+    occluded = [i for i, obj in enumerate(truth["objects"]) if not obj.get("background")
+                and truth["visible"][i].sum() < .97 * truth["full"][i].sum()]
+    assert len(occluded) == occluded_count
+    result = pipeline.run(path, Config(denoise=denoise))
+    measured = score.structure(result.svg, truth)
+    assert measured["hidden_completion"] == 0., (stem, denoise, measured)
+
+
 def test_bakeoff_end_to_end_and_plate_beats_baseline(mini, tmp_path):
     summ = runner.run(mini / "images", tmp_path, ["plate", "vtracer"], truth=mini / "truth", log=lambda m: None)
     by = {s["tool"]: s for s in summ}

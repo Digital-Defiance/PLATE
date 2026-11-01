@@ -21,8 +21,8 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
       0.33 → 0.42; floor met, 0.6 stretch not); `docs/BAKEOFF.md` corrected.
       Re-audited 2026-11-01 against the exact seed-1/q55 corpus with the JPEG trigger
       disabled vs enabled: 3/10 → 4/10 objects, mean per-scene 0.333333 → 0.416667.
-      Task 1's ≥0.4 acceptance floor is met; the ≥0.6 stretch and Task 2 residual pin
-      are NOT done. Evidence: `/tmp/plate-continue/task1-audit.json`.
+      Task 1's ≥0.4 acceptance floor is met; the ≥0.6 stretch remains unmet. Task 2's
+      residual pin is now done (see below). Evidence: `/tmp/plate-continue/task1-audit.json`.
       Measure first: `plate corpus -o /tmp/jpeg-bo -n 24 --seed 1` then
       `plate bakeoff /tmp/jpeg-bo/images --truth /tmp/jpeg-bo/truth -o /tmp/jpeg-bo/out`;
       confirm JPEG-variant aggregate `hidden_completion` ≈ 0.30 (3/10). Add a JPEG-keyed
@@ -37,7 +37,7 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
       Verify: re-run the bakeoff above and confirm the number rose; `pytest -q tests/test_bakeoff.py`
       new test passes; REGS holds.
 
-- [ ] 2. Pin the JPEG clean-render floor as a documented limit (R1 state (b)).
+- [x] 2. Pin the JPEG clean-render floor as a documented limit (R1 state (b)).
       The 3 objects (scene15 ×2, scene23 ×1) recover 0 even on the clean render at every
       denoise level — a pre-existing rect/polygon completion limit (Task 4 class), not a
       JPEG bug. Add a pin asserting the clean-render floor so they are never re-chased as
@@ -45,6 +45,11 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
       Files: `tests/test_bakeoff.py` (or `tests/test_pipeline.py`).
       Acceptance (b): pin test asserts the measured clean-render non-recovery of those
       objects; references Task 4 as the owning class.
+      Done 2026-11-01: 14 tests directly render independent truth SVGs as PNG and verify
+      scene15 ×2 / scene23 ×1 recover 0 at denoise -1/0/1/2/3/4/6. This pins a measured
+      R2/Task 4 completion/matching limitation, not an information-theoretic impossibility;
+      update the pin when Task 4 improves recovery. Full 651/7 xfail, sweep 70/78, core
+      36/36, 48 default/control SVGs unchanged.
       Verify: `pytest -q` runs the new pin green; REGS holds.
 
 - [ ] 3. Realistic gradient: smooth-single-ramp region detector (R4 state (a)).
@@ -214,7 +219,13 @@ PNG inputs, VTracer baseline present, 7 strict-xfail gaps intact.
         Substantial splits and whole foreign-object erasure remain rejected; no prior test/gate
         weakened. Seven new cases, full suite 622/7 xfail, same sweep/default outputs.
         Under-bar overlays 141 → 50, anchors 624 → 600, SSIM .976205 → .977287, topology 0/0.
-        **Still open:** remaining 50 under-bar overlay pixels and 1–2px-short vertical gap ends.
+        Bounded corner-reference follow-up: in clean mode, refine existing sharp outer corners
+        using a matching unblurred contour, preserving existing flank-fit gates and bounding
+        displacement. No new corners or mask edits. Fifteen independent endpoint/control tests;
+        full 651/7 xfail, same sweep/defaults. Logo left/right tip y 805/806 → 807/806 (source
+        807/807), SSIM .977287 → .977355, anchors/topology unchanged. Smooth bake-off effectively
+        flat (.849341 → .849337); recovery unchanged, tiny fidelity tradeoff recorded.
+        **Still open:** remaining 50 under-bar overlay pixels and right gap tip 1px short.
         Global spatial-blur reduction and blanket final-pass tip suppression each created two
         extra pieces and were rejected. Do not relax guards to force closure; `/tmp/plate-tips2/`
         holds both experiments and current source/before/after crop measurements.

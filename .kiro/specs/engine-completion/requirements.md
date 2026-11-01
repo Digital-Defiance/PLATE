@@ -96,7 +96,10 @@ occluded JPEG-q55 objects (mean per-scene `hidden_completion` **0.333333**), not
 historically reported 0/10 (a different corpus config, with the cause misattributed to
 the T-junction test). With the trigger it recovers **4/10**, mean **0.416667**; this was
 reproduced 2026-11-01 by disabling/enabling the trigger on the same six JPEGs.
-The Task 1 floor is met; the 0.6 stretch and Task 2 residual pin remain open.
+The Task 1 floor is met; the 0.6 stretch remains unmet. Task 2's residual pin is done:
+14 tests render independent truth SVGs directly as clean PNGs and recover none of the three
+residual objects at denoise -1/0/1/2/3/4/6. This is a measured R2/Task 4 completion/matching
+limitation, not a proven information-theoretic impossibility.
 Original root cause: the auto-denoiser never
 fires on JPEG-q55 (`noise_fraction` 0.011–0.026 < the 0.04 gate; `interior_noise_fraction`
 ≈ 0, below the 0.002 lever), so JPEG ringing displaces the segmentation boundary and the

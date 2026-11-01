@@ -1,6 +1,45 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-01 (small-gap anchors, Task 13.6 partial) · Version 0.1.0 · Tests: 622 passed, 7 expected feature gaps.
+Last updated: 2026-11-01 (bounded corner recovery; Task 2 pinned) · Version 0.1.0 · Tests: 651 passed, 7 expected feature gaps.
+
+## Bounded sharp-corner recovery + Task 2 residual pin — 2026-11-01
+
+Continued on `codex/logo-quality` from signed checkpoint **`d5d0bf6`**; nothing pushed.
+
+- In clean/`edge_smooth` tracing, refine an **already detected sharp corner** against the
+  unblurred mask contour. Require matching contour count and outer area within 5%, matching
+  convex/concave sense, the existing straight-flank line-fit gates, and displacement bounded by
+  max(2.5, 3·mask sigma) working pixels. Only extend a supported tip; do not add corners or alter
+  masks. Holes keep their existing tracing; default mode never requests this reference.
+- Independently authored triangles and concave notches at 2×/4× reproduce >1 source-pixel tip
+  loss without the reference, and <0.2px error with it. Fifteen regressions also cover rotations,
+  reversed winding, round boundaries, distant references and the displacement bound. The 15
+  new corner cases failed before implementation; no prior tests/gates were weakened.
+- Logo: left/right vertical-tip bottom y **805/806 → 807/806**, versus source-luma y **807/807**.
+  SSIM **0.977286920 → 0.977354943**, MAE **1.285310984 → 1.281820893**. Still 39 editable
+  shapes, 600 serialized anchors, 4 colours, topology **0 extra / 0 missing**, both periods/V dot.
+  Spine overlays remain 0; under-bar overlays remain 50 source pixels.
+- Same 24-scene `smooth` bake-off: composite **0.849340515 → 0.849336896** (effectively flat),
+  SSIM **0.989570306 → 0.989566773**; object F1 **0.707263801** and hidden completion
+  **0.548611111** unchanged. Scene16 improves, scene19 JPEG regresses slightly. Weights unchanged.
+- **Task 2 done:** 14 pins render the independent truth SVGs directly to clean PNGs (not
+  re-encoded JPEGs), then test denoise -1/0/1/2/3/4/6. The two occluded objects in scene15 and
+  one in scene23 still recover 0. These are measured completion/matching limitations owned by
+  **R2 / Task 4**, not proven information-theoretic impossibilities. Update pins when that work
+  improves recovery. Task 1 remains done at its 0.4 floor; the 0.6 stretch remains unmet.
+- Rejected scratch colour repairs: widening achromatic pair eligibility globally damaged many
+  labels; restricting to third-colour pixels barely helped; a local repair reduced under-bar
+  overlays 50 → 38 but worsened SSIM to .976646. None is shipped. The gray JPEG pixels currently
+  assigned to blue merit segmentation work; do not erase the connectivity-protected island.
+- **Validation:** baseline **622 passed / 7 xfailed** (324.16s), after **651 passed / 7 xfailed** (371.99s);
+  no exclusions/skips/xpasses; focused **42 passed**. Full/core robustness **70/78 / 36/36**;
+  all **24 PLATE + 24 VTracer default SVGs byte-identical**. Sample renders and enlarged
+  source/before/after logo crops inspected. New corner test passes Ruff; `git diff --check` passes.
+- New artifacts: `out/research-force/logo.plate-corner-reference.{svg,png,report.html}`,
+  `logo-corner-reference-comparison.png`, `corner-reference-validation.json`. Earlier artifacts
+  preserved. Detailed evidence: `/tmp/plate-tips3/` and `/tmp/plate-tips3-before-tests.txt`.
+- **Still open:** Task 13.6 (50 under-bar overlay pixels, right tip 1px short), 13.5 smoothness
+  scoring, and native Illustrator acceptance of the new revision. Do not claim R9 complete.
 
 ## Small-gap anchors and safe partial reconnection — 2026-11-01
 

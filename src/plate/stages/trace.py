@@ -70,6 +70,14 @@ def mask_to_path(mask: Mask, canvas: tuple[int, int], cfg: Config, scale: float)
     # exactly round under resize. Snap only interior holes, only on a tight circle
     # fit, so non-circular holes and the outer contour keep their Bézier tracing.
     outer_idx = max(range(len(conts)), key=lambda i: abs(poly_area(conts[i]))) if conts else -1
+    corner_reference = None
+    if cfg.edge_smooth > 0 and sigma > 0.45 and conts:
+        raw = mask_contours(mask, canvas, 0.0)
+        if len(raw) == len(conts):
+            reference = max(raw, key=lambda c: abs(poly_area(c)))
+            area = abs(poly_area(reference))
+            if abs(abs(poly_area(conts[outer_idx])) - area) <= 0.05 * area:
+                corner_reference = reference
     hole_tol = max(0.35 * scale, 0.4)
 
     def circle_arc(c):
@@ -93,7 +101,9 @@ def mask_to_path(mask: Mask, canvas: tuple[int, int], cfg: Config, scale: float)
                 continue
         res = contour_to_beziers(c, tol, cfg.corner_threshold, smooth_px=cfg.edge_smooth * scale,
                                  straighten=cfg.straighten,
-                                 corner_k=max(4, int(round(3 * scale))) if cfg.edge_smooth > 0 else 4)
+                                 corner_k=max(4, int(round(3 * scale))) if cfg.edge_smooth > 0 else 4,
+                                 corner_reference=corner_reference if i == outer_idx else None,
+                                 reference_limit=max(2.5, 3 * sigma))
         if res is None:
             continue
         start, curves = res

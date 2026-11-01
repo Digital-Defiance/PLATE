@@ -215,8 +215,49 @@ def _line_curve(p0, p1):
     return np.array([p0, p0 + d / 3, p0 + 2 * d / 3, p1])
 
 
+def _restore_reference_corners(P, Pd, corners, reference, k, limit):
+    """Refine existing sharp corners from unblurred geometry, with the same line-fit gates."""
+    R = resample_closed(reference, 1.0)
+    kin, kout = max(3, k - 1), max(12, 3 * k)
+    if len(R) < max(4 * k, 2 * kout + 2):
+        return P
+    Rd = gaussian_filter1d(R, 1.0, axis=0, mode="wrap")
+
+    def winding(points):
+        return np.sign(np.sum(points[:, 0] * np.roll(points[:, 1], -1)
+                              - points[:, 1] * np.roll(points[:, 0], -1)))
+
+    rw, pw = winding(Rd), winding(Pd)
+    targets = []
+    for j in find_corners(Rd, 90, k):
+        point = refine_corner(Rd, j, kin, kout)
+        if np.array_equal(point, Rd[j]):
+            continue  # unsupported/curved flanks: refine_corner kept its fallback
+        u, v = Rd[j] - Rd[(j - k) % len(Rd)], Rd[(j + k) % len(Rd)] - Rd[j]
+        direction = point - (Rd[(j - k) % len(Rd)] + Rd[(j + k) % len(Rd)]) / 2
+        if np.linalg.norm(direction) < 1:
+            continue
+        targets.append((point, _norm(direction), np.sign((u[0] * v[1] - u[1] * v[0]) * rw)))
+    used = set()
+    for i in corners:
+        u, v = Pd[i] - Pd[(i - k) % len(Pd)], Pd[(i + k) % len(Pd)] - Pd[i]
+        if u @ v > 0:
+            continue  # only turns of at least 90 degrees
+        side = np.sign((u[0] * v[1] - u[1] * v[0]) * pw)
+        candidates = [(np.linalg.norm(point - P[i]), j, point, direction)
+                      for j, (point, direction, sign) in enumerate(targets)
+                      if j not in used and sign == side]
+        if not candidates:
+            continue
+        distance, j, point, direction = min(candidates, key=lambda item: item[0])
+        if distance <= limit and (point - P[i]) @ direction > 0.25:
+            P[i] = point
+            used.add(j)
+    return P
+
+
 def contour_to_beziers(P, tol, corner_deg, smooth_px: float = 0.0, straighten: bool = False,
-                       corner_k: int = 4):
+                       corner_k: int = 4, corner_reference=None, reference_limit: float = 2.5):
     """Closed contour (N, 2) -> (start_point, [cubic ctrl arrays], closed=True).
     Corners are detected and kept sharp; smooth stretches are fit with Schneider.
 
@@ -224,7 +265,9 @@ def contour_to_beziers(P, tol, corner_deg, smooth_px: float = 0.0, straighten: b
       smooth_px  Gaussian sigma ALONG the outline between corners, ends pinned (working px);
                  corners are then detected on a lightly smoothed copy.
       straighten corner-to-corner runs that bow < STRAIGHT_RATIO of their length -> exact lines.
-      corner_k   half-window (samples) of the corner detector; scale it with `upscale`."""
+      corner_k   half-window (samples) of the corner detector; scale it with `upscale`.
+      corner_reference  optional matching unblurred contour for bounded sharp-tip recovery.
+                        Does not introduce new corners or change the contour topology."""
     P = resample_closed(P, 1.0)
     n = len(P)
     if n < 6:
@@ -237,6 +280,8 @@ def contour_to_beziers(P, tol, corner_deg, smooth_px: float = 0.0, straighten: b
         for i in corners:
             P[i] = refine_corner(Pd, i, k_in=max(3, corner_k - 1), k_out=max(12, 3 * corner_k)) if clean \
                 else refine_corner(P, i)
+        if clean and corner_reference is not None:
+            P = _restore_reference_corners(P, Pd, corners, corner_reference, corner_k, reference_limit)
         segs = []
         for a, b in zip(corners, corners[1:] + [corners[0] + n]):
             idx = [(j % n) for j in range(a, b + 1)]

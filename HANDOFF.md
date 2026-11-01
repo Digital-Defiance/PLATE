@@ -1,10 +1,33 @@
-# PLATE handover — 2026-11-01 (JPEG colour boundaries)
+# PLATE handover — 2026-11-01 (bounded sharp corners; Task 2 pinned)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — small-gap anchors and safe partial transfers
+## Latest checkpoint — bounded sharp corners and clean-render residual pins
+
+- Continued from signed **`d5d0bf6`** on `codex/logo-quality`; nothing pushed.
+- Clean-mode tracing can refine an existing sharp outer corner from an unblurred contour,
+  under matching count/area, convexity, existing straight-flank fit and displacement guards.
+  No new corners/mask changes; defaults and hole handling unchanged. Fifteen independent
+  triangle/notch/reference controls guard >1px → <0.2px source endpoint error at 2×/4×.
+- Logo left/right tip bottoms 805/806 → 807/806 (source 807/807); SSIM .977287 → .977355,
+  MAE 1.285311 → 1.281821. Still 39 shapes, 600 anchors, topology 0/0, spine overlays 0,
+  under-bar overlays 50. Output: `out/research-force/logo.plate-corner-reference.*`, comparison
+  and validation alongside. Native Illustrator review remains pending.
+- **Task 2 checked done:** independent truth rendered directly as PNG; scene15's two hidden
+  objects and scene23's one recover 0 at denoise -1/0/1/2/3/4/6, pinned in 14 tests. This is a
+  measured R2/Task 4 completion/matching limit, not a proven information limit. Update the pins
+  when Task 4 improves recovery. Task 1's ≥.4 floor verified; ≥.6 stretch still unmet.
+- Full tests **651 passed / 7 xfailed**, sweep **70/78**, core **36/36**, 48 default/control
+  SVGs unchanged. Smooth bake-off .849340515 → .849336896, recovery/topology unchanged;
+  tiny fidelity tradeoff retained, weights unchanged. Evidence `/tmp/plate-tips3/`.
+- Next: remaining 13.6 under-bar segmentation/right tip and 13.5 smoothness scoring. Broad
+  achromatic pair fallback and local pair repair were tried/rejected (local repair worsened
+  logo SSIM); preserve the connectivity guards and the earlier rejected experiments below.
+  Browser draft specs/Kiro execution metadata remain outside this scoped checkpoint.
+
+## Prior checkpoint — small-gap anchors and safe partial transfers
 
 - Continued from signed commits `c036114` and `4c887d3` on `codex/logo-quality`; nothing pushed.
 - Small regions can own a connected gap if there is one unique solid, opaque source-colour core.
