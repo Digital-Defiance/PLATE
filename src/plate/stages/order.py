@@ -14,7 +14,7 @@ import numpy as np
 from scipy import ndimage as ndi
 
 from ..config import Config
-from ..geometry import fit_circle, raster_prim
+from ..geometry import Prim, fit_circle, raster_prim
 from ..masks import Mask, contains, touches, crop_like, inter_area
 from ..scene import Segmentation, Shape
 from .complete import occludes, try_complete
@@ -199,6 +199,21 @@ def merge_fragments(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> 
     return seg
 
 
+def merge_ring_ellipses(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> Segmentation:
+    """Reunite an interrupted ELLIPTICAL stroke ring left split by every earlier pass.
+
+    Runs AFTER loops.recover/curves so it never pre-empts the rings those stages
+    already reunite (keeping their geometry and paint order intact). Same strict
+    admission as the compound-sibling circle arm (shared 15deg occluder clusters,
+    >=160deg arc, tight scale-keyed RMS) plus the ellipse-specific defences in
+    `_fit_ring_ellipse`. Returns a rebuilt segmentation on the first reunion, else
+    `seg` unchanged.
+    """
+    if not cfg.complete_hidden:
+        return seg
+    return _merge_compound_siblings(seg, transparent, cfg, rings=True)
+
+
 def _cluster_by_shared_occluder(ids: list[int], occ: dict[int, set[int]]) -> list[list[int]]:
     """Union-find groups of ids whose occluder sets intersect (one shape over both)."""
     parent = {i: i for i in ids}
@@ -220,7 +235,7 @@ def _cluster_by_shared_occluder(ids: list[int], occ: dict[int, set[int]]) -> lis
 
 
 def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
-                             cfg: Config) -> Segmentation:
+                             cfg: Config, rings: bool = False) -> Segmentation:
     """Reunite same-colour sibling fragments of ONE compound object that no primitive fit.
 
     Runs only after the parent-island and flat-pool branches have had their turn, so
@@ -290,19 +305,173 @@ def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
                 continue
             circ, rms, cov = fit_circle(hull)
             radius = circ.rx
-            if radius < 1 or rms > 0.02 * radius or cov < np.deg2rad(160):
-                continue
             # The union keeps every member's visible pixels, so no ownership moves and
             # no earlier sibling is uncovered (`rebuilt` asserts this). Merge into one
             # compound shape keyed on the lowest member id.
             first = min(cluster)
             vmask = Mask.from_full(vis)
-            joint = Shape(first, color, vmask, vmask, sil=vmask)
             cset = set(cluster)
+            if radius >= 1 and rms <= 0.02 * radius and cov >= np.deg2rad(160):
+                # Circle continuation (unchanged behaviour): emit a compound path.
+                joint = Shape(first, color, vmask, vmask, sil=vmask)
+                shapes = [joint if s.id == first else s for s in seg.shapes
+                          if s.id == first or s.id not in cset]
+                return seg.rebuilt(shapes)
+            if not rings:
+                continue
+            # Circle fit rejected. An interrupted ELLIPTICAL ring (same colour arcs
+            # on one elongated ellipse that a circle cannot describe) is admitted
+            # only through an equally strict fallback: a tight ellipse edge fit,
+            # the same >=160deg arc minimum, plausible/non-degenerate axes and a
+            # sanitised angle. No circle-arm gate is relaxed; the cluster already
+            # carries the shared-occluder (15deg T-junction) evidence. This runs only
+            # in the dedicated post-loop ring pass (`rings=True`), AFTER loops.recover
+            # has reunited the rings it supports, so loops.recover's results (and their
+            # paint order) are never pre-empted. The cover = painted non-member pixels;
+            # the ring may only close across pixels under that cover, never across a
+            # transparent/background gap (a genuinely open ring stays open).
+            cover = (seg.rid >= 0) & ~np.isin(seg.rid, list(cset))
+            stroke = _fit_ring_ellipse(vis, H, W, cover)
+            if stroke is None:
+                continue
+            joint = Shape(first, color, vmask, vmask, sil=vmask)
+            joint.closed_stroke = stroke
             shapes = [joint if s.id == first else s for s in seg.shapes
                       if s.id == first or s.id not in cset]
             return seg.rebuilt(shapes)
     return seg
+
+
+def _fit_ring_ellipse(vis: np.ndarray, H: int, W: int, cover: np.ndarray | None = None):
+    """Refine a native elliptical stroke ring from pooled same-colour arc pixels.
+
+    Returns a ``strokes.ClosedStroke`` (prim = fitted ellipse, constant width, full =
+    the rasterised whole ring) only when the fit is tight, the arc coverage reaches
+    the circle arm's 160deg floor, the axes are plausible/elongated/non-degenerate and
+    the cv2 angle sanitises cleanly. Otherwise ``None`` (reject, as strict as the
+    circle arm). Contaminated pooled hulls (same-colour debris) fail the RMS/axis
+    gates; those fragments are already kept in singleton clusters upstream.
+    """
+    from scipy.optimize import least_squares
+
+    from ..geometry import contours_xy, fit_ellipse
+    from .strokes import ClosedStroke, _ellipse_distance
+
+    ys, xs = np.nonzero(vis)
+    pts = np.c_[xs, ys].astype(np.float32)
+    if len(pts) < 8:
+        return None
+    hull = cv2.convexHull(pts).reshape(-1, 2).astype(np.float64)
+    if len(hull) < 5:
+        return None
+    initial = fit_ellipse(hull)
+    if initial is None:
+        return None
+    pr, hull_rms, cov = initial
+    rx, ry = float(pr.rx), float(pr.ry)
+    lo_axis, hi_axis = min(rx, ry), max(rx, ry)
+    # Gate the hull fit as tightly as the circle arm (RMS keyed to the ellipse's
+    # own scale) and demand the same minimum covered arc.
+    if hull_rms > 0.02 * lo_axis or cov < np.deg2rad(160):
+        return None
+    # Plausibility: non-degenerate minor axis, bounded major axis within the scene,
+    # and genuinely elongated (a near-circle belongs to the circle arm, not here).
+    if lo_axis < 2.0 or hi_axis > 0.75 * max(H, W) or lo_axis / hi_axis > 0.9:
+        return None
+    # Sanitise the cv2 angle (a garbage >180deg angle was observed on raw pooled
+    # hulls); fold into [0,180). A finite centre is required.
+    angle = float(pr.angle) % 180.0
+    if not (np.isfinite(pr.cx) and np.isfinite(pr.cy) and np.isfinite(rx) and np.isfinite(ry)):
+        return None
+    # Reject two CONGRUENT OFFSET ellipses posing as one interrupted ring. A pooled
+    # single-ellipse fit cannot tell a genuine ring (whose arcs share one centre)
+    # from two near-complete ellipses of the same shape placed side by side (which
+    # share an occluder and a plausible common hull but are distinct objects). When
+    # two fragments EACH independently determine a confident ellipse (ample arc,
+    # tight fit) with matching axes but centres offset by a real fraction of the
+    # minor axis, they are duplicates, not fragments -- refuse (as the later
+    # loops.recover arc-compatibility test would). Genuine ring fragments are either
+    # short (no confident solo fit) or share one centre.
+    confident = []
+    lbl, ncomp = ndi.label(vis)
+    for k in range(1, ncomp + 1):
+        comp = lbl == k
+        if comp.sum() < 60:
+            continue
+        cy, cx = np.nonzero(comp)
+        chull = cv2.convexHull(np.c_[cx, cy].astype(np.float32)).reshape(-1, 2).astype(np.float64)
+        if len(chull) < 5:
+            continue
+        fe = fit_ellipse(chull)
+        if fe is None:
+            continue
+        fpr, frms, fcov = fe
+        if fcov >= np.deg2rad(140) and frms <= 1.0:
+            confident.append(fpr)
+    for a in range(len(confident)):
+        for b in range(a + 1, len(confident)):
+            ea, eb = confident[a], confident[b]
+            amin, amaj = min(ea.rx, ea.ry), max(ea.rx, ea.ry)
+            bmin, bmaj = min(eb.rx, eb.ry), max(eb.rx, eb.ry)
+            congruent = (abs(amin - bmin) <= 0.12 * max(amin, bmin)
+                         and abs(amaj - bmaj) <= 0.12 * max(amaj, bmaj))
+            sep = float(np.hypot(ea.cx - eb.cx, ea.cy - eb.cy))
+            if congruent and sep > 0.15 * (amin + bmin) / 2:
+                return None
+    # Seed a stroke model and refine against the observed arc boundary. Width from
+    # the visible arc thickness (twice the median distance-transform ridge).
+    dt = ndi.distance_transform_edt(vis)
+    width0 = float(2 * np.median(dt[vis]))
+    if not np.isfinite(width0) or width0 < 1.0:
+        return None
+    boundary = np.vstack([c for c in contours_xy(vis)]) if contours_xy(vis) else None
+    if boundary is None or len(boundary) < 40:
+        return None
+    q0 = np.array([pr.cx, pr.cy, rx, ry, np.deg2rad(angle), width0])
+    span = np.array([3, 3, 4, 4, .15, 3])
+    lower, upper = q0 - span, q0 + span
+    lower[2:4] = np.maximum(lower[2:4], .5)
+    lower[-1] = max(1., lower[-1])
+    fit = least_squares(lambda q: np.abs(_ellipse_distance(boundary, q[:5])) - q[5] / 2,
+                        q0, bounds=(lower, upper), max_nfev=80)
+    q = fit.x
+    width = float(q[5])
+    rms = float(np.sqrt(np.mean(fit.fun ** 2)))
+    # Final defensive gate on the refined stroke (thicker 5-8px orbit strokes than
+    # loops.py's thin arcs, so .9 / 2*width mirror its .35 / .85 scaled up).
+    if rms > 0.9 or float(np.max(np.abs(fit.fun))) > 2 * width:
+        return None
+    rxf, ryf = float(q[2]), float(q[3])
+    if min(rxf, ryf) < 2.0 or max(rxf, ryf) > 0.75 * max(H, W) or min(rxf, ryf) / max(rxf, ryf) > 0.9:
+        return None
+    # Rasterise the ENTIRE ring; reject if its extent leaves the canvas.
+    phi = q[4]
+    ext_x = np.hypot(q[2] * np.cos(phi), q[3] * np.sin(phi)) + width / 2 + 3
+    ext_y = np.hypot(q[2] * np.sin(phi), q[3] * np.cos(phi)) + width / 2 + 3
+    x0, y0 = np.floor([q[0] - ext_x, q[1] - ext_y]).astype(int)
+    x1, y1 = (np.ceil([q[0] + ext_x, q[1] + ext_y]).astype(int) + 1)
+    if x0 < 0 or y0 < 0 or x1 > W or y1 > H:
+        return None
+    yy, xx = np.indices((y1 - y0, x1 - x0))
+    dist = np.abs(_ellipse_distance(np.c_[xx.ravel() + x0, yy.ravel() + y0], q[:5])).reshape(yy.shape)
+    full = Mask(dist <= width / 2, y0, x0)
+    # Never close the ring across an EXPOSED gap. The reconstructed stroke CORE (well
+    # inside the band) must, wherever it is not observed, lie under an occluder
+    # (painted non-member pixel). A core pixel that is neither observed nor covered
+    # marks a genuine opening -- a transparent/background gap the artist left open --
+    # so refuse. This mirrors loops.recover's exposed-core guard; a ring interrupted
+    # only by occluders completes, an open ring (even a 1px slit) stays open. The
+    # occluder set is dilated by 2px to tolerate the raster fringe at a real
+    # T-junction, but a transparent slit is not adjacent to any occluder.
+    if cover is not None:
+        observed = vis[y0:y1, x0:x1]
+        cov = ndi.binary_dilation(cover[y0:y1, x0:x1], iterations=2)
+        core = dist <= width / 2 - 1
+        exposed = core & ~observed & ~cov
+        if exposed.any():
+            return None
+    ring_prim = Prim("ellipse", float(q[0]), float(q[1]), rxf, ryf, angle=np.rad2deg(q[4]))
+    return ClosedStroke(ring_prim, width, full, True)
 
 
 def build(seg: Segmentation, transparent: np.ndarray, cfg: Config) -> list[int]:

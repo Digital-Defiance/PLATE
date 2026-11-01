@@ -35,6 +35,7 @@ class Shape:
     is_background: bool = False
     grad: GradientFill | None = None  # smooth-ramp fill (linear/radial), None = flat
     verified_prim: Prim | None = None  # source-validated gradient completion, retained on reindex
+    closed_stroke: object | None = None  # stages.strokes.ClosedStroke for a merged ring, retained on reindex
 
 
 @dataclass
@@ -46,7 +47,8 @@ class Segmentation:
     def rebuilt(self, shapes: list[Shape]) -> Segmentation:
         """Reindex merged visible regions and discard stale ordering/completion."""
         fresh = [replace(s, id=i, full=s.vis, sil=None, parent=None, children=[], prim=None,
-                         completed=False, draw=None, bleed=0., is_background=False)
+                         completed=False, draw=None, bleed=0., is_background=False,
+                         closed_stroke=s.closed_stroke)
                  for i, s in enumerate(shapes)]
         rid = np.full(self.rid.shape, -1, np.int32)
         for s in fresh:

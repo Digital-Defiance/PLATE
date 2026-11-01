@@ -229,6 +229,14 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                                if s.id == first.id or s.id not in ids])
             roots = order.build(seg, transparent, cfg)
             curve_fits[vis] = curve.stroke
+        # Reunite any interrupted ELLIPTICAL ring the loop/curve recovery left split
+        # (same-colour arcs on one elongated ellipse sharing an occluder). This runs
+        # AFTER loops.recover so the rings it already reunited keep their geometry and
+        # paint order; the merged joint carries a native <ellipse> stroke via
+        # Shape.closed_stroke, emitted in the leaf loop below.
+        while (merged := order.merge_ring_ellipses(seg, transparent, cfg)) is not seg:
+            seg = merged
+            roots = order.build(seg, transparent, cfg)
         completed_fits = {**loop_fits, **curve_fits}
         # Every foreign observed region under a restored loop must paint above
         # it. Lift descendants to sibling constraints, preserving other order.
@@ -275,6 +283,11 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
                 _closed_node(node, s, loop_fits[s.vis], img.scale)
             elif s.vis in curve_fits:
                 _stroke_node(node, s, curve_fits[s.vis], img.scale, cfg.path_precision)
+            elif s.closed_stroke is not None:
+                # A compound-sibling merge reunited an interrupted elliptical ring
+                # into a native stroke; emit it as an <ellipse> (sets stroke_width,
+                # so the later fit_closed/fit_stroke pass skips this node).
+                _closed_node(node, s, s.closed_stroke, img.scale)
             node.opacity = _opacity(s, img.alpha)
             leaves[s.id] = node
     if cfg.strokes:
