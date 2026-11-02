@@ -64,3 +64,20 @@ def test_dot_in_the_v_survives(traced):
 def test_editable_size(traced):
     _, res, _, _ = traced
     assert res.stats["anchors"] <= 700, res.stats["anchors"]     # 356 when added; guards over-fragmenting
+
+
+def test_outline_smoothness_is_measured_and_bounded(traced):
+    """Kiro 13.6 is a DOCUMENTED LIMIT, state (b): the narrow gaps near the logo's spine come
+    out ~1 px short and slightly wavy. The ownership sub-fix (rescue.reconnect_tips) already
+    removed the floating spine knobs, so topology is clean (0 extra / 0 missing, pinned above);
+    the residual is sub-piece wobble that SSIM/edge-F1 cannot see. The 13.5 smoothness metric
+    gives it a number. Three broad fixes - global mask-blur reduction, blanket tip suppression,
+    and a 35%% fold-clamp - each created extra pieces or showed no gain and were rejected
+    (see tasks.md 13.6 / STATUS.md). This pins the measured state so a regression is visible.
+    """
+    ref, res, ren, _ = traced
+    f = score.fidelity(res.svg, ref)
+    # wobble is small but non-zero: the known slightly-wavy spine bends. Guard it does not
+    # balloon (a regression that re-roughened the outlines) without claiming it is zero.
+    assert 0.90 <= f["smoothness"] <= 1.0, f["smoothness"]
+    assert f["wobble"] <= 0.01, f["wobble"]

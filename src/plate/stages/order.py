@@ -275,19 +275,6 @@ def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
             if len(cluster) < 2:
                 continue
             frag = {m.id: m for m in members}
-            # A genuine interrupted fragment is NOT already a finished object. If any
-            # member snaps to a closed curved/boxed primitive on its own it is a
-            # complete shape, not a sliver of a larger one, so leave the group alone.
-            if cfg.snap_primitives:
-                from .primitives import snap
-                complete_member = False
-                for cid in cluster:
-                    pr = snap(frag[cid].full, cfg)
-                    if pr is not None and pr.kind in ("circle", "ellipse", "rect", "rrect"):
-                        complete_member = True
-                        break
-                if complete_member:
-                    continue
             # common-circle continuation: the fragments' outer (convex) boundary must
             # lie on one circle. This is the exact-circle fit completion already trusts;
             # distinct arcs (light orbit arcs) or glyphs that merely share an occluder
@@ -305,17 +292,92 @@ def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
                 continue
             circ, rms, cov = fit_circle(hull)
             radius = circ.rx
-            # The union keeps every member's visible pixels, so no ownership moves and
-            # no earlier sibling is uncovered (`rebuilt` asserts this). Merge into one
-            # compound shape keyed on the lowest member id.
+            cset = set(cluster)
             first = min(cluster)
             vmask = Mask.from_full(vis)
-            cset = set(cluster)
+            # ----- Circle-arm on-ring analysis (Task 5 / R6a). -----
+            # The whole-cluster hull circle fit is blind to fragments pooled INSIDE the
+            # hull: it is fixed by the OUTER boundary, so a same-colour leaf that shares
+            # the occluder but sits off the ring never spoils the fit, yet merging it
+            # corrupts the ring. Classify each member by its pixels' MEDIAN distance to
+            # the fitted centre: ON the ring (within a radius-scaled tolerance that
+            # absorbs the stroke thickness and raster fringe), or OFF. `big_off_ring`
+            # flags contamination -- an off-ring member whose area rivals the true arcs
+            # (the ROOT leaf), as opposed to a small inner tick/spoke of a thick ring,
+            # which is kept. This reuses ONLY the fitted circle the merge already trusts.
+            on_members, on_mask, big_off_ring = None, None, False
+            if radius >= 1:
+                tol = max(6.0, 0.08 * radius)
+                on_members, on_mask, off_areas = [], np.zeros((H, W), bool), []
+                for cid in cluster:
+                    mys, mxs = np.nonzero(frag[cid].vis.to_full((H, W)))
+                    med_r = float(np.median(np.hypot(mxs - circ.cx, mys - circ.cy)))
+                    if abs(med_r - radius) <= tol:
+                        on_members.append(cid)
+                        on_mask |= frag[cid].vis.to_full((H, W))
+                    else:
+                        off_areas.append(frag[cid].vis.area)
+                # Contamination vs a legitimate inner tick/spoke: compare each off-ring
+                # member's area to the TOTAL on-ring mass (stable whether the arcs are
+                # still split or already merged into one shape -- unlike a per-member
+                # median, which inflates once the arcs reunite). A small spoke is a few
+                # percent of the ring and is kept; an adjacent leaf rivals the whole
+                # ring and is excluded.
+                ring_mass = float(sum(frag[c].vis.area for c in on_members))
+                big_off_ring = bool(on_members) and any(a >= 0.25 * ring_mass for a in off_areas)
+
+            # A genuine interrupted fragment is NOT already a finished object. If a
+            # member snaps to a closed curved/boxed primitive on its own it is a
+            # complete shape, not a sliver of a larger one, so leave the group alone.
+            # EXCEPTION (Task 5 / R6a): a short, thin ON-ring arc snaps to a tiny BOX
+            # (rect/rrect) only because a few-degree arc looks locally rectangular -- a
+            # false positive that left the ROOT inner seal split into Beige_* extras.
+            # An on-ring member is therefore exempt from the veto ONLY when it snaps to
+            # a rect/rrect; a member that snaps to a CIRCLE/ELLIPSE is a genuine complete
+            # curved object (e.g. a badge's nearly-whole disc that happens to lie on the
+            # same fitted circle) and still vetoes, on or off the ring. Off-ring members
+            # of any snapped kind still veto. No gate is relaxed -- only the boxy-sliver
+            # false positive is removed from the EXISTING veto.
+            vetoed = False
+            if cfg.snap_primitives:
+                from .primitives import snap
+                on_set = set(on_members) if on_members is not None else set()
+                for cid in cluster:
+                    pr = snap(frag[cid].full, cfg)
+                    if pr is None or pr.kind not in ("circle", "ellipse", "rect", "rrect"):
+                        continue
+                    if cid in on_set and pr.kind in ("rect", "rrect"):
+                        continue  # a boxy on-ring arc sliver, not a finished object
+                    vetoed = True
+                    break
+            if vetoed:
+                continue
+
             if radius >= 1 and rms <= 0.02 * radius and cov >= np.deg2rad(160):
-                # Circle continuation (unchanged behaviour): emit a compound path.
-                joint = Shape(first, color, vmask, vmask, sil=vmask)
-                shapes = [joint if s.id == first else s for s in seg.shapes
-                          if s.id == first or s.id not in cset]
+                # Circle continuation. When a large off-ring same-colour leaf was pooled
+                # into the cluster (`big_off_ring`), reunite ONLY the on-ring arcs and
+                # re-fit the circle on exactly those (same rms<=0.02*r / arc>=160deg
+                # gates); the leaf keeps its own identity. Otherwise the whole cluster
+                # merges exactly as before (byte-identical for every existing ring, e.g.
+                # the orbit navy ring whose only off-ring member is a small spoke).
+                merge_ids, merge_mask = cset, vmask
+                if big_off_ring and on_members is not None and len(on_members) >= 2:
+                    oys, oxs = np.nonzero(on_mask)
+                    ohull = cv2.convexHull(np.c_[oxs, oys].astype(np.float32)).reshape(
+                        -1, 2).astype(np.float64)
+                    if len(ohull) < 5:
+                        continue
+                    ocirc, orms, ocov = fit_circle(ohull)
+                    if not (ocirc.rx >= 1 and orms <= 0.02 * ocirc.rx
+                            and ocov >= np.deg2rad(160)):
+                        continue
+                    merge_ids, merge_mask = set(on_members), Mask.from_full(on_mask)
+                elif big_off_ring:
+                    continue
+                mfirst = min(merge_ids)
+                joint = Shape(mfirst, color, merge_mask, merge_mask, sil=merge_mask)
+                shapes = [joint if s.id == mfirst else s for s in seg.shapes
+                          if s.id == mfirst or s.id not in merge_ids]
                 return seg.rebuilt(shapes)
             if not rings:
                 continue
@@ -330,14 +392,49 @@ def _merge_compound_siblings(seg: Segmentation, transparent: np.ndarray,
             # paint order) are never pre-empted. The cover = painted non-member pixels;
             # the ring may only close across pixels under that cover, never across a
             # transparent/background gap (a genuinely open ring stays open).
-            cover = (seg.rid >= 0) & ~np.isin(seg.rid, list(cset))
-            stroke = _fit_ring_ellipse(vis, H, W, cover)
+            # A LARGE same-colour fragment pooled inside the hull (an adjacent leaf
+            # that shares the occluder but does not continue the ellipse) is invisible
+            # to the hull fit, exactly as in the circle arm. Fit a provisional ellipse
+            # to the hull, keep only the members whose pixels lie on its band, and drop
+            # the pooled pixels of any LARGE off-band member before `_fit_ring_ellipse`.
+            # A small off-band member (an inner tick) stays. This only ever removes
+            # contaminating pixels, so a cluster with no such contamination (every
+            # existing reunited ring) feeds `_fit_ring_ellipse` the identical mask and
+            # is byte-identical.
+            ring_vis = vis
+            ring_ids = cset
+            from ..geometry import fit_ellipse
+            from .strokes import _ellipse_distance
+            ehull = cv2.convexHull(np.c_[np.nonzero(vis)[1], np.nonzero(vis)[0]].astype(
+                np.float32)).reshape(-1, 2).astype(np.float64)
+            efit = fit_ellipse(ehull) if len(ehull) >= 5 else None
+            if efit is not None:
+                epr = efit[0]
+                q = np.array([epr.cx, epr.cy, epr.rx, epr.ry, np.deg2rad(epr.angle % 180.0)])
+                eband = max(6.0, 0.08 * max(epr.rx, epr.ry))
+                on_ids, on_m, off_big = [], np.zeros((H, W), bool), False
+                for cid in cluster:
+                    mys, mxs = np.nonzero(frag[cid].vis.to_full((H, W)))
+                    d = np.abs(_ellipse_distance(np.c_[mxs, mys].astype(float), q))
+                    if float(np.median(d)) <= eband:
+                        on_ids.append(cid)
+                        on_m |= frag[cid].vis.to_full((H, W))
+                ring_mass = float(sum(frag[c].vis.area for c in on_ids))
+                for cid in cluster:
+                    if cid not in on_ids and on_ids and frag[cid].vis.area >= 0.25 * ring_mass:
+                        off_big = True
+                if off_big and len(on_ids) >= 2:
+                    ring_vis, ring_ids = on_m, set(on_ids)
+            cover = (seg.rid >= 0) & ~np.isin(seg.rid, list(ring_ids))
+            stroke = _fit_ring_ellipse(ring_vis, H, W, cover)
             if stroke is None:
                 continue
-            joint = Shape(first, color, vmask, vmask, sil=vmask)
+            rfirst = min(ring_ids)
+            rmask = Mask.from_full(ring_vis)
+            joint = Shape(rfirst, color, rmask, rmask, sil=rmask)
             joint.closed_stroke = stroke
-            shapes = [joint if s.id == first else s for s in seg.shapes
-                      if s.id == first or s.id not in cset]
+            shapes = [joint if s.id == rfirst else s for s in seg.shapes
+                      if s.id == rfirst or s.id not in ring_ids]
             return seg.rebuilt(shapes)
     return seg
 

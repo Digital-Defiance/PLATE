@@ -14,7 +14,9 @@ map; palette rides through unchanged.
 """
 from __future__ import annotations
 
+import cv2
 import numpy as np
+from scipy import ndimage as ndi
 
 from ..config import Config
 from ..geometry import fit_linear_gradient, fit_radial_gradient, raster_prim
@@ -23,6 +25,22 @@ from ..scene import Loaded, Segmentation, Shape
 from . import segment as _segment
 
 GRAD_FIT_SAMPLES = 20000
+
+# Smooth-single-ramp pre-pass (R4). A photographic/vector gradient whose colours never
+# repeat defeats the count-floor palette: segment() collapses the whole ramp to the one
+# flat colour of its surrounding background and emits a single region, so detect()'s band
+# path sees zero candidates. These constants describe the measured signature of such a
+# smooth ramp fused into a flat region (orb: luma span ~245, interior Lab-gradient median
+# ~6.6, 29617 unique colours / ~no repeated mass), which no flat-art or posterized-ramp
+# region matches (flat art and twin_gradients/gradient_badge/discrete_palette all carry a
+# large repeated-colour mass, so they keep flowing the unchanged band path).
+RAMP_MIN_LUMA_SPAN = 120.0     # a real ramp sweeps most of the brightness range
+RAMP_MAX_LAB_GRAD = 8.0        # low local Lab gradient => smooth, not noisy/textured
+RAMP_MIN_UNIQUE_FRAC = 0.03    # high unique-colour mass (ramp, not a few flat swatches)
+RAMP_MAX_REPEAT_FRAC = 0.05    # ~no single colour dominates (defeats the palette floor)
+RAMP_MIN_AREA_FRAC = 0.02      # only a sizeable region is worth a gradient model
+_LUMA = np.array([0.299, 0.587, 0.114], np.float32)
+_CONN4 = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
 
 
 def _band_mean_rgb(s: Shape, img: Loaded, H: int, W: int) -> np.ndarray:
@@ -401,10 +419,102 @@ def _grow_radial_bands(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentat
     return seg
 
 
+def _ramp_signature(full: np.ndarray, rgb: np.ndarray, gmag: np.ndarray) -> bool:
+    """True when a region's visible pixels look like one smooth colour ramp rather than
+    flat art or a posterized band: a wide luma span, a low interior Lab-gradient median
+    (smooth, not noisy), a high unique-colour mass and almost no single repeated colour."""
+    ys, xs = np.nonzero(full)
+    C = rgb[ys, xs]
+    luma = C @ _LUMA
+    if float(luma.max() - luma.min()) < RAMP_MIN_LUMA_SPAN:
+        return False
+    packed = (C[:, 0].astype(np.uint32) << 16) | (C[:, 1].astype(np.uint32) << 8) | C[:, 2].astype(np.uint32)
+    _, counts = np.unique(packed, return_counts=True)
+    if len(counts) / len(C) < RAMP_MIN_UNIQUE_FRAC:
+        return False
+    if counts.max() / len(C) > RAMP_MAX_REPEAT_FRAC:
+        return False
+    interior = ndi.binary_erosion(full, iterations=2)
+    sample = interior if interior.any() else full
+    return float(np.median(gmag[sample])) <= RAMP_MAX_LAB_GRAD
+
+
+def detect_ramp_region(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
+    """Pre-pass (R4): recover a smooth single ramp the palette collapsed into one flat
+    region. A ramp whose colours never repeat (a shaded orb on a flat ground) yields no
+    palette entry of its own, so segment() emits it as one region carrying the ground's
+    flat colour. Here we detect that region by its smooth-ramp signature, carve the ramp
+    blob out of its flat surround, fit the EXISTING radial/linear gradient on the blob's
+    raw pixels, and -- only when the fit is within `grad_max_residual` -- replace the one
+    region with a gradient Shape (the blob) plus the flat remainder.
+
+    Additive by construction: flat art, discrete palettes and already-posterized ramps all
+    carry a large repeated-colour mass, so they fail `_ramp_signature` and flow unchanged
+    into detect()'s band path. The gradient gates (`grad_max_residual`) are unchanged.
+    Returns a re-indexed Segmentation; palette passes through unchanged."""
+    H, W = img.alpha.shape
+    rgb = img.rgb.astype(np.float32)
+    lab = _segment._lab(img.rgb)
+    gx = cv2.Sobel(lab, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(lab, cv2.CV_32F, 0, 1, ksize=3)
+    gmag = np.sqrt((gx * gx + gy * gy).sum(axis=2))
+    min_area = RAMP_MIN_AREA_FRAC * H * W
+
+    shapes = list(seg.shapes)
+    changed = False
+    for s in list(seg.shapes):
+        if s.grad is not None:
+            continue
+        full = s.vis.to_full((H, W))
+        if int(full.sum()) < min_area or not _ramp_signature(full, rgb, gmag):
+            continue
+        # Separate the ramp blob from the flat remainder painted in the region's own
+        # colour. The blob is the largest 4-connected run of pixels away from that colour.
+        color = np.array(s.color, np.float32)
+        away = full & (np.linalg.norm(rgb - color, axis=2) > 16.0)
+        lbl, n = ndi.label(away, structure=_CONN4)
+        if n == 0:
+            continue
+        sizes = ndi.sum(np.ones_like(lbl), lbl, index=range(1, n + 1))
+        blob = ndi.binary_fill_holes(lbl == (1 + int(np.argmax(sizes)))) & full
+        interior = ndi.binary_erosion(blob, iterations=3)
+        if interior.sum() < 50:
+            continue
+        iy, ix = np.nonzero(interior)
+        P = np.c_[ix, iy].astype(float)
+        C = rgb[iy, ix]
+        if len(P) > GRAD_FIT_SAMPLES:
+            idx = np.random.default_rng(0).choice(len(P), GRAD_FIT_SAMPLES, replace=False)
+            P, C = P[idx], C[idx]
+        gl, rl = fit_linear_gradient(P, C)
+        gr, rr = fit_radial_gradient(P, C)
+        grad, residual = (gl, rl) if rl <= rr else (gr, rr)   # ties -> linear (simpler model)
+        if residual > cfg.grad_max_residual:
+            continue
+
+        blob_mask = Mask.from_full(blob)
+        survivors = [Shape(id=0, color=_stopcurve_color(grad, 0.5), vis=blob_mask,
+                           full=blob_mask, grad=grad)]
+        remainder = full & ~blob
+        if remainder.any():
+            rlbl, rn = ndi.label(remainder, structure=_CONN4)
+            for k in range(1, rn + 1):
+                rm = Mask.from_full(rlbl == k)
+                survivors.append(Shape(id=0, color=s.color, vis=rm, full=rm))
+        i = shapes.index(s)
+        shapes[i:i + 1] = survivors
+        changed = True
+
+    if not changed:
+        return seg
+    return _reindex(shapes, seg)
+
+
 def detect(seg: Segmentation, img: Loaded, cfg: Config) -> Segmentation:
     """Merge groups of thin flat bands that form one smooth ramp into a single Shape
     carrying a GradientFill. Returns a NEW Segmentation with a re-indexed shapes list
     (id == index) and a rebuilt rid map; palette passes through unchanged."""
+    seg = detect_ramp_region(seg, img, cfg)
     H, W = img.alpha.shape
     components = _find_components(seg, img, cfg)
 

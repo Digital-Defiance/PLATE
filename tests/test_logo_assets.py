@@ -130,6 +130,72 @@ def test_root_tree_strokes_fuse_into_the_trunk_as_one_region():
     assert len(teal) == 1, f"leaf-4 and leaf-5 are separable: {teal}"
 
 
+def test_root_leaf_vein_11_splits_at_a_subpixel_bend_not_a_stroke_floor():
+    """DOCUMENTED LIMIT, measured (R6b, Task 6, state (b)) — do NOT lower the
+    fit_stroke width/area floor, and do NOT loosen the segmentation edge threshold,
+    to force logo_root_seal's leaf-vein-11 into one stroke.
+
+    challenge_report shows leaf-vein-11 emitted as TWO primitives (Beige_rectangle +
+    Beige_ellipse_3, the one remaining ROOT split after Task 5 reunited the inner-seal
+    ring). The honest prior was that fit_stroke's floors (width>=2, area>=24*r^2) were
+    the blocker. They are not: the vein never reaches a single stroke candidate because
+    SEGMENTATION splits it upstream.
+
+    At the vein's tightest bend the cream stroke is only ~3-4 working px wide, so its
+    whole cross-section reads as an anti-aliased edge (Sobel grad ~160 >> the 10.0
+    edge_threshold). The edge-coverage-blend in _edge_labels then hands a ~6-row run of
+    those genuinely-cream pixels to the surrounding teal, cutting the vein into two
+    4-connected regions with a multi-pixel gap between them.
+
+    Because the two emitted pieces are DISCONNECTED (and the smaller is a 30px blob that
+    can never be a stroke on its own), no change to the stroke width/area floor can
+    reunite them — the floor is not the cause. Reconnecting the vein would require
+    raising the nearly-unmixed edge-restore threshold past its measured ~12px gate,
+    which touches hundreds of edge pixels per logo and would regress the 24 byte-
+    identical shipped SVGs (GC-4/GC-5). So this stays a documented limit; logo_root_seal
+    remains xfail (its dominant gap is the Task 7 same-colour limit).
+
+    This test pins the measured raster facts directly on the input PNG, independent of
+    the pipeline, so a regression or a silent gate/floor-weakening "fix" is caught:
+      - the gap pixels (rows 312-317, col 513) are opaque and RGB-nearest the authored
+        cream swatch (239,235,215) by a wide margin (~16-17px vs ~260px to teal);
+      - an RGB-nearest cream mask over the vein is ONE connected region ~2px in radius
+        (so the vein is physically a single continuous thin stroke, not two objects).
+    """
+    from scipy import ndimage as ndi
+
+    with Image.open(DIRECTORY / "logo_root_seal.png") as image:
+        rgba = np.asarray(image.convert("RGBA"))
+    rgb, alpha = rgba[..., :3].astype(int), rgba[..., 3]
+
+    # The five authored palette colours segmentation recovers; cream is index 4.
+    palette = np.array([(38, 125, 131), (24, 46, 76), (169, 209, 181),
+                        (233, 188, 89), (239, 235, 215)], float)
+    cream, teal = 4, 0
+
+    # 1) The pixels the edge-blend hands to teal are opaque and unambiguously cream.
+    for y in range(312, 318):
+        pixel = rgb[y, 513]  # numpy indexes [row=y, col=x]
+        assert alpha[y, 513] >= 250, f"gap pixel row {y} is not opaque"
+        distance = np.linalg.norm(palette - pixel, axis=1)
+        assert int(distance.argmin()) == cream, f"gap pixel row {y} is not RGB-nearest cream"
+        assert distance[cream] <= 20 < 200 <= distance[teal], (
+            f"gap pixel row {y} cream/teal separation collapsed: "
+            f"d_cream={distance[cream]:.1f} d_teal={distance[teal]:.1f}")
+
+    # 2) The vein is physically ONE continuous thin cream region (so it is a single
+    #    stroke in the source; the two emitted pieces are a segmentation artefact).
+    y0, y1, x0, x1 = 255, 335, 505, 535
+    window = rgb[y0:y1, x0:x1].astype(float)
+    window_alpha = alpha[y0:y1, x0:x1]
+    nearest = np.linalg.norm(window[..., None, :] - palette[None, None], axis=3).argmin(axis=2)
+    cream_region = (nearest == cream) & (window_alpha >= 128)
+    _, components = ndi.label(cream_region, np.ones((3, 3)))
+    assert components == 1, f"the cream vein is not one connected region: {components}"
+    radius = ndi.distance_transform_edt(cream_region).max()
+    assert radius <= 3.5, f"vein unexpectedly wide ({radius:.2f}px); re-measure the bend"
+
+
 @pytest.mark.parametrize("name", [row[0] for row in LOGOS])
 def test_logo_png_matches_authored_svg(name):
     if not have_renderer():

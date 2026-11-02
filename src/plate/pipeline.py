@@ -386,7 +386,7 @@ def run(path: Path | str, cfg: Config | None = None, labels: dict[int, str] | No
     # classical base names, then optional semantic overrides
     for n in leaves.values():
         s = shapes[n.shape_id]
-        word = "stroke" if n.stroke_width is not None else name.KIND_WORD[n.kind]
+        word = "stroke" if n.stroke_width is not None else name.shape_word(n)
         base = "Background" if s.is_background else f"{name.color_name(s.color)} {word}"
         n.name = base
     res = Result("", tree, shapes, seg, img, cfg)

@@ -50,6 +50,35 @@ def test_short_square_cap_curve_stays_filled(tmp_path, mirror):
     assert result.stats['strokes'] == 0
 
 
+@pytest.mark.parametrize("mirror", [False, True])
+def test_short_butt_cap_curve_emits_a_round_cap_measured_limit(tmp_path, mirror):
+    """R7g documented limit (engine-completion Task 11, state (b)).
+
+    A short curved stroke authored with flat BUTT caps is recovered as a round-cap
+    stroke -- the same output as the round-cap control -- because the flat-cap
+    detector `strokes._flat_terminal` keys on a straight cap front spanning at least
+    `0.75*width`. Measured on this control (width 4.04 px): the butt cap's front IS
+    confidently straight (SVD residual 0.017-0.032 at a tight front fraction) but its
+    measurable flat span is only ~2.0-2.75 px, below the 0.75*width = 3.03 px floor,
+    so the cap reads as round. A square cap, whose flat front sits a full half-width
+    beyond the terminal, DOES clear the span floor and is rejected
+    (`test_short_square_cap_curve_stays_filled`).
+
+    This is pinned as a limit, not fixed: separating the butt cap would require
+    lowering `_flat_terminal`'s span floor (a calibrated gate) or emitting butt
+    linecaps, and all 24 shipped challenge targets use `stroke-linecap="round"`
+    exclusively -- no shipped artwork benefits, while relaxing the gate risks the
+    short round-cap strokes it guards (GC-5). Update this pin if a butt-cap emission
+    path is added.
+    """
+    source, _ = _curve(tmp_path, mirror, cap="butt")
+    result = pipeline.run(source)
+    assert result.stats['strokes'] == 1
+    stroke, = [e for e in ET.fromstring(result.svg).iter() if e.get('stroke')]
+    # The recovered cap geometry is round (the measured limit), not butt.
+    assert stroke.get('stroke-linecap') == 'round'
+
+
 def test_rejected_centreline_needs_source_boundary_evidence(tmp_path):
     source, _ = _curve(tmp_path, mirror=True)
     result = pipeline.run(source, Config(strokes=False))

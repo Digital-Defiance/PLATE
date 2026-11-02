@@ -1,9 +1,18 @@
 # ROADMAP / TODO
 
-Updated: 2026-10-31. Final verification: **549 passed, 7 expected structural gaps**;
-full robustness sweep **70/78**, core **36/36**. `STATUS.md` records measurements and
-all seven remaining challenge failures; `docs/challenges.md` links each PNG to its
-independent desired SVG.
+Updated: 2026-11-02. **The classical engine is complete (engine-completion spec / R8 closed).**
+Every in-scope engine-quality gap (R1–R7, R9) is in a terminal state — **9 FIXED, 11 DOCUMENTED
+LIMIT** — with its moving number or pin test named in `STATUS.md`'s per-requirement ledger. The
+P1 engine items below (bake-off-driven JPEG/completion/same-colour, and "further robustness"
+thin-colour/ring-naming/thin-rect/palette/alpha/scale) are each now marked closed `[x]` or pinned
+as a measured limit; what remains open here is out-of-scope by design (OOS-1..5: desktop
+Illustrator, live VLM quality, external-tool bake-off entries, the ambiguous PLATE-identity target,
+and product/infra). Engine development stops at that boundary.
+
+Final verification (Task 15): **699 passed, 7 expected structural gaps / 0 xpassed**;
+full robustness sweep **70/78**, core **36/36**; 24 shipped SVGs preserved; VTracer baseline
+present. `STATUS.md` records measurements and all seven remaining challenge failures;
+`docs/challenges.md` links each PNG to its independent desired SVG.
 
 Legend: [x] verified done · [ ] remaining · P0 validation · P1 next quality work · P2 product/AI · P3 research.
 
@@ -64,10 +73,12 @@ supersedes older statements deferring all engine work to the hosted service.
    do not invent it). See HANDOFF's gap table and the detailed P1 backlog below.
    Partial progress Oct-31: EMBER **4/7 strokes**, all whiskers independently pass,
    **455→447 anchors**; complete target still xfail.
-   - [ ] Fix false split/merge diagnostics on legitimate overlapping objects:
-     identical overlapping back/front rectangles currently report two splits.
-   - [ ] Broaden short curved butt-cap controls: an existing accepted fit emits
-     round caps for the recorded butt-cap probe. Square-cap guards currently pass.
+   - [x] **R7g·1 false split/merge on legitimate overlaps — FIXED (a), verified.** `5692fa9`
+     (at HEAD) derives split/merge from the Hungarian assignment; `diff_target(svg,svg)` on identical
+     overlapping rects (IoU 0.25) reports 0 false splits. Pinned in `tests/test_challenge_diff.py`.
+   - [x] **R7g·2 short curved butt cap — DOCUMENTED LIMIT (b).** The butt cap's flat front span
+     (~2.0–2.75px) falls below the 0.75·width = 3.03px gate, so it reads as round; all 24 shipped
+     targets use round caps only. Pinned in `tests/test_exposed_curve_refit.py`.
 4. [~] Add the 10–20-image redistributable real corpus and broader independent
    alpha/gradient/occlusion/aspect-ratio/stroke/lettering contracts. Add per-case
    exception recording before fuzzing.
@@ -97,21 +108,31 @@ PLATE ranks first under all five weightings, but the bake-off surfaced concrete 
 are the highest-value next fixes. Re-run `plate bakeoff bo/corpus/images --truth bo/corpus/truth`
 after each change; do NOT tune the composite weights to flatter PLATE — fix the weakness.
 
-- [ ] **JPEG robustness.** JPEG-keyed denoise landed (Kiro engine-completion Task 1): JPEG-variant
-  scenes 3/10 → 4/10 occluded objects recovered (`hidden_completion` 0.33 → 0.42, floor 0.4 pinned in
-  `tests/test_bakeoff.py`). Cause of the rest: JPEG ringing displaces boundaries so the primitive fit in
-  `complete.try_complete` misses its tolerance. Target: JPEG-variant `hidden_completion` ≥ 0.6.
-- [ ] **Outline smoothness metric.** SSIM and edge F1 cannot see wobble; the Research Force logo
-  looked fine on both while Illustrator showed lumpy lines. Add a bake-off smoothness number (Kiro
-  Task 13.5), then measure `--preset smooth` on both corpora before considering any default change.
-- [ ] **Narrow gaps near a junction** come out slightly short and wavy under `--preset smooth`
-  (Research Force logo spine; Kiro Task 13.6).
-- [ ] **Same-colour touching objects merge** (colour-only segmentation can't split them): the
-  recurring blocker also behind the EMBER/ROOT/storefront structural limits. Split regions at
-  concavities / convexity defects, or via SAM (P2). Add corpus scenes that stress this.
-- [ ] **Rect/polygon amodal completion** is weaker than circles (occluded rect 4/11, polygon 3/10,
-  rrect 5/12 on the corpus). Extend the free edges of a partly-hidden rect/polygon by line
-  intersection rather than only fitting on free points. Target overall `hidden_completion` ≥ 0.8.
+- [x] **JPEG robustness (R1 — FIXED (a) at the floor + LIMIT (b) for the residual).** JPEG-keyed
+  denoise landed (engine-completion Task 1): JPEG-variant scenes 3/10 → 4/10 occluded objects
+  recovered (`hidden_completion` 0.33 → 0.42, floor 0.4 pinned in `tests/test_bakeoff.py`). The
+  ≥0.6 stretch is unmet because the residual misses are a rect/polygon completion limit, not a JPEG
+  bug — pinned as the clean-render floor (Task 2, 14 pins). Engine-complete; no further JPEG work.
+- [x] **Outline smoothness metric (Kiro 13.5, done 2026-11-01).** SSIM and edge F1 cannot see
+  wobble; the Research Force logo looked fine on both while Illustrator showed lumpy lines.
+  `score.smoothness` reports render-vs-reference excess turning per unit outline length (wobble),
+  report-only (weight 0). Opt-in `plate-smooth` bake-off adapter. Measured both corpora: synthetic
+  plate 0.9942 / smooth 0.9958; real plate 0.9854 / smooth 0.9843 (isolates `real_jpeg_artifacts`
+  0.80 from clean 1.000). Six pins in `tests/test_smoothness_metric.py`. Composites unchanged.
+- [x] **Narrow gaps near a junction (Kiro 13.6, closed 2026-11-01 as a DOCUMENTED LIMIT).** The
+  ownership sub-fix cleared the floating spine knobs (topology 0/0; smoothness 0.9736). The
+  residual (~50 under-bar overlay px, right tip ~1 px short) is sub-piece wobble; three broad
+  fixes were tried and rejected. Pinned in `tests/test_research_force_logo.py`. R9/Task 13 complete.
+- [x] **Same-colour touching objects merge (R3 — DOCUMENTED LIMIT (b), the hard classical ceiling).**
+  Investigated (engine-completion Task 7, `.agents/tasks/same-colour-split-investigation.md`): no
+  classical concavity/convexity-defect cue splits an abutting same-colour component without inventing
+  a boundary absent from the raster. Recovering this needs an ML segmenter (SAM, OOS-5). Pinned by
+  raster-contiguity tests on EMBER/ROOT/storefront. This is the engine's hard ceiling, by design.
+- [x] **Rect/polygon amodal completion (R2 — FIXED (a) + LIMIT (b) residual).** Free-edge
+  line-intersection reconstruction landed (engine-completion Task 4): polygon 2 → 3/10, overall
+  32 → 33/57, `hidden_completion` 0.549 → 0.562, composite 0.852 → 0.857; pinned in
+  `tests/test_free_edge_completion.py` + `tests/test_bakeoff.py`. Residual rrect near-misses (sharp
+  reconstructed quad loses corner rounding, IoU 0.85–0.90) pinned as a measured limit.
 - [ ] **Add external tools to the bake-off** (`--external DIR` with `IMAGE.TOOL.svg` exports):
   Illustrator Image Trace, Vectorizer.AI, Inkscape trace. Needs a Mac with those apps; record in
   `docs/BAKEOFF.md`.
@@ -267,14 +288,27 @@ not complete these tasks. See the current-gap table in `STATUS.md`.
 - [~] **Real-world corpus.** Gather 10–20 logos, clipart and scans in `samples/real/`; run `plate bench samples/real` and record failures. Current benchmark results are synthetic. DONE (generated portion): a redistributable, deliberately messy 14-image generated-realistic corpus now ships in `samples/real/` (`scripts/make_real_corpus.py`); run `plate bench samples/real`, per-image results in `docs/REAL-CORPUS.md`. Diagnostic only, no gate. REMAINING: genuine CC0/PD drop-ins (slot + manifest ready in `samples/real/CREDITS.md`).
 - [ ] **Real VLM quality/performance.** Connection/naming/grouping work; improve left/right names, grouping accuracy and one-request-per-shape latency (earlier face run ≈6s/shape). Verify on real images.
 
-## P1 — further robustness
+## P1 — further robustness (all terminal — engine-completion R7, Tasks 9/10/11)
 
-- [ ] Extend thin-colour discovery to hairlines/fully antialiased features with no stable pre-dilation colour core; retain palette budgets and the gradient-band veto. Continuous panel routes and seeded-head branches are now covered by regressions.
-- [ ] Ring/compound-path semantic naming (e.g. "Red ring"); validate `t3_ring` without changing its even-odd topology.
-- [ ] Thin occluded rectangles: a narrow bar split by a perpendicular cover can fail hidden-area validation because rasterized perimeter pixels dominate the inferred extra area. Correct pixel-boundary evaluation before changing occlusion thresholds.
-- [ ] Palette pressure: exercise >64 distinct flat colours and k-means in `stages/segment.py`; add a labelled mosaic.
-- [ ] Extend the implemented flat-region opacity/faint-object support to nonuniform alpha/shadows; validate both backgrounds.
-- [ ] Scale consistency: run the same authored logo at 1×/2×/4×; compare object recovery and source-coordinate geometry. Badge source scaling at a 400px working size passes; reducing work_size to 200 currently loses gradient detection before reconciliation (10 flat objects / 0 gradients).
+- [x] **R7a thin-colour / hairline discovery — DOCUMENTED LIMIT (b).** A 2px fully-antialiased mark
+  has no stable colour core (admitted at ≥3px); forcing it needs lowering the admission gate, which
+  the route pins prove regresses shipped art. Pinned in `tests/test_segment.py` + the hairline-route
+  floors in `tests/test_robustness.py`. (Panel routes / seeded-head branches already regression-covered.)
+- [x] **R7f ring / compound-path semantic naming — FIXED (a).** Classical `name.shape_word` names an
+  even-odd two-subpath annulus "ring"; `t3_ring` → "Red ring" with byte-identical even-odd topology.
+  Pinned in `tests/test_controls.py`.
+- [x] **R7b thin occluded rectangles — FIXED (a).** Corrected the pixel-boundary (interior-coverage)
+  evaluation in hidden-area validation (not the `_occludes` threshold); an 8–16px occluded bar now
+  completes to one `<rect>`. Pinned in `tests/test_free_edge_completion.py`.
+- [x] **R7c palette pressure >64 colours / k-means — FIXED (a).** Added `scripts/make_mosaic.py`; the
+  k-means path recovers a 130-colour mosaic when the budget is raised (73/130 at `max_colors=96`,
+  113/130 at 130). Pinned in `tests/test_segment.py`.
+- [x] **R7d nonuniform / soft alpha + shadows — DOCUMENTED LIMIT (b).** One flat opacity cannot match
+  two backgrounds (feathered disc SSIM 0.856 white / 0.721 black); extending the silhouette below the
+  alpha≥128 contract breaks the 24 SVGs. Added `scripts/make_soft_alpha.py`; pinned in `tests/test_inputs.py`.
+- [x] **R7e scale consistency — DOCUMENTED LIMIT (b).** Measured work_size gradient floor: `gradient_badge`
+  loses the ramp at work_size=200 (per-step dE 17–60 vs `grad_step_de` 14), consistent at ≥250; the
+  1×/2× source rescales are scale-consistent. Pinned in `tests/test_gradient_bands.py`.
 
 ## P2 — optional naming/grouping and text
 

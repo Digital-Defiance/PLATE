@@ -8,7 +8,7 @@ import pytest
 
 from plate.raster import have_renderer
 
-from challenge_diff import diff_target
+from challenge_diff import SILHOUETTE_IOU, diff_target
 from challenges import TargetMismatch, assert_target
 
 pytestmark = pytest.mark.skipif(
@@ -93,6 +93,42 @@ def test_overlapping_objects_self_diff_has_no_split_or_merge():
     assert d["merged"] == []
     assert d["missing"] == []
     assert d["extra"] == []
+
+
+def test_r7g_identical_overlapping_rects_self_diff_reports_zero_false_splits():
+    # R7g verification pin (engine-completion Task 11, state (a) verified+pinned).
+    # Commit 5692fa9 (an ancestor of HEAD) derives split/merge from the Hungarian
+    # assignment instead of raw IoU >= PRESENCE_FLOOR, so two genuinely distinct
+    # objects that merely overlap (a front rect sitting on a back rect) are no
+    # longer miscounted as a fragmentation of one another. Measured on the exact
+    # control the task specifies -- identical overlapping back/front rectangles,
+    # diff_target(svg, svg) -- the classifier reports zero false splits and zero
+    # false merges. This pin asserts that the overlap is genuinely non-trivial
+    # (so the pin cannot pass vacuously) before asserting the zero-false-split
+    # result, and guards the fix against regression.
+    import numpy as np
+    from xml.etree import ElementTree as ET
+
+    from challenges import _mask, drawables
+
+    root = ET.fromstring(OVERLAP)
+    back_mask, front_mask = (_mask(root, e) for e in drawables(root))
+    inter = np.count_nonzero(back_mask & front_mask)
+    union = np.count_nonzero(back_mask | front_mask)
+    overlap_iou = inter / max(1, union)
+    # The front rect genuinely overlaps the back rect well above the 0.1 presence
+    # floor that the pre-fix classifier used to (mis)read as a fragment.
+    assert overlap_iou > 0.2
+
+    d = diff_target(OVERLAP, OVERLAP).to_dict()
+    assert d["expected_count"] == d["actual_count"] == 2
+    assert len(d["matched"]) == 2
+    assert d["split"] == [], "overlapping distinct objects must not be a false split"
+    assert d["merged"] == [], "overlapping distinct objects must not be a false merge"
+    assert d["missing"] == []
+    assert d["extra"] == []
+    # Both objects match 1:1 at full identity (a self-diff), not as fragments.
+    assert all(m["iou"] >= SILHOUETTE_IOU for m in d["matched"])
 
 
 def test_genuine_merge_still_detected():

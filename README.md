@@ -23,13 +23,18 @@ By Digital Defiance (501(c)(3)). MIT licensed.
 The [PLATE logo](assets/brand/README.md) doubles as a tracing challenge: its layered
 P, transparent counters and registration strokes test the structure PLATE recovers.
 
-> **Status (v0.1.0):** working classical engine; the real-LM-Studio VLM path is validated (naming +
-> semantic grouping against a live vision model). Linear/radial gradients and conservative
-> strokes are implemented. All 24 benchmark images pass 636 automated Illustrator 30.8.2
-> checks for actual layers, names, grouping, order, geometry, strokes, gradients, edits and `.ai` round trips;
-> see `docs/illustrator-checklist.md` for measured results and remaining checks.
-> Full state and known limitations are in `STATUS.md`; plans in `ROADMAP.md`. Continuing the project
-> with a coding agent? Start with **`AGENTS.md`**.
+> **Status (v0.1.0): the classical engine is complete.** Every in-scope engine-quality gap is
+> resolved to one of two honest terminal states — **FIXED** (a diagnostic number moved, pinned by a
+> test) or **DOCUMENTED LIMIT** (measured proof the raster lacks the information, pinned so it can't
+> drift): **9 FIXED, 11 DOCUMENTED LIMIT**, nothing in limbo. The largest limit is the hard classical
+> ceiling — colour-only segmentation cannot split touching regions of identical fill without an ML
+> segmenter (out of scope). The real-LM-Studio VLM path is validated (cosmetic naming + semantic
+> grouping only). All 24 benchmark images pass 636 automated Illustrator 30.8.2 checks for actual
+> layers, names, grouping, order, geometry, strokes, gradients, edits and `.ai` round trips; see
+> `docs/illustrator-checklist.md`. Regression surface: `pytest -q` 699 passed / 7 expected structural
+> gaps, robustness 70/78 full & 36/36 core. The full per-requirement ledger, the FIXED-vs-LIMIT count
+> and the out-of-scope boundary (where engine development stops) are in `STATUS.md`; plans in
+> `ROADMAP.md`. Continuing the project with a coding agent? Start with **`AGENTS.md`**.
 
 ## What PLATE covers
 

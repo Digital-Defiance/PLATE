@@ -114,7 +114,7 @@ def summarise(rows: list[dict], weights: dict) -> list[dict]:
         for k in set().union(*[r["norm"].keys() for r in ok]) if ok else []:
             agg[k] = float(np.mean([r["norm"][k] for r in ok if k in r["norm"]]))
         raw = {}
-        for k in ("ssim", "topology", "topo_extra", "topo_missing", "anchors_per_shape", "shapes", "primitive_ratio", "named", "hidden_completion",
+        for k in ("ssim", "topology", "topo_extra", "topo_missing", "smoothness", "wobble", "anchors_per_shape", "shapes", "primitive_ratio", "named", "hidden_completion",
                   "obj_complete_f1", "primitive_acc"):
             vals = [r["raw"][k] for r in ok if r["raw"].get(k) is not None]
             if vals:
@@ -135,7 +135,7 @@ def _thumb(svg_path: Path, size: int = 200) -> str:
         return ""
 
 
-METRIC_LABEL = dict(ssim="SSIM", edge_f1="Edge F1", topology="Same pieces as source", obj_visible_f1="Objects found (visible)",
+METRIC_LABEL = dict(ssim="SSIM", edge_f1="Edge F1", topology="Same pieces as source", smoothness="Outline smoothness", obj_visible_f1="Objects found (visible)",
                     obj_complete_f1="Objects found (complete)", hidden_completion="Hidden parts completed",
                     order_acc="Stacking order", anchor_eff="Anchor economy", primitive_ratio="True primitives",
                     named="Meaningful names")
@@ -145,10 +145,21 @@ def report_html(rows, summary, files, out: Path, weights: dict) -> str:
     tools = [s["tool"] for s in summary]
     metrics = [k for k in METRIC_LABEL if any(k in s["norm"] for s in summary)]
     head = "".join(f"<th>{html.escape(METRIC_LABEL[k])}<br><small>w={weights.get(k, 0):g}</small></th>" for k in metrics)
+    # smoothness is report-only (not normalised / not in the composite), so it never reaches `norm`
+    # and the norm-driven column loop above would silently drop it. Surface it from the `raw`
+    # aggregate as its own report-only column (w=0) so the "smooth lines and curves" quality
+    # signal is visible next to topology, which it complements.
+    show_smooth = any("smoothness" in s["raw"] for s in summary)
+    if show_smooth:
+        head += f"<th>{html.escape(METRIC_LABEL['smoothness'])}<br><small>w=0</small></th>"
     body = ""
     for s in summary:
         cells = "".join(f"<td style='background:rgba(46,160,67,{0.08 + 0.55 * s['norm'].get(k, 0):.2f})'>{s['norm'][k]:.2f}</td>"
                         if k in s["norm"] else "<td>–</td>" for k in metrics)
+        if show_smooth:
+            sm = s["raw"].get("smoothness")
+            cells += (f"<td style='background:rgba(46,160,67,{0.08 + 0.55 * sm:.2f})'>{sm:.2f}</td>"
+                      if sm is not None else "<td>–</td>")
         body += (f"<tr><th>{html.escape(s['tool'])}</th><td class=big>{s['composite']:.3f}</td>{cells}"
                  f"<td>{s['raw'].get('anchors_per_shape', 0):.1f}</td><td>{s['seconds']:.1f}s</td></tr>")
     grid = ""

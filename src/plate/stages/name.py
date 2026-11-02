@@ -30,6 +30,18 @@ def color_name(rgb) -> str:
     return _names[int(np.argmin(np.linalg.norm(_lab - lab, axis=1)))]
 
 
+def shape_word(node) -> str:
+    """Classical base word for a drawable node. A compound path whose only
+    topology is a single hole (an even-odd path with exactly one outer contour
+    and one interior contour, e.g. an annulus) reads as a "ring". This is a
+    naming decision over the geometry the tracer already produced -- the
+    even-odd fill and its two subpaths are untouched (GC-2)."""
+    word = KIND_WORD[node.kind]
+    if node.kind == "path" and node.evenodd and node.d.count("M") == 2:
+        return "ring"
+    return word
+
+
 def assign_names(nodes: list[Node], overrides: dict[int, str] | None = None) -> None:
     """Depth-first naming with unique suffixes. `overrides` maps shape_id -> semantic name."""
     seen: dict[str, int] = {}

@@ -19,6 +19,14 @@ def plate(src: Path, dst: Path, cfg: Config | None = None) -> None:
     dst.write_text(pipeline.run(src, cfg or Config()).svg, encoding="utf-8")
 
 
+def plate_smooth(src: Path, dst: Path) -> None:
+    """PLATE under the opt-in `smooth` preset (clean-line mode for real artwork). Lets the
+    bake-off report the `smoothness` metric for smooth vs default side by side (Kiro 13.5)."""
+    from .. import pipeline
+    from ..config import load
+    dst.write_text(pipeline.run(src, load("smooth", None)).svg, encoding="utf-8")
+
+
 def vtracer_stacked(src: Path, dst: Path) -> None:
     import vtracer
     vtracer.convert_image_to_svg_py(str(src), str(dst), colormode="color", hierarchical="stacked", mode="spline")
@@ -59,8 +67,8 @@ def potrace_color(src: Path, dst: Path, k: int = 8) -> None:
                    + "".join(parts) + "</svg>", encoding="utf-8")
 
 
-BUILTIN = {"plate": plate, "vtracer": vtracer_stacked, "vtracer-cutout": vtracer_cutout,
-           "potrace-color": potrace_color}
+BUILTIN = {"plate": plate, "plate-smooth": plate_smooth, "vtracer": vtracer_stacked,
+           "vtracer-cutout": vtracer_cutout, "potrace-color": potrace_color}
 
 
 def discover_external(folder: Path, stems: list[str]) -> dict[str, dict[str, Path]]:

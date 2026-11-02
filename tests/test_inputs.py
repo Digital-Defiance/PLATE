@@ -5,6 +5,7 @@ photos came out sideways, fully transparent images crashed, tiny icons emitted a
 empty SVG or a stray lens, unreadable files printed tracebacks, small antialiased
 text lost half its letters, and >16 flat swatch colours were k-means averaged.
 """
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import cv2
@@ -223,6 +224,83 @@ def test_soft_shadow_ramp_is_not_mistaken_for_a_flat_faint_object(tmp_path):
     im.paste((0, 0, 0, 255), (0, 0), shadow.filter(ImageFilter.GaussianBlur(14)))
     from plate.stages.segment import _faint_objects
     assert not _faint_objects(np.asarray(im)[..., 3]).any()
+
+
+# --- R7d: nonuniform / soft alpha + shadows, validated on both backgrounds ----
+# A fixtures-backed pin (scripts/make_soft_alpha.py). Flat-region opacity support
+# (pipeline._opacity + segment._faint_objects) models a translucent object with ONE
+# opacity measured from its interior. A single flat coverage composites identically
+# on every background, so the SUPPORTED uniform case is correct on BOTH white and
+# black (that is also what test_translucent_overlay_keeps_its_opacity asserts for
+# alpha 64/128/191). A NONUNIFORM / feathered alpha has no hard silhouette boundary:
+# one opacity cannot match two backgrounds at once, and _faint_objects deliberately
+# admits a faint region only when its interior sits at one steady level, so a
+# continuously-ramping alpha keeps its binary-threshold treatment. R7d terminal
+# state is (b) DOCUMENTED LIMIT with this measured both-background pin.
+
+_SOFT_FIXTURES = Path(__file__).resolve().parents[1] / "samples" / "fixtures"
+
+
+def _both_bg_ssim(svg, src):
+    return (metrics.fidelity(svg, src, bg=(255, 255, 255))["ssim"],
+            metrics.fidelity(svg, src, bg=(0, 0, 0))["ssim"])
+
+
+def test_uniform_flat_region_opacity_is_correct_on_both_backgrounds():
+    """R7d SUPPORTED case: a single flat 50%-alpha panel composites near-perfectly on
+    both a white and a black background (one opacity is background-independent).
+
+    Validates: Requirements 7 (R7d)."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    png = _SOFT_FIXTURES / "soft_uniform_overlay.png"
+    assert png.exists(), f"run scripts/make_soft_alpha.py to create {png}"
+    src = np.asarray(Image.open(png).convert("RGBA"))
+    r = pipeline.run(png, Config())
+    assert r.stats["shapes"] == 1
+    white, black = _both_bg_ssim(r.svg, src)
+    assert white >= 0.99 and black >= 0.99, (white, black)
+    # background-independent: the two SSIMs agree closely
+    assert abs(white - black) <= 0.01, (white, black)
+
+
+def test_feathered_nonuniform_alpha_cannot_match_both_backgrounds_at_once():
+    """R7d LIMIT (b): a radial alpha fade has no hard boundary. One flat opacity matches
+    one background's coverage but not the other, so the white/black SSIMs are both below
+    the uniform case AND asymmetric. Measured floors pin the limit (white ~0.856,
+    black ~0.721); if flat-region opacity is ever extended, move these up on purpose.
+
+    Validates: Requirements 7 (R7d)."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    png = _SOFT_FIXTURES / "soft_feathered_disc.png"
+    assert png.exists(), f"run scripts/make_soft_alpha.py to create {png}"
+    src = np.asarray(Image.open(png).convert("RGBA"))
+    r = pipeline.run(png, Config())
+    white, black = _both_bg_ssim(r.svg, src)
+    # both below the uniform case -> a nonuniform alpha is not fully represented
+    assert white < 0.95 and black < 0.95, (white, black)
+    # background-dependent -> one opacity cannot serve both backgrounds
+    assert abs(white - black) >= 0.05, (white, black)
+    # measured floors (recover-or-raise markers)
+    assert white >= 0.80 and black >= 0.65, (white, black)
+
+
+def test_soft_drop_shadow_band_is_the_measured_feathered_limit():
+    """R7d LIMIT (b): an opaque card over a soft (Gaussian) translucent drop shadow. The
+    card is exact; the soft-shadow band's varying alpha only shows on the white
+    background, so white SSIM sits below black. Pins the measured both-background split.
+
+    Validates: Requirements 7 (R7d)."""
+    if not have_renderer():
+        pytest.skip("requires renderer")
+    png = _SOFT_FIXTURES / "soft_shadow_card_fx.png"
+    assert png.exists(), f"run scripts/make_soft_alpha.py to create {png}"
+    src = np.asarray(Image.open(png).convert("RGBA"))
+    r = pipeline.run(png, Config())
+    white, black = _both_bg_ssim(r.svg, src)
+    assert black >= white, (white, black)          # the shadow is invisible on black
+    assert white >= 0.85 and black >= 0.99, (white, black)
 
 
 def test_unwritable_output_fails_cleanly(tmp_path, capsys):

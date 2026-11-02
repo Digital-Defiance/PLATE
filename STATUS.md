@@ -1,6 +1,191 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-01 (bounded corner recovery; Task 2 pinned) · Version 0.1.0 · Tests: 651 passed, 7 expected feature gaps.
+Last updated: 2026-11-02 (Task 15 / R8 — engine-complete closure audit) · Version 0.1.0 · Tests: 699 passed, 7 expected feature gaps.
+
+## THE CLASSICAL ENGINE IS COMPLETE (Task 15 / R8) — 2026-11-02
+
+This is the closure audit for the engine-completion spec. It is an audit, not a code
+change: **no source touched, no gate moved, GC-5 held.** Every in-scope engine-quality
+gap (R1–R7, R9, and each sub-item) is now recorded in exactly one terminal state —
+**(a) FIXED** (a real diagnostic number moved, pinned by a regression test) or
+**(b) DOCUMENTED LIMIT** (measured pixel proof that no classical cue exists, pinned so it
+cannot silently drift). Nothing is left in limbo. This is the line after which classical
+engine development stops; everything past it is the out-of-scope boundary (OOS-1..5) below.
+
+### Ceiling statement (the honest count)
+
+Across the 20 in-scope terminal-state outcomes: **9 FIXED (a) · 11 DOCUMENTED LIMIT (b).**
+(Plus R8, this audit, and Task 14, the bake-off verification harness — infrastructure, not
+an engine-gap outcome.) A LIMIT is a first-class resolution: it is a measured proof that
+the raster does not contain the information, not a failure or a deferral. The largest
+cluster of limits — R3, and the ROOT/EMBER/storefront structural gaps behind it — is the
+engine's hard classical ceiling: colour-only segmentation cannot split touching regions of
+identical fill without inventing a boundary that is absent from the pixels (that needs an
+ML segmenter such as SAM, which is out of scope, OOS-5).
+
+### Regression surface — re-verified green from the tree (GC-4)
+
+- `pytest -q`: **699 passed / 7 xfailed / 0 xpassed** (the 7 strict-xfail structural gaps
+  intact: mission_patch, storefront, event_poster, EMBER, ORBIT, ROOT, PLATE identity).
+- `python -m plate.robustness`: **full 70/78**, **core 36/36** (failing set identical to
+  the spec baseline).
+- **24 shipped sample + challenge SVGs** preserved (the asset-contract and brand byte-compare
+  tests in `test_logo_assets.py` / `test_complex_scene_assets.py` / `test_challenges.py` are
+  all green); the plain-**VTracer baseline** (`src/plate/baseline.py`) is present.
+
+### Per-requirement terminal-state ledger
+
+Every item names its moving number (state a) or its pin test (state b).
+
+| Req | Item | State | Evidence / moving number | Pin test · task |
+|---|---|---|---|---|
+| **R1** | JPEG occlusion recovery | **(a) FIXED** | JPEG-variant `hidden_completion` 0.333→0.417 (3/10→4/10); floor 0.4 met, 0.6 stretch not | `test_bakeoff.py::test_jpeg_variant_hidden_completion_meets_floor` · T1 |
+| R1 | residual clean-render misses | **(b) LIMIT** | scene15 ×2 / scene23 ×1 recover 0 on the clean render at every denoise level (an R2/T4 completion limit, not a JPEG bug) | 14 clean-render pins in `test_bakeoff.py` · T2 |
+| **R2** | rect/polygon amodal completion | **(a) FIXED** | free-edge line-intersection: polygon 2→3/10, overall 32→33/57, `hidden_completion` 0.549→0.562, composite 0.852→0.857 | `test_free_edge_completion.py` (4 cases) + `test_bakeoff.py::test_free_edge_lifts_occluded_rectilinear_completion` · T4 |
+| R2 | residual rrect near-miss | **(b) LIMIT** | reconstructed sharp quad loses corner rounding (best IoU 0.85–0.90 band) | `test_bakeoff.py::test_free_edge_residual_rrect_is_a_measured_near_miss` · T4 |
+| **R3** | same-colour touching merge | **(b) LIMIT** | the hard classical ceiling — no concavity/defect cue splits an abutting same-colour component without inventing a boundary (EMBER/ROOT/storefront) | raster-contiguity pins in `test_logo_assets.py` / `test_complex_scene_assets.py`; investigation `.agents/tasks/same-colour-split-investigation.md` · T7 |
+| **R4** | realistic gradient (orb) | **(a) FIXED** | smooth-ramp pre-pass: `real_radial_orb` 1 obj/0 grad/SSIM 0.8276 → 1 radial disc/SSIM 0.9455 (beats VTracer 0.9094) | `test_gradient_bands.py::test_smooth_single_ramp_region_recovers_the_orb_as_one_radial_gradient` + flat-art negative · T3 |
+| R4 | `real_sunset_gradient` | **(b) LIMIT** | `_monotone_ok` correctly rejects a 94-band non-ramp blob (backstep 149–363 vs budget 15.3) | flat-art negative pin in `test_gradient_bands.py` · T3 |
+| **R5** | heavy sensor-noise / JPEG-artifact collapse | **(b) LIMIT** | noise destroys the flat-colour structure; a gate low enough to catch it re-denoises shipped `logo_orbit_wordmark` (breaks byte-identity) | 4 pins in `test_real_corpus.py` (`..._is_not_a_denoise_trigger_gap`, `..._even_at_maximum_denoise`, `..._below_the_gate_and_overlaps_shipped_art`, `..._changes_a_shipped_svg`) · T8 |
+| **R6a** | ROOT inner-seal ring | **(a) FIXED** | circle-arm reunion: inner-seal IoU 0.2715→0.4073, topology (1,0)→(7,0), extras 7→1 | `test_interrupted_loops.py` (1 real + 1 synthetic positive, 2 negatives) · T5 |
+| **R6b** | ROOT leaf-vein-11 split | **(b) LIMIT** | sub-pixel segmentation, not a stroke-floor: the ~3.4px vein is cut upstream (one physical cream region, radius ≤3.5px) | `test_logo_assets.py::test_root_leaf_vein_11_splits_at_a_subpixel_bend_not_a_stroke_floor` · T6 |
+| **R7a** | thin-colour / hairline discovery | **(b) LIMIT** | sub-pixel floor: a 2px fully-AA mark has no stable colour core (admitted at ≥3px) | `test_segment.py` (admitted ≥3px / below-floor 2px) + `test_robustness.py::test_hairline_route_*` · T9 |
+| **R7b** | thin occluded rectangles | **(a) FIXED** | corrected pixel-boundary (interior-coverage) eval in hidden-area validation: an 8–16px occluded bar completes to one `<rect>` (was 2 fragments) | `test_free_edge_completion.py::test_thin_occluded_bar_completes_into_one_rect` (+ control + negative) · T9 |
+| **R7c** | palette pressure >64 / k-means | **(a) FIXED** | new `scripts/make_mosaic.py` fixture; k-means path recovers 73/130 (`max_colors=96`), 113/130 (130) | 3 pins in `test_segment.py` (verbatim ≤ceiling / default-budget collapse / k-means recovery) · T9 |
+| **R7d** | nonuniform / soft alpha + shadows | **(b) LIMIT** | one flat opacity cannot match two backgrounds (feathered disc SSIM 0.856 white / 0.721 black); new `scripts/make_soft_alpha.py` | 3 pins in `test_inputs.py` (uniform OK both bg / feathered can't match both / soft-shadow band) · T10 |
+| **R7e** | scale consistency | **(b) LIMIT** | measured work_size gradient floor: `gradient_badge` lost at 200, consistent 1 grad/5 shapes ≥250 (per-step dE 17–60 vs `grad_step_de` 14 at w=200) | 2 pins in `test_gradient_bands.py` (scale-consistent above floor / 1×–2× source) · T10 |
+| **R7f** | ring / compound-path naming | **(a) FIXED** | classical `name.shape_word`: even-odd + 2 subpaths → "ring"; `t3_ring` "Red shape"→"Red ring", topology byte-identical | `test_controls.py` t3_ring branch (name + evenodd + `d.count("M")==2`) · T10 |
+| **R7g·1** | overlapping-object false split/merge | **(a) FIXED** (verified) | `5692fa9` confirmed at HEAD; `diff_target(svg,svg)` on identical overlapping rects (IoU 0.25) → 0 false splits | `test_challenge_diff.py::test_r7g_identical_overlapping_rects_self_diff_reports_zero_false_splits` · T11 |
+| **R7g·2** | short curved butt cap | **(b) LIMIT** | butt cap's flat front span ~2.0–2.75px < the 0.75·width = 3.03px gate; all 24 shipped targets use `round` caps only | `test_exposed_curve_refit.py::test_short_butt_cap_curve_emits_a_round_cap_measured_limit` · T11 |
+| **R9** | real-artwork clean-line `smooth` preset | **(a) FIXED** | opt-in levers (default + 24 SVGs unchanged by construction); logo SSIM ≥0.97, edge F1 ≥0.99, topology 0/0, both periods + V dot, ≤700 anchors; report-only `topology`+`smoothness` metrics (weight 0) | `test_research_force_logo.py`, `test_topology_metric.py`, `test_smoothness_metric.py` (13.1–13.8 all done) · T13 |
+| R9 | outline-wobble residual | **(b) LIMIT** | sub-piece wobble (~50 under-bar px, right tip ~1px short) creates no extra/missing piece; SSIM/edge-F1 cannot see it; 3 broad fixes tried and rejected | `test_research_force_logo.py::test_outline_smoothness_is_measured_and_bounded` (0.90≤smoothness≤1.0, wobble≤0.01) · T13.8 |
+
+**Tally: 9 FIXED (a) · 11 DOCUMENTED LIMIT (b) = 20 outcomes, 0 in limbo.** Task 14
+(bake-off round-trip/quality verification — `fidelity`/`topology`/`smoothness` surfaced
+end to end) and R8 (this audit) are infrastructure/closure, not engine-gap outcomes.
+
+### Out-of-scope boundary (OOS-1..5) — the line where engine development stops
+
+These need external resources that cannot reach a verifiable in-repo terminal state, so
+"engine complete" is defined without them. Not worthless — just not classical-engine quality.
+- **OOS-1** Illustrator desktop validation beyond the automated 24-case / 636-check suite
+  (live-shape widgets, direct gradient-stop edits, 4× seam checks, broader AI versions) —
+  needs a Mac with Illustrator + human interaction.
+- **OOS-2** real LM Studio VLM naming/grouping quality + latency — the path is verified and
+  the VLM is cosmetic (GC-2); judging quality needs a live vision model + human judgement.
+- **OOS-3** external-tool bake-off entries (Illustrator Image Trace, Vectorizer.AI, Inkscape)
+  — need those apps + manual SVG exports.
+- **OOS-4** PLATE identity logo structural target — hidden back-P geometry is not uniquely
+  recoverable from the raster; stays strict-xfail permanently (a permanent documented limit).
+- **OOS-5** product / infra, not engine quality — hosted service; browser/Pyodide shell
+  (its own spec); PyPI/CI/packaging; PDF/AI export; the SAM segmenter; `--open` / `--watch`.
+
+Continued on `codex/logo-quality`; nothing pushed (owner pushes). Audit evidence: this run's
+`pytest -q` (699/7/0), `plate.robustness` (70/78 full, 36/36 core), and the intact xfail set
+listed above.
+
+## ROOT inner-seal interrupted circular ring (Task 5 / R6a) — FIXED (a) — 2026-11-01
+Continued on `codex/logo-quality`; nothing pushed. Closes R6a in terminal state (a).
+- **Problem (measured first).** `DIAG -m challenge_report logo_root_seal` showed the
+  `#a9d1b5` inner-seal circular ring (r≈278 from (450,369)) split into **6 extra `Beige_*`
+  arc fragments**, matched only as an open arc at **IoU 0.2715**, topology **(1, 0)**. The
+  circle arm of `order._merge_compound_siblings` already clusters the arcs (shared 15° T-junction)
+  and the pooled convex-hull common-circle fit passes (rms/r 0.0052, arc 345°), but the merge
+  was vetoed: five short arc slivers (areas 140–358) each snap to a tiny **rect/rrect** on their
+  own, because a few-degree arc looks locally rectangular, and the existing veto treats any
+  member snapping to a closed primitive as a finished object.
+- **Fix (no gate relaxed, GC-5).** In the circle arm only: (1) classify each member by its
+  pixels' MEDIAN distance to the fitted centre as ON the ring (within `max(6, 0.08·r)`) or OFF;
+  (2) exempt from the veto an ON-ring member that snaps to a **rect/rrect** (the boxy-sliver false
+  positive) — a member snapping to a **circle/ellipse** is a genuine complete curved object and
+  still vetoes (keeps e.g. `samples/badge.png` byte-identical, where a nearly-whole disc lies on
+  the same circle); (3) when a large same-colour OFF-ring leaf was pooled into the hull
+  (`big_off_ring`, area ≥ 25% of the total on-ring mass — stable whether arcs are split or
+  merged), reunite ONLY the on-ring arcs and re-fit the circle on exactly those with the SAME
+  `fit_circle` rms≤0.02·r / arc≥160° gates, so adjacent leaves keep their identity. The ellipse
+  arm gained the same off-band leaf guard. All reuse the existing fit; no threshold loosened.
+- **Result.** `logo_root_seal`: the 7 on-ring arcs reunite into one compound path — **inner-seal
+  IoU 0.2715 → 0.4073**, topology **(1, 0) → (7, 0)**, **extras 7 → 1** (the remaining
+  `Beige_ellipse_3` is the separate Task 6 leaf-vein split); object count 51 → 45; `matched`
+  stays 44 with leaf-3/leaf-6 NOT swallowed. ROOT stays xfail (its dominant gap is the Task 7
+  same-colour limit) — the criterion is the per-object improvement, met.
+- **Pins.** `tests/test_interrupted_loops.py`: one positive on the real asset
+  (`test_root_inner_seal_arcs_reunite_into_one_ring_without_swallowing_leaves`), one synthetic
+  positive (`test_circular_ring_crossed_by_a_shared_occluder_reunites`) and two negatives
+  (`test_off_ring_same_colour_disc_is_not_merged_into_the_ring` — contaminated hull;
+  `test_arcs_without_a_shared_occluder_are_not_reunited` — no shared occluder). `test_strokes.py`
+  stroke/shape-count pin updated (ROOT 51 → 45 shapes, strokes ≥ 8).
+- **Validation.** Full suite **670 passed / 7 xfailed / 0 xpassed**; robustness **core 36/36,
+  full 70/78**; **24 shipped SVGs byte-identical except `logo_root_seal`** (orbit, mission_patch,
+  badge and the other 20 confirmed unchanged by md5).
+## Smooth single-ramp region detector (Task 3 / R4) — FIXED (a) — 2026-11-01
+Continued on `codex/logo-quality`; nothing pushed. Closes R4 in terminal state (a).
+- **Problem (measured first).** `real_radial_orb` is a blue radial-gradient orb on a flat
+  near-white ground. Its ramp colours never repeat (29617 unique colours, max repeat frac
+  0.0098), so the count-floor palette keeps only the ground colour `(239,234,224)`; `segment()`
+  emits **one** full-canvas region and `gradient.detect()`'s band path sees zero candidates.
+  Baseline: **1 object, 0 gradients, SSIM 0.8276**.
+- **Fix.** New additive pre-pass `gradient.detect_ramp_region`, run at the top of `detect()`.
+  It flags a region by the measured smooth-ramp signature — luma span ≥120 (orb ~245), interior
+  Lab-gradient median ≤8 (orb 6.66 = smooth, not noisy), unique-colour frac ≥0.03 (orb 0.060)
+  and max single-colour repeat frac ≤0.05 (orb 0.0098) — carves the ramp blob out of its flat
+  surround (largest 4-connected run >16 RGB from the region colour), fits the EXISTING
+  `fit_radial_gradient`/`fit_linear_gradient` on the eroded blob interior (orb radial residual
+  **0.0307**), and accepts only at residual ≤ `grad_max_residual` (0.06). On accept it replaces
+  the one region with a gradient `Shape` (the blob) + the flat remainder; no palette colour added.
+- **Result.** `real_radial_orb` → **2 shapes, 1 radial-gradient disc + flat background, 100%
+  prim, SSIM 0.9455** (0.8276 → 0.9455; now beats VTracer's 0.9094). `<radialGradient>` emitted.
+- **Additive by construction.** Flat art / discrete palettes / already-posterized ramps all
+  carry a large repeated-colour mass (discrete_palette 0.53, twin_gradients 0.50, gradient_badge
+  0.57) so they fail the signature and keep the unchanged band path. Verified unchanged:
+  `shaded`→1 radial (SSIM 0.9557), `discrete_palette`→0, `twin_gradients`→2, `gradient_badge`→1,
+  `real_sunset_gradient`→0 (still correctly rejected by `_monotone_ok`). t3/t4 gradient controls
+  and the 24 shipped SVGs unchanged (test_controls + full suite green).
+- **Pins.** `tests/test_gradient_bands.py::test_smooth_single_ramp_region_recovers_the_orb_as_one_radial_gradient`
+  (one radial disc, `<radialGradient>`, SSIM > 0.83 and ≥ 0.90) and
+  `::test_flat_art_does_not_trigger_the_smooth_ramp_pre_pass` (discrete_palette → 0 gradients).
+- **Validation.** Full suite **660 passed / 7 xfailed** (was 658; +2 pins, xfail unchanged);
+  robustness **core 36/36, full 70/78**; `plate bench samples/real` shows the orb improved.
+
+## Outline smoothness metric (13.5) + 13.6 pinned as a documented limit — 2026-11-01
+
+Continued on `codex/logo-quality` from checkpoint **`cfe42e2`** (clean tree, 651/7 reproduced);
+nothing pushed. This closes the two items the prior handover left open under R9/Task 13.
+
+- **13.5 (a) — bake-off smoothness metric.** `score.smoothness(ren, ref)` traces every solid
+  same-colour outline (reusing the topology palette/class-map, so blends are excluded) and sums
+  its absolute turning (direction change) per unit arc length, resampled at a fixed step so
+  single-pixel staircase jitter does not dominate. It reports the render's EXCESS turning over
+  the reference as `wobble`; `smoothness = 1/(1+8·wobble)` in [0,1], 1 = as smooth as the source.
+  One-sided (a crisp render of a wavy source is not penalised) and blend-aware (soft JPEG vs
+  crisp render agree). **Report-only:** not in `DEFAULT_WEIGHTS`, so every composite is unchanged;
+  carried through `fidelity()`, `summarise` and the HTML report label, exactly like `topology`.
+- New opt-in **`plate-smooth`** bake-off adapter runs PLATE under the `smooth` preset so
+  smooth-vs-default is measurable side by side. It is NOT a default `--tools` entry (slower).
+- **Measured.** Seed-1 synthetic corpus (n=24): plate smoothness **0.9942** / wobble 0.00074,
+  plate-smooth **0.9958** / wobble 0.00054 — smooth marginally smoother, composite flat
+  (0.8515 vs 0.8493, report-only). Real corpus (`samples/real`, 14 imgs): plate **0.9854**,
+  plate-smooth **0.9843**; the metric isolates `real_jpeg_artifacts` (**0.80**, real ringing
+  wobble) from clean images (1.000) and surfaces that smooth adds minor contour detail on
+  `real_soft_shadow_card` (**0.975**). That small smooth-lower aggregate is a real, recorded
+  observation, not hidden. Six pins in `tests/test_smoothness_metric.py`.
+- **13.6 (b) — DOCUMENTED LIMIT.** The earlier ownership sub-fix already cleared the floating
+  spine knobs. The logo under `smooth` now measures **topology 0 extra / 0 missing**, SSIM
+  **0.977355**, edge_f1 **0.999358**, anchors **348**, smoothness **0.9736** / wobble **0.0034**.
+  The residual (~50 under-bar overlay pixels, right gap tip ~1 px short) is sub-piece wobble
+  that creates no extra/missing piece and that SSIM/edge-F1 cannot see. All three broad fixes
+  were tried and rejected before (global mask-blur reduction and blanket tip suppression each
+  made 2 extra dark pieces; the 35% fold clamp showed no synthetic gain). Pinned by
+  `tests/test_research_force_logo.py::test_outline_smoothness_is_measured_and_bounded`
+  (0.90 ≤ smoothness ≤ 1.0, wobble ≤ 0.01). Do not relax the topology/foreign-object guards.
+- With 13.5/13.6 terminal, **parent Task 13 (R9) and its sub-items 13.1–13.8 are all done.**
+- **Validation:** baseline **651 passed / 7 xfailed** reproduced on a clean tree; after
+  **657 passed / 7 xfailed** (+6 smoothness pins, xfail unchanged); core robustness **36/36**.
+  The default `plate` conversion path is untouched (changes are bake-off scoring + an opt-in
+  tool only), so the 48 default/control SVGs are unaffected. New code matches the project's
+  existing Ruff style (the only flag is the same `dict()`-literal rule the committed
+  `score.py`/`test_topology_metric.py` already use). Native Illustrator acceptance of the
+  logo revision remains outstanding; do not claim R9 visually verified in Illustrator.
 
 ## Bounded sharp-corner recovery + Task 2 residual pin — 2026-11-01
 

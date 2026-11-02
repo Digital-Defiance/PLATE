@@ -15,6 +15,7 @@ composite renormalises over what exists. Add other tools by exporting their SVGs
 | fidelity | `ssim` | SSIM of the render vs the *clean* reference (truth render if known, else the source). Normalised (ssim−0.85)/0.14 |
 | | `edge_f1` | Canny-edge F1 with 2 px tolerance |
 | topology (report-only, weight 0) | `topology` | same solid pieces as the reference: same-colour pieces matched by overlap; `topo_extra` = specks, pinched-off tips, splits; `topo_missing` = dropped dots/periods, merges. Blend pixels are ignored on both sides, so a soft JPEG and a crisp render compare fairly |
+| smoothness (report-only, weight 0) | `smoothness` | smooth lines and curves: for each dominant colour, the render's absolute turning-per-outline-length *minus* the reference's (`wobble`), mapped to [0,1] by `1/(1+8·wobble)` (1 = as smooth as the source). One-sided (a crisp render of a wavy source is not penalised) and blend-aware. SSIM/edge-F1 are blind to wobble, so a lumpy outline can still render near-pixel-identical |
 | structure (truth only) | `obj_visible_f1` | an SVG element whose *visible* region (minus later elements) matches a true object's visible region at IoU ≥ 0.9; F1 over objects vs elements — over-segmentation lowers precision |
 | | `obj_complete_f1` | same, but the element's *whole* shape vs the object's complete silhouette → rewards hidden-part completion |
 | | `hidden_completion` | of objects that are partly hidden, the share recovered whole |
@@ -27,6 +28,25 @@ Also recorded, not in the composite: `primitive_acc` (right primitive kind for m
 Composite = weighted mean over available metrics (`DEFAULT_WEIGHTS` in `bakeoff/score.py`; override with `--weights w.toml`).
 The report also re-ranks under **five weightings** (balanced, geometry-only, fidelity-first, editability-first, structure-first)
 so you can see whether a ranking is an artefact of the weights.
+
+## Verification: render the SVG back and check it (Task 14)
+The bake-off already does the three checks Task 14 asks for, on every scored SVG from any tool:
+1. **Pixel round-trip** — `score.fidelity` renders the SVG back to PNG (`raster.render_svg`) at the
+   source resolution and compares: `ssim`, `mae`, and `edge_f1` (Canny-edge F1, 2 px tolerance).
+2. **Good objects / lack of artifacts** — `topology` matches solid same-colour pieces by overlap;
+   `topo_extra` counts specks, splits and pinched-off tips, `topo_missing` counts dropped pieces and
+   merges. Report-only (weight 0).
+3. **Smooth lines and curves** — `smoothness`/`wobble` measure excess outline turning-per-length over
+   the reference. Report-only (weight 0); SSIM/edge-F1 cannot see wobble.
+All three are computed by `score_svg`, aggregated per tool in `summarise`, and shown in
+`report.html` (topology and smoothness as explicit `w=0` columns beside SSIM/edge-F1). Pinned
+end-to-end by `tests/test_bakeoff.py::test_quality_signals_are_computed_by_score_svg`,
+`::test_quality_signals_survive_the_full_bakeoff`, and
+`::test_artifacts_and_wobble_are_measured_end_to_end`; the per-metric behaviour is pinned in
+`tests/test_topology_metric.py` and `tests/test_smoothness_metric.py`. (The smoothness column had
+been silently dropped from `report.html` because the column loop keyed off the normalised set and
+smoothness is report-only; it is now sourced from the raw aggregate. Composites are unchanged —
+neither topology nor smoothness is in `DEFAULT_WEIGHTS`.)
 
 ## Method safeguards
 - The ground-truth SVG itself must score perfect structure (tested). A tool that returns only visible cut-outs must lose `complete` credit (tested).
@@ -174,11 +194,22 @@ Artifacts `out/research-force/logo.plate-corner-reference.*`, `logo-corner-refer
 `corner-reference-validation.json`; evidence `/tmp/plate-tips3/`.
 
 ## Where PLATE loses (the useful part)
-Complete-object recovery on the corpus: free circles 13/17, **occluded rect 4/11, occluded polygon 3/10, occluded rrect 5/12**, and
-**JPEG-damaged scenes: 3/10 occluded objects recovered** at the original default (aggregate `hidden_completion` 0.33; an earlier
-0/10 here came from a different corpus config), **4/10 (0.42) since the JPEG-keyed denoise** (`load_image` runs one bilateral pass
-when the source is a JPEG; it never fires on PNG). Causes found: (1) touching objects of the *same colour* merge into one
-region (colour-only segmentation can't split them) → needs SAM or geometric splitting; (2) amodal completion is weaker for
-rectangles/polygons than circles; (3) JPEG ringing displaces region boundaries enough that the primitive fit in
-`complete.try_complete` exceeds its tolerance (the T-junction occlusion test is not the cause). These are tracked in ROADMAP.md (P1 "bake-off driven").
+Complete-object recovery on the seed-1 (n=24) corpus: occluded **circle 14/16, ellipse 4/8, rect 6/11,
+polygon 2→3/10, rrect 6/12**; overall occluded **32→33/57**, mean per-scene `hidden_completion` **0.549→0.562**.
+The arrows are Task 4 (R2): `complete.try_complete` now extends partly-hidden *rectilinear* free edges and
+intersects adjacent non-parallel ones to reconstruct the hidden corner(s), feeding the clean polygon to the
+EXISTING `evaluate` (primitive-fit tolerance and the 15° `_occludes` threshold unchanged; the occluder-coverage
+test gains a 1px dilation only for this candidate, to absorb the sub-pixel rasterisation seam — the fraction
+floors are untouched). Pinned by `tests/test_free_edge_completion.py` and
+`tests/test_bakeoff.py::test_free_edge_lifts_occluded_rectilinear_completion`.
+**JPEG-damaged scenes: 3/10 occluded objects recovered** at the original default (aggregate `hidden_completion`
+0.33; an earlier 0/10 here came from a different corpus config), **4/10 (0.42) since the JPEG-keyed denoise**
+(`load_image` runs one bilateral pass when the source is a JPEG; it never fires on PNG). Remaining causes:
+(1) touching objects of the *same colour* merge into one region (colour-only segmentation can't split them)
+→ needs SAM or geometric splitting; (2) clean free-edge reconstructions that stay just under IoU 0.9 — chiefly
+rounded rectangles, whose sharp reconstructed corners lose the truth's corner rounding (measured near-miss,
+pinned as `tests/test_bakeoff.py::test_free_edge_residual_rrect_is_a_measured_near_miss`), and stacked corners
+covered by a neighbour that gives R no local T-junction; (3) JPEG ringing displaces region boundaries enough
+that the primitive fit in `complete.try_complete` exceeds its tolerance (the T-junction occlusion test is not the
+cause). These are tracked in ROADMAP.md (P1 "bake-off driven").
 Goal: `hidden_completion` ≥ 0.8 and JPEG parity, tracked by `tests/test_bakeoff.py` + this table.

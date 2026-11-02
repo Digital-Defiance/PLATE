@@ -116,6 +116,13 @@ def test_control(cname, controls_dir):
     # 3) tier-specific structural checks
     if cname == "t3_ring":
         assert 'fill-rule="evenodd"' in r.svg, "ring must emit an even-odd fill"
+        # R7f: the annulus reads semantically as a "ring" while its even-odd
+        # topology (one outer contour + one interior hole = two subpaths) is
+        # unchanged. Naming is classical only; GC-2/topology preserved.
+        ring = next(n for n, _ in flat if n.kind == "path" and n.evenodd)
+        assert ring.name == "Red ring", f"ring should be named 'Red ring', got {ring.name!r}"
+        assert ring.evenodd is True, "R7f must not touch the even-odd fill"
+        assert ring.d.count("M") == 2, "R7f must not change the ring's two-subpath topology"
     if cname == "t4_grad_behind_circle":
         assert "<linearGradient" in r.svg, "gradient rect must emit a linearGradient"
         rect_node = next(n for n, _ in flat if n.kind in {"rect", "rrect"})

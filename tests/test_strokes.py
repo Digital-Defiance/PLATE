@@ -185,8 +185,15 @@ def test_adaptive_refit_rescues_an_underfit_curve(tmp_path):
 
 
 def test_ember_recovers_more_whiskers_without_regressing_originals():
-    """The adaptive refit lifts EMBER navy strokes (was 2) and ROOT strokes (was 3)
-    without changing object counts; EMBER's full target stays a strict xfail."""
+    """The adaptive refit lifts EMBER navy strokes (was 2) and ROOT strokes (was 3);
+    EMBER's full target stays a strict xfail.
+
+    ROOT's object count dropped 51 -> 45 with Task 5 / R6a: the inner-seal circular
+    ring, previously left split into six Beige_* arc extras, now reunites into one
+    compound path via the circle arm of order._merge_compound_siblings (one fewer
+    emitted stroke, 9 -> 8, since the reunited arcs are a single compound path rather
+    than individual stroke fragments). See test_interrupted_loops.py for the ring pins.
+    """
     if not have_renderer():
         pytest.skip("requires renderer")
     directory = Path(__file__).resolve().parents[1] / "samples/challenges"
@@ -194,5 +201,5 @@ def test_ember_recovers_more_whiskers_without_regressing_originals():
     assert ember.stats["shapes"] == 51
     assert ember.stats["strokes"] >= 3   # was 2 before adaptive refit
     root = pipeline.run(directory / "logo_root_seal.png", Config())
-    assert root.stats["shapes"] == 51
-    assert root.stats["strokes"] >= 9    # was 3 before adaptive refit
+    assert root.stats["shapes"] == 45    # was 51 before the Task 5 ring reunion
+    assert root.stats["strokes"] >= 8    # was 3 before adaptive refit

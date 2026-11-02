@@ -123,7 +123,7 @@ def fidelity(svg: str, ref_rgb: np.ndarray) -> dict:
     p = (re_ & dg).sum() / max(re_.sum(), 1) if re_.any() else 1.0
     r = (ge & dr).sum() / max(ge.sum(), 1) if ge.any() else 1.0
     return dict(ssim=float(ssim(ref_rgb, ren, channel_axis=2)), mae=mae,
-                edge_f1=float(2 * p * r / max(p + r, 1e-9)), **topology(ren, ref_rgb))
+                edge_f1=float(2 * p * r / max(p + r, 1e-9)), **topology(ren, ref_rgb), **smoothness(ren, ref_rgb))
 
 
 # ---------------------------------------------------------------- topology
@@ -230,6 +230,76 @@ def topology(ren: np.ndarray, ref_rgb: np.ndarray) -> dict:
     missing = sum(p["kind"] == "missing" for p in odd)
     return dict(topology=float(max(0.0, 1 - (extra + missing) / max(total, 1))),
                 topo_extra=extra, topo_missing=missing)
+
+# ---------------------------------------------------------------- smoothness (outline wobble)
+def _color_contours(img: np.ndarray, pal: np.ndarray, min_area: int):
+    """Outer contours (as float (x, y) arrays) of every solid same-colour piece, blend pixels
+    excluded. Reuses the topology palette/class machinery so soft and crisp images agree."""
+    cm = _class_map(img, pal)
+    out = []
+    for k in range(len(pal)):
+        cc, _ = _labels(cm == k, min_area)
+        for i in np.unique(cc):
+            if i == 0:
+                continue
+            cs, _ = cv2.findContours((cc == i).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            for c in cs:
+                if len(c) >= 16 and cv2.contourArea(c) >= min_area:
+                    out.append(c.reshape(-1, 2).astype(np.float64))
+    return out
+
+
+def _turning_per_length(contour: np.ndarray, step: float = 3.0) -> tuple[float, float]:
+    """(total absolute turning in radians, perimeter) of one closed contour, resampled at a fixed
+    arc-length `step` so single-pixel staircase jitter does not dominate. A smooth arc turns the
+    same total angle whether crisp or wavy; wobble adds back-and-forth turning that cancels in a
+    clean outline, so excess turning over the reference is the wobble signal."""
+    p = np.vstack([contour, contour[:1]])
+    seg = np.linalg.norm(np.diff(p, axis=0), axis=1)
+    peri = float(seg.sum())
+    if peri < 4 * step:
+        return 0.0, peri
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    n = max(8, int(peri / step))
+    u = np.linspace(0.0, peri, n, endpoint=False)
+    rx = np.interp(u, s, p[:, 0])
+    ry = np.interp(u, s, p[:, 1])
+    d = np.stack([np.gradient(rx), np.gradient(ry)], 1)
+    ang = np.arctan2(d[:, 1], d[:, 0])
+    dth = np.diff(np.concatenate([ang, ang[:1]]))
+    dth = (dth + np.pi) % (2 * np.pi) - np.pi      # wrap to (-pi, pi]
+    return float(np.abs(dth).sum()), peri
+
+
+def _wobble(img: np.ndarray, pal: np.ndarray, min_area: int) -> tuple[float, float]:
+    """(total absolute turning, total perimeter) summed over every solid piece of `img`."""
+    turn = length = 0.0
+    for c in _color_contours(img, pal, min_area):
+        t, lp = _turning_per_length(c)
+        turn += t
+        length += lp
+    return turn, length
+
+
+def smoothness(ren: np.ndarray, ref_rgb: np.ndarray) -> dict:
+    """How much more do the render's outlines wiggle than the reference's? For each dominant
+    reference colour we sum the absolute turning (direction change) of every solid outline and
+    divide by its total length: a smooth curve and its wavy copy turn the same net angle, but the
+    wavy one accumulates extra back-and-forth turning. `wobble` is the render's turning-per-length
+    minus the reference's (>= 0, clipped); `smoothness = 1/(1+8*wobble)` maps it to [0, 1] with 1 =
+    as smooth as the source. Report-only: it is not in DEFAULT_WEIGHTS, so composites never move.
+    SSIM/edge-F1 are blind to this - a lumpy line can render almost pixel-identical to a clean one."""
+    pal = _ref_palette(ref_rgb)
+    if len(pal) < 2:
+        return dict(smoothness=1.0, wobble=0.0)
+    min_area = max(16, int(1e-5 * ref_rgb.shape[0] * ref_rgb.shape[1]))
+    tr, lr = _wobble(ref_rgb, pal, min_area)
+    tc, lc = _wobble(ren, pal, min_area)
+    ref_tpl = tr / lr if lr else 0.0
+    ren_tpl = tc / lc if lc else 0.0
+    wob = max(0.0, ren_tpl - ref_tpl)
+    return dict(smoothness=float(1.0 / (1.0 + 8.0 * wob)), wobble=float(wob))
+
 
 
 # ---------------------------------------------------------------- structure vs truth
