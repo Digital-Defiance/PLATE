@@ -177,13 +177,14 @@ function mimeForFilename(filename: string): string {
   }
 }
 
-/**
- * Render one top-level layer as a `.layer-item` list entry (7.2). The name is
- * the layer's own name; the kind badge uses the shell's `.layer-kind` class.
- * `data-order` carries the paint-order index for tooling/tests without changing
- * the visible text.
- */
-function buildLayerItem(doc: Document, layer: LayerInfo): HTMLLIElement {
+/** Number of drawable leaves; grouping folders are not counted as objects. */
+function objectCount(layer: LayerInfo): number {
+  if (layer.children?.length) return layer.children.reduce((total, child) => total + objectCount(child), 0);
+  return layer.kind === "group" ? 0 : 1;
+}
+
+/** Preserve sibling paint order while exposing the actual nested object tree. */
+function buildLayerItem(doc: Document, layer: LayerInfo, expandAll: boolean, depth = 0): HTMLLIElement {
   const item = doc.createElement("li");
   item.className = "layer-item";
   item.setAttribute("data-order", String(layer.order));
@@ -191,15 +192,45 @@ function buildLayerItem(doc: Document, layer: LayerInfo): HTMLLIElement {
 
   const name = doc.createElement("span");
   name.className = "layer-name";
-  // Layer names come from the engine; `textContent` keeps them inert (no HTML).
+  // Engine names remain inert text, including at every nested level.
   name.textContent = layer.name;
-  item.appendChild(name);
-
   const kind = doc.createElement("span");
   kind.className = "layer-kind";
   kind.textContent = LAYER_KIND_LABELS[layer.kind] ?? layer.kind;
-  item.appendChild(kind);
 
+  const children = layer.children ?? [];
+  if (children.length === 0) {
+    item.appendChild(name);
+    item.appendChild(kind);
+    return item;
+  }
+
+  item.className = "layer-item layer-branch";
+  const group = doc.createElement("details");
+  group.className = "layer-group";
+  group.open = expandAll || depth === 0;
+  const summary = doc.createElement("summary");
+  summary.className = "layer-summary";
+  const chevron = doc.createElement("span");
+  chevron.className = "layer-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "▸";
+  summary.appendChild(chevron);
+  summary.appendChild(name);
+  summary.appendChild(kind);
+  const count = objectCount(layer);
+  const counter = doc.createElement("span");
+  counter.className = "layer-count";
+  counter.textContent = `${count} ${count === 1 ? "object" : "objects"}`;
+  summary.appendChild(counter);
+  group.appendChild(summary);
+
+  const list = doc.createElement("ul");
+  list.className = "layer-children";
+  list.setAttribute("aria-label", `${layer.name} contents`);
+  for (const child of children) list.appendChild(buildLayerItem(doc, child, expandAll, depth + 1));
+  group.appendChild(list);
+  item.appendChild(group);
   return item;
 }
 
@@ -298,7 +329,7 @@ export class Preview {
   }
 
   /**
-   * Render the top-level layer list from the result summary (7.2) or an empty
+   * Render the nested layer/object list from the result summary (7.2) or an empty
    * state when there are no layers (7.3). The summary is already in bottom->top
    * paint order from the glue, so entries are rendered in array order.
    */
@@ -312,7 +343,10 @@ export class Preview {
       return;
     }
 
-    const items = layers.map((layer) => buildLayerItem(this.doc, layer));
+    // Small examples should immediately show what was found; larger artwork
+    // keeps its top-level groups open and lets the user expand deeper folders.
+    const expandAll = layers.reduce((total, layer) => total + objectCount(layer), 0) <= 30;
+    const items = layers.map((layer) => buildLayerItem(this.doc, layer, expandAll));
     this.els.layerList.replaceChildren(...items);
   }
 

@@ -1,7 +1,49 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-03 (browser welcome, presets and automatic preview updates) · Version 0.1.0 · Tests: 838 passed, 7 expected feature gaps.
+Last updated: 2026-11-03 (expandable layer/object tree) · Version 0.1.0 · Tests: 841 passed, 7 expected feature gaps.
 
+
+
+
+## Expandable layer/object tree — 2026-11-03 (publication approved)
+
+Owner noticed the demo looked as if PLATE found only two objects. The SVG actually has
+**10 drawable objects**; the browser glue discarded every group's children and the list
+showed only two top-level entries. Prepared from **`ad9d757`** on `main`; Jessica explicitly
+approved publication on 2026-11-03. GitHub Pages deployment verification is recorded separately.
+Existing Kiro metadata is excluded.
+
+- `_summarise_layers` now includes actual recursive group contents, preserving names and
+  sibling-local bottom-to-top order. Top-level names/kinds/order and the four-key result
+  envelope remain unchanged; no synthetic SVG layer wrappers are added to the object tree.
+  `LayerInfo.children` is optional so older flat summaries still render safely.
+- The panel is now **Layers & objects**. Native keyboard-accessible details/summary controls
+  expand/collapse groups, with drawable-descendant counts (folders are not objects). Results
+  with ≤30 drawable objects start fully expanded; larger results open top-level groups and
+  collapse deeper folders. Empty/legacy groups do not get misleading empty expand controls.
+  Names remain inert text at every depth. A bounded scrolling pane handles larger artwork.
+- Actual browser demo: **2 root rows → 13 tree rows (10 objects + 3 groups)**. All ten objects
+  are exposed; group counts are **9 / 5 / 4**. The SVG markup is **byte-identical before/after**
+  this change. Verified mouse collapse, Enter-key expansion, and 390px mobile layout with
+  content width 390px (no horizontal overflow). Source/converted images and the full tree
+  were rendered/inspected together; exported geometry/layers have not changed.
+- Real reload testing caught a **cached same-version engine wheel**: new UI initially received
+  the old flat summary. The static build now hashes all `src/plate/**/*.py` plus pyproject.toml
+  and embeds that source revision in the same-origin wheel URL query. Changes to Python or
+  packaging fetch a fresh wheel even while package version stays 0.1.0; unchanged content
+  reuses cache. Scientific dependency pins are untouched. The same local origin that reproduced
+  the stale summary then received the new nested data without manually clearing its cache.
+- **Validation:** before **838 passed / 7 xfailed** (453.81s), after **841 passed / 7 xfailed**
+  (479.20s); no skips/exclusions/xpasses. Focused conversion module **46 passed**; final three
+  hierarchy pins rerun after test lint cleanup. Browser tests **270 → 278 passed**; TypeScript
+  typecheck/build, new Python test Ruff and `git diff --check` pass. Three Python regressions
+  failed against the old summary; four of five tree UI regressions failed (the legacy-flat
+  control already passed). Three more tests cover source-revision invalidation and wheel URLs.
+- Evidence: `out/web-review/layer-tree-demo.png`, `layer-tree-mobile.png`,
+  `layer-tree-validation.json`; `/tmp/plate-layer-tree-{before,after}-pytest.txt`,
+  `/tmp/plate-layer-tree-{before,after}-web.txt`, focused/red logs. Local review:
+  `http://127.0.0.1:8765/`. No new pipeline/bake-off/robustness changes or claims; the separate
+  Research Force browser/native discrepancy and proposed batch workflow remain follow-ups.
 
 
 ## Website published — 2026-11-03

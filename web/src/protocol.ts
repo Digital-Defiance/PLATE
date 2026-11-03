@@ -64,11 +64,13 @@ export interface ConvertStats {
   [key: string]: number | undefined;
 }
 
-/** One top-level layer from `plate.web.convert_bytes`'s `layers` summary. */
+/** A layer/group/object in the output hierarchy; order is local to its siblings. */
 export interface LayerInfo {
   name: string;
   kind: "layer" | "group" | "shape";
   order: number;
+  /** Actual group contents; optional for leaves and older flat summaries. */
+  children?: LayerInfo[];
 }
 
 /** The JSON-serialisable result dict `plate.web.convert_bytes` returns. */

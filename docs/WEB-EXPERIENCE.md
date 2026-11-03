@@ -57,6 +57,18 @@ These are starting points, not guaranteed quality rankings. Keep the existing
 fixture and regression metrics; do not label synthetic benchmark scores as user
 success rates.
 
+## Nested objects follow-up (publication approved 2026-11-03)
+
+Groups now expose their actual child groups and shapes, with descendant object counts.
+The badge demo has 10 drawables in 3 nested grouping folders, previously hidden behind
+2 root entries. Small results open fully; larger trees keep deeper groups collapsed.
+Mouse and keyboard expansion preserve the SVG unchanged. This is hierarchy inspection;
+selection/highlighting and recoloring remain next steps.
+
+Reload testing also caught an older engine wheel being cached under the unchanged package
+version. The build now fingerprints Python sources and packaging metadata and includes that
+revision in the wheel request URL, so the new UI receives its matching engine summary.
+
 ## Next product improvements, in order
 
 1. **Make objects tangible.** Add synchronized pan/zoom and a comparison slider.

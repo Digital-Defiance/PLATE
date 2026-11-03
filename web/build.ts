@@ -20,6 +20,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
+import { engineRevision } from "./build-revision.js";
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
 const SRC_DIR = path.join(WEB_DIR, "src");
@@ -51,7 +52,9 @@ async function main(): Promise<void> {
   await fs.rm(OUT_DIR, { recursive: true, force: true });
   await fs.mkdir(OUT_DIR, { recursive: true });
 
+  const revision = await engineRevision(path.resolve(WEB_DIR, ".."));
   await build({
+    define: { __PLATE_ENGINE_REVISION__: JSON.stringify(revision) },
     entryPoints: ENTRY_POINTS,
     outdir: OUT_DIR,
     bundle: true,

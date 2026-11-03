@@ -58,6 +58,10 @@ usage limit, finish a verified checkpoint before starting further expansion.
 - [ ] Investigate measured browser/native Research Force discrepancy: smooth+2× browser
   SSIM .975083/topology 1 extra/3 missing; native .977355/0/0. Cause not established. Do not
   promote it as an identical-quality showcase; retain topology gates. Evidence `out/web-review/`.
+- [x] Local expandable layer/object tree: all 10 demo drawables exposed under their actual
+  groups, per-group object counts, keyboard controls, small-tree automatic expansion and
+  larger-tree nesting/scrolling. Fixed same-version engine caching using source-keyed wheel
+  URLs. Full 841/7 xfail, web 278; owner approved publication (see STATUS for deployment).
 - [ ] Object/layer selection and highlighting, synchronized zoom/comparison, then recolor/hide
   with undo so editability is tangible. Compact welcome after selection/for returning users.
 - [ ] Permission-cleared example gallery, Research Force case study once runtime discrepancy

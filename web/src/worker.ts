@@ -80,8 +80,15 @@ const PYODIDE_MODULE_URL = `${PYODIDE_CDN_BASE}pyodide.mjs`;
  * importing this module outside a worker — the unit tests run under plain Node,
  * where `self` is undefined — does not touch `self.location`.
  */
-function plateWheelUrl(): string {
-  return new URL("./plate_svg-0.1.0-py3-none-any.whl", self.location.href).href;
+declare const __PLATE_ENGINE_REVISION__: string | undefined;
+
+export function plateWheelUrl(
+  base = self.location.href,
+  revision = typeof __PLATE_ENGINE_REVISION__ === "undefined" ? undefined : __PLATE_ENGINE_REVISION__,
+): string {
+  const url = new URL("./plate_svg-0.1.0-py3-none-any.whl", base);
+  if (revision) url.searchParams.set("v", revision);
+  return url.href;
 }
 
 /**

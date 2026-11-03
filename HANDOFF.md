@@ -1,10 +1,31 @@
-# PLATE handover — 2026-11-03 (web welcome and live preview)
+# PLATE handover — 2026-11-03 (expandable layer/object tree)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — website experience (published)
+## Latest checkpoint — expandable objects (publication approved)
+
+- Base `ad9d757` on `main`; Jessica approved publishing this tree follow-up on 2026-11-03.
+  See STATUS for deployment verification. Kiro metadata is excluded.
+- Owner requested seeing sub-objects inside Group entries. Recursive summaries now include
+  actual child nodes, retaining paint order/names and the existing top-level result contract.
+  The UI shows expandable Layers & objects, with leaf-object counts. Small results (≤30
+  objects) open fully; larger results open roots and collapse deeper groups. Native controls
+  support keyboard/mouse; empty and old flat payloads stay compatible, names stay inert text.
+- Badge demo now exposes 10 objects + 3 groups (previously only 2 root rows). Counts 9/5/4;
+  SVG markup unchanged byte-for-byte. Mouse/Enter interaction and 390px mobile verified.
+- Fixed the observed old-engine cache issue: `web/build-revision.ts` fingerprints Python
+  sources/pyproject; the static build embeds that revision into the same-origin wheel URL.
+  Returning browsers now fetch updated same-version glue. Do not remove the query cache key.
+- Full suite 841 passed/7 xfailed (baseline 838/7); web 278 passed (baseline 270), typecheck,
+  build, new Python test Ruff and diff checks pass. Three Python pins, five tree UI cases and
+  three revision/URL cases. Full evidence and durations in latest STATUS; screenshots/metrics
+  in `out/web-review/layer-tree-*`. Review local http://127.0.0.1:8765/.
+- No geometry changes or batch work. The previously measured Research Force runtime-quality
+  discrepancy remains an independent follow-up; it was not re-certified in this tree task.
+
+## Prior checkpoint — website experience (published)
 
 - Current branch `main`. Signed feature commit **`7378dd0`** was pushed after Jessica
   approved publication on 2026-11-03. Pages build/deploy succeeded (run 41702484129).

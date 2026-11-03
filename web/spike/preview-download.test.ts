@@ -73,6 +73,7 @@ class FakeElement {
   href = "";
   download = "";
   disabled = false;
+  open = false;
   children: FakeElement[] = [];
   private readonly attrs = new Map<string, string>();
   private readonly handlers = new Map<string, Array<() => void>>();
@@ -695,3 +696,80 @@ test("dispose() detaches the click listener so later clicks are inert", () => {
 // document the download seam; referenced here so the import is not flagged.
 const _typeWitness: [AnchorLike | null, HTMLElementLike | null] = [null, null];
 void _typeWitness;
+
+/* Nested groups expose the actual object hierarchy, rather than just its roots. */
+const nestedLayers = (): LayerInfo[] => [{ name: "Badge", kind: "group", order: 0, children: [
+  { name: "Base", kind: "shape", order: 0 },
+  { name: "Details", kind: "group", order: 1, children: [
+    { name: "Star", kind: "shape", order: 0 },
+    { name: "Dot", kind: "shape", order: 1 },
+  ] },
+] }];
+
+function descendants(root: FakeElement): FakeElement[] {
+  return [root, ...root.children.flatMap(descendants)];
+}
+
+function named(root: FakeElement, className: string): FakeElement[] {
+  return descendants(root).filter(el => el.className === className);
+}
+
+test("nested objects appear in sibling paint order and small groups start expanded", () => {
+  const { preview, els } = buildPreview();
+  preview.render(makeResult(nestedLayers()), makeSource());
+  assert.deepEqual(named(els.layerList, "layer-name").map(el => el.textContent),
+    ["Badge", "Base", "Details", "Star", "Dot"]);
+  const groups = descendants(els.layerList).filter(el => el.tagName === "details");
+  assert.equal(groups.length, 2);
+  assert.ok(groups.every(el => el.open));
+  assert.ok(groups.every(el => el.children[0]!.tagName === "summary"));
+  assert.deepEqual(named(els.layerList, "layer-count").map(el => el.textContent),
+    ["3 objects", "2 objects"]);
+  const rows = descendants(els.layerList).filter(el => el.getAttribute("data-order") !== null);
+  assert.deepEqual(rows.map(el => el.getAttribute("data-order")), ["0", "0", "1", "0", "1"]);
+});
+
+test("object counts count leaves, with a singular label for a one-object group", () => {
+  const { preview, els } = buildPreview();
+  preview.render(makeResult([{ name: "Outer", kind: "group", order: 0, children: [
+    { name: "Inner", kind: "group", order: 0, children: [{ name: "Dot", kind: "shape", order: 0 }] },
+  ] }]), makeSource());
+  assert.deepEqual(named(els.layerList, "layer-count").map(el => el.textContent), ["1 object", "1 object"]);
+});
+
+test("large results keep top-level groups open and nested groups initially collapsed", () => {
+  const { preview, els } = buildPreview();
+  preview.render(makeResult([{ name: "Many", kind: "group", order: 0, children: [
+    { name: "Inner", kind: "group", order: 0, children: Array.from({ length: 50 }, (_, order) =>
+      ({ name: `Object ${order}`, kind: "shape" as const, order })) },
+  ] }]), makeSource());
+  const groups = descendants(els.layerList).filter(el => el.tagName === "details");
+  assert.equal(groups[0]!.open, true);
+  assert.equal(groups[1]!.open, false);
+  assert.equal(named(els.layerList, "layer-name").length, 52, "collapsed children remain available");
+});
+
+test("empty groups and legacy flat summaries do not get misleading expand controls", () => {
+  const { preview, els } = buildPreview();
+  preview.render(makeResult([{ name: "Empty", kind: "group", order: 0, children: [] },
+    { name: "Legacy", kind: "group", order: 1 }]), makeSource());
+  assert.equal(descendants(els.layerList).filter(el => el.tagName === "details").length, 0);
+  assert.equal(named(els.layerList, "layer-count").length, 0);
+  assert.deepEqual(named(els.layerList, "layer-name").map(el => el.textContent), ["Empty", "Legacy"]);
+});
+
+test("nested names remain text and refreshing replaces the entire old hierarchy", () => {
+  const { preview, els } = buildPreview();
+  const layers = nestedLayers();
+  layers[0]!.children![1]!.name = '<img src=x onerror="alert(1)">';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><circle r="2"/></svg>';
+  preview.render(makeResult(layers, { svg }), makeSource());
+  const malicious = named(els.layerList, "layer-name")[2]!;
+  assert.equal(malicious.textContent, '<img src=x onerror="alert(1)">');
+  assert.equal(malicious.innerHTML, "");
+  assert.equal(descendants(els.layerList).filter(el => el.tagName === "img").length, 0);
+  assert.equal(els.svgPreview.innerHTML, svg, "layer rendering never alters the SVG");
+  preview.render(makeResult([{ name: "New", kind: "shape", order: 0 }]), makeSource());
+  assert.deepEqual(named(els.layerList, "layer-name").map(el => el.textContent), ["New"]);
+  assert.equal(descendants(els.layerList).filter(el => el.tagName === "details").length, 0);
+});

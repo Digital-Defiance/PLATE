@@ -205,3 +205,68 @@ def test_clean_png_samples_have_no_warnings(samples):
         path = samples / f"{name}.png"
         out = web.convert_bytes(path.read_bytes(), path.name)
         assert out["warnings"] == []
+
+
+def test_layer_summary_keeps_nested_groups_and_sibling_paint_order():
+    from plate.scene import Node
+
+    nodes = [Node("Backdrop", "rect"), Node("Badge", "group", children=[
+        Node("Base", "circle"), Node("Details", "group", children=[
+            Node("Star", "polygon"), Node("Dot", "circle"),
+        ]), Node("Ribbon", "path"),
+    ])]
+    assert web._summarise_layers(nodes) == [
+        {"name": "Backdrop", "kind": "shape", "order": 0},
+        {"name": "Badge", "kind": "group", "order": 1, "children": [
+            {"name": "Base", "kind": "shape", "order": 0},
+            {"name": "Details", "kind": "group", "order": 1, "children": [
+                {"name": "Star", "kind": "shape", "order": 0},
+                {"name": "Dot", "kind": "shape", "order": 1},
+            ]},
+            {"name": "Ribbon", "kind": "shape", "order": 2},
+        ]},
+    ]
+
+
+def test_layer_summary_retains_empty_groups_without_inventing_objects():
+    from plate.scene import Node
+
+    assert web._summarise_layers([Node("Empty", "group")]) == [
+        {"name": "Empty", "kind": "group", "order": 0, "children": []},
+    ]
+
+
+def test_badge_layer_summary_exposes_every_drawable_in_the_export(samples):
+    path = samples / "badge.png"
+    out = web.convert_bytes(path.read_bytes(), path.name)
+    svg = ET.fromstring(out["svg"])
+
+    def check(entries, elements):
+        assert len(entries) == len(elements)
+        for order, (entry, element) in enumerate(zip(entries, elements)):
+            assert entry["name"] == element.get("data-name")
+            assert entry["order"] == order
+            if entry["kind"] == "group":
+                assert element.tag.rsplit("}", 1)[-1] == "g"
+                check(entry["children"], list(element))
+            else:
+                assert element.tag.rsplit("}", 1)[-1] != "g"
+                assert "children" not in entry
+
+    top_elements = [e for e in svg if e.tag.rsplit("}", 1)[-1] != "defs"]
+    # Standalone top-level shapes have synthetic Illustrator layer wrappers.
+    assert len(out["layers"]) == len(top_elements)
+    normalised = [element if entry["kind"] == "group" else next(iter(element))
+                  for entry, element in zip(out["layers"], top_elements)]
+    check(out["layers"], normalised)
+
+    def leaves(entries):
+        return [item for entry in entries
+                for item in (leaves(entry["children"]) if entry["kind"] == "group" else [entry])]
+
+    summary_objects = leaves(out["layers"])
+    exported_objects = [e for e in svg.iter()
+                        if e.tag.rsplit("}", 1)[-1] in {"path", "circle", "ellipse", "rect", "polygon"}]
+    assert len(out["layers"]) == 2
+    assert len(summary_objects) == len(exported_objects) == out["stats"]["shapes"] == 10
+    assert [e["name"] for e in summary_objects] == [e.get("data-name") for e in exported_objects]

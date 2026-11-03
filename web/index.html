@@ -337,6 +337,25 @@
         font-size: 0.88rem;
       }
 
+
+      .layer-hint { color: var(--muted); font-size: .76rem; line-height: 1.45; margin: .65rem .8rem .25rem; }
+      .layer-list { max-height: 560px; overflow: auto; }
+      .layer-name { min-width: 0; overflow-wrap: anywhere; }
+      .layer-kind { flex-shrink: 0; }
+      .layer-item.layer-branch { display: block; padding: 0; }
+      .layer-group { min-width: 0; }
+      .layer-summary { display: grid; grid-template-columns: .65rem minmax(0, 1fr) auto; column-gap: .4rem; align-items: baseline; padding: .45rem .55rem; cursor: pointer; list-style: none; border-radius: 6px; }
+      .layer-summary::-webkit-details-marker { display: none; }
+      .layer-summary:hover { background: #293344; }
+      .layer-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+      .layer-chevron { display: inline-block; color: var(--muted); }
+      .layer-group[open] > .layer-summary > .layer-chevron { transform: rotate(90deg); }
+      .layer-count { grid-column: 2 / -1; color: var(--muted); font-size: .73rem; }
+      .layer-children { list-style: none; margin: .1rem .45rem .5rem .8rem; padding: 0 0 0 .55rem; border-left: 1px solid #435367; display: grid; gap: .2rem; }
+      .layer-children > .layer-item { font-size: .8rem; padding: .35rem .3rem; }
+      .layer-children > .layer-branch { padding: 0; }
+      .layer-children .layer-summary { padding: .35rem .3rem; }
+
       /* Download control ------------------------------------------------- */
       .download-row {
         display: none;
@@ -565,7 +584,8 @@
         </div>
 
         <div class="pane layers">
-          <h2>Layers</h2>
+          <h2>Layers &amp; objects</h2>
+          <p class="layer-hint">Expand groups to inspect their objects. Paint order: bottom to top.</p>
           <ul class="layer-list" id="layer-list"></ul>
         </div>
       </section>

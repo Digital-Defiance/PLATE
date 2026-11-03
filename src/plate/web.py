@@ -233,19 +233,22 @@ def _extension_of(filename: str) -> str:
 
 
 def _summarise_layers(nodes: list) -> list[dict]:
-    """Summarise the pipeline's top-level nodes as the UI layer list, in the
-    engine's bottom->top paint order. Each top-level node is a layer in the SVG
-    (``emit.write_svg`` turns a top-level group into a layer and wraps a standalone
-    top-level shape in a layer container), so one entry per top-level node mirrors
-    exactly what the exported SVG contains. ``kind`` is ``"group"`` for a true
-    group layer and ``"shape"`` for a standalone drawable promoted to its own layer."""
+    """Expose every output group/object, keeping bottom-to-top order at each level.
+
+    Root entries keep the existing top-level layer contract; group children are
+    the actual drawable/group nodes, without synthetic SVG layer wrappers.
+    "order" is sibling-local. No SVG geometry or exported layer structure changes.
+    """
     layers: list[dict] = []
     for order_idx, node in enumerate(nodes):
-        layers.append({
+        entry = {
             "name": node.name,
             "kind": "group" if node.kind == "group" else "shape",
             "order": order_idx,
-        })
+        }
+        if node.kind == "group":
+            entry["children"] = _summarise_layers(node.children)
+        layers.append(entry)
     return layers
 
 
