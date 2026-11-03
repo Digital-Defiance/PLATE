@@ -53,8 +53,8 @@ usage limit, finish a verified checkpoint before starting further expansion.
 - [x] Local live preview: retain selected image; re-convert on settings/preset/reset after 350ms,
   serialize work, ignore stale results/errors, preserve transferred source bytes, disable stale
   downloads. Expose smooth/max plus a smooth+2× small-text recipe. Full 838/7 xfail, web 270.
-- [x] Owner approved committing/pushing the reviewed website changes on 2026-11-03.
-  Existing GitHub Pages workflow handles deployment; see STATUS for the verification result.
+- [x] Published signed feature commit `7378dd0` to main on 2026-11-03 with owner approval.
+  GitHub Pages run 41702484129 succeeded; public welcome, presets and example-to-SVG verified.
 - [ ] Investigate measured browser/native Research Force discrepancy: smooth+2× browser
   SSIM .975083/topology 1 extra/3 missing; native .977355/0/0. Cause not established. Do not
   promote it as an identical-quality showcase; retain topology gates. Evidence `out/web-review/`.

@@ -1,8 +1,8 @@
 # PLATE website: first result, useful objects, repeat use
 
 Product review: 2026-11-03. The public site is https://plate.digitaldefiance.org/.
-The owner approved publishing this checkpoint on 2026-11-03; see STATUS for deployment
-verification. No analytics, outreach,
+Published with owner approval on 2026-11-03 in feature commit `7378dd0`; GitHub Pages
+run 41702484129 succeeded and the public example-to-SVG flow was verified. No analytics, outreach,
 accounts, payment system or new export formats are introduced.
 
 ## Positioning

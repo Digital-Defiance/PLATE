@@ -3,6 +3,23 @@
 Last updated: 2026-11-03 (browser welcome, presets and automatic preview updates) · Version 0.1.0 · Tests: 838 passed, 7 expected feature gaps.
 
 
+
+## Website published — 2026-11-03
+
+- Owner approved shipping the reviewed website work. Signed feature commit **`7378dd0`**
+  was pushed to `origin/main`; unrelated Kiro execution metadata was excluded.
+- GitHub Pages build and deploy both succeeded:
+  https://github.com/Digital-Defiance/PLATE/actions/runs/41702484129
+- Verified https://plate.digitaldefiance.org/ serves the new welcome, object/layer explanation,
+  direct picker, example and new presets. The public example completed with SVG preview,
+  named layers and an enabled download. Switching to Line art updated that same image
+  without selecting it again. Production screenshot: `out/web-review/published-website.png`.
+  Existing validation remains **838 Python passed /
+  7 xfailed**, **270 browser tests passed**; no code changes after that validation.
+- The known Research Force browser/native quality discrepancy remains documented below.
+  Batch support remains a proposal; no batch functionality was included in this release.
+
+
 ## Browser welcome, preset recipes and retained-image updates — 2026-11-03
 
 Owner asked for a clearer/more attractive live website, easier settings, Research Force-style

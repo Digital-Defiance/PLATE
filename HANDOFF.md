@@ -4,11 +4,12 @@ Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This reco
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — website experience (publication approved)
+## Latest checkpoint — website experience (published)
 
-- Current branch `main`, base `934e1aa`. Jessica approved committing/pushing the website
-  welcome/presets/re-render checkpoint on 2026-11-03. Deployment runs through GitHub Pages;
-  see the latest STATUS for verification. Pre-existing tasks.meta.json changes are excluded.
+- Current branch `main`. Signed feature commit **`7378dd0`** was pushed after Jessica
+  approved publication on 2026-11-03. Pages build/deploy succeeded (run 41702484129).
+  Public welcome/presets and example-to-SVG flow verified; see STATUS for evidence.
+  Pre-existing tasks.meta.json changes were excluded.
 - Production: https://plate.digitaldefiance.org/. Local review:
   `http://127.0.0.1:8765/` and `docs/WEB-EXPERIENCE.md`. Welcome explicitly explains PNG/JPG →
   editable layered SVG and object/stroke recovery. No blocking modal. Primary picker, real
