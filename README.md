@@ -36,6 +36,21 @@ P, transparent counters and registration strokes test the structure PLATE recove
 > and the out-of-scope boundary (where engine development stops) are in `STATUS.md`; plans in
 > `ROADMAP.md`. Continuing the project with a coding agent? Start with **`AGENTS.md`**.
 
+## In the browser (beta)
+
+A free, static web page runs the **unchanged** PLATE engine entirely in your browser via Pyodide
+(CPython compiled to WebAssembly) in a Web Worker: drop a PNG or JPG, pick a preset or adjust a few
+levers, and download the same layered, Illustrator-friendly SVG the CLI produces. The image never
+leaves your device — there is no server and no upload. The CLI stays the source of truth and remains
+the tool for batch work and local LM Studio naming.
+
+The browser shell ships from the repo's `/web` folder via a GitHub Pages workflow; it is **beta**.
+PNG output is byte-identical to the CLI. JPEG output can differ because Pyodide's Pillow decodes JPEG
+with a different library (IJG libjpeg 9) than the CPython wheels (libjpeg-turbo), so the decoded
+pixels differ before the engine runs; this is a documented decoder-only difference, tracked in
+[ROADMAP.md](ROADMAP.md) (browser JPEG decoder parity). The Phase 1 spike that proved engine
+import, package load, per-scene timing and SVG equivalence is recorded in `STATUS.md`.
+
 ## What PLATE covers
 
 PLATE is intended for logos, icons, diagrams and graphic illustrations with

@@ -1,0 +1,813 @@
+{
+  "pbtResults": {
+    "1.4 Write property test for warning-matches-behaviour": {
+      "status": "passed",
+      "lastRunTimestamp": 1793657311548
+    },
+    "1.7 Write property test for in-browser/CLI SVG equivalence": {
+      "status": "passed",
+      "lastRunTimestamp": 1793658449528
+    },
+    "1.8 Write property test for no-persist privacy": {
+      "status": "passed",
+      "lastRunTimestamp": 1793659318040
+    },
+    "12. Phase 2 — Property test for non-blocking main thread (GATED on task 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1793676172216
+    },
+    "13. Phase 2 — Property test for memory bounded (GATED on task 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1793676219809
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `src/plate/web.py` with `build_config(overrides)`": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194604
+      },
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654202655
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654710916
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656161362
+      }
+    ],
+    "1.2 Write property test for config fidelity": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194662
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656720281
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657904575
+      }
+    ],
+    "1.3 Implement `check_noise(data, filename)` in `src/plate/web.py`": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194707
+      },
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654203290
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656167394
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656715587
+      }
+    ],
+    "1.4 Write property test for warning-matches-behaviour": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194749
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656721209
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657905876
+      }
+    ],
+    "1.5 Implement `convert_bytes(data, filename, overrides)` in `src/plate/web.py`": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194787
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793656722340
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657906623
+      }
+    ],
+    "1.6 Write CLI-equivalence unit tests for `convert_bytes`": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194832
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657910268
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659339850
+      }
+    ],
+    "1.7 Write property test for in-browser/CLI SVG equivalence": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194869
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657911210
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659340797
+      }
+    ],
+    "1.8 Write property test for no-persist privacy": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194915
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793657912084
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659341661
+      }
+    ],
+    "2. Phase 1 — Checkpoint: glue green under pytest": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194956
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659353856
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793661278589
+      }
+    ],
+    "3.1 Create the Web Worker runtime bootstrap (`web/src/worker.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654194998
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659357470
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793661277595
+      }
+    ],
+    "3.2 Build the spike measurement harness (`web/spike/measure.ts` + Python driver)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195053
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793661284515
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793661856505
+      }
+    ],
+    "3.3 Implement spike decision-point halts": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195085
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793661859142
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793662096027
+      }
+    ],
+    "4. Phase 1 — Checkpoint: spike measurements recorded": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195119
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793662112020
+      },
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793662121347
+      },
+      {
+        "executionId": "49a1c10b-3bbf-4426-bf0e-100003620148",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793662820920
+      },
+      {
+        "executionId": "49a1c10b-3bbf-4426-bf0e-100003620148",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793667586258
+      }
+    ],
+    "5. Phase 1 GATE — Verify and record the spike done-definition (blocks all of Phase 2, 3, 4)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195155
+      },
+      {
+        "executionId": "49a1c10b-3bbf-4426-bf0e-100003620148",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793667675842
+      },
+      {
+        "executionId": "49a1c10b-3bbf-4426-bf0e-100003620148",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793670051306
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793670174332
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671464466
+      }
+    ],
+    "6.1 Create the static shell and `PlateClient` worker wrapper (`web/index.html`, `web/src/client.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195185
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671469591
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671913562
+      }
+    ],
+    "6.2 Write unit tests for the worker message protocol": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195219
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672813452
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673120246
+      }
+    ],
+    "7.1 Implement drag-drop and file-picker intake with pre-decode validation (`web/src/intake.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195260
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671470970
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671915005
+      }
+    ],
+    "7.2 Write unit tests for intake validation": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195307
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671927419
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672803163
+      }
+    ],
+    "8.1 Implement staged `convert` handling in the worker (`web/src/worker.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195346
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671925070
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672800791
+      }
+    ],
+    "8.2 Write unit tests for staged progress and result/error exclusivity": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195387
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673135384
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674540649
+      }
+    ],
+    "9.1 Render source/SVG preview, layer list, and warnings (`web/src/preview.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195423
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673131037
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674543498
+      }
+    ],
+    "9.2 Implement the SVG download control (`web/src/download.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195466
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673131922
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674544166
+      }
+    ],
+    "9.3 Write unit tests for layer list, empty-state, and download naming": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195503
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675120632
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676314152
+      }
+    ],
+    "10.1 Wire the pre-conversion noise/JPEG warning into the shell (`web/src/warnings.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195546
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673133371
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674542059
+      }
+    ],
+    "11.1 Implement runtime/input/platform error surfaces (`web/src/errors.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195587
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673134764
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674539756
+      }
+    ],
+    "11.2 Write unit tests for error-surface behaviour": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195625
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675121582
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676309622
+      }
+    ],
+    "12. Phase 2 — Property test for non-blocking main thread (GATED on task 5)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195679
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675123946
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676311055
+      }
+    ],
+    "13. Phase 2 — Property test for memory bounded (GATED on task 5)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195713
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675124739
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676311970
+      }
+    ],
+    "14. Phase 2 — Checkpoint: minimal page end-to-end": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195747
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793677477739
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793678109911
+      }
+    ],
+    "15.1 Author the deploy workflow (`.github/workflows/deploy-web.yml`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195781
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671471917
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671915671
+      }
+    ],
+    "15.2 Write a workflow validation/lint check for the deploy action": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195811
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671928871
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672804561
+      }
+    ],
+    "16.1 Build the settings panel mapping presets and levers (`web/src/settings.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195843
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671926512
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672805418
+      }
+    ],
+    "16.2 Write unit tests for the settings-to-config serialisation": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195889
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674938138
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675112425
+      }
+    ],
+    "17.1 Add the advanced LM Studio naming toggle and fallback (`web/src/settings.ts`, `web/src/naming.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195936
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674554731
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674929928
+      }
+    ],
+    "17.2 Write unit tests for LM Studio enable/disable and fallback": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654195975
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675122471
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676313406
+      }
+    ],
+    "18. Phase 4 — Headless-browser smoke test (BROWSER-ONLY integration test, GATED on task 5)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654196017
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676322982
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793677469327
+      }
+    ],
+    "19.1 Add the beta label and power-user links to the shell (`web/index.html`, `web/src/links.ts`)": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654196058
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672814213
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673121220
+      }
+    ],
+    "19.2 Record the web page in README and ROADMAP": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654196100
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793671929412
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672802210
+      }
+    ],
+    "20. Phase 4 — Final checkpoint: full suite green": [
+      {
+        "executionId": "f50f735e-9849-4a13-9366-2e95667b4dc4",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793654196141
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793678117012
+      },
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793678721849
+      },
+      {
+        "executionId": "e486f55d-c014-4f42-9381-0f707a9a21c8",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793679420951
+      },
+      {
+        "executionId": "e486f55d-c014-4f42-9381-0f707a9a21c8",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793680342381
+      }
+    ],
+    "1. Phase 1 — Build the `plate.web` glue module as pure CPython (spike foundation)": [
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793659341701
+      }
+    ],
+    "3. Phase 1 — Pyodide bring-up in a Web Worker with OpenCV load check": [
+      {
+        "executionId": "98199144-ba11-49bc-8243-b117ef46619e",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793662096076
+      }
+    ],
+    "7. Phase 2 — Image intake with type and size validation (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672803201
+      }
+    ],
+    "15. Phase 3 — Automatic GitHub Pages deployment (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793672804599
+      }
+    ],
+    "6. Phase 2 — UI shell scaffold and worker client (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673120289
+      }
+    ],
+    "19. Phase 4 — Owner launch and placement items (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793673121254
+      }
+    ],
+    "8. Phase 2 — Worker conversion protocol with staged progress (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674540690
+      }
+    ],
+    "10. Phase 2 — JPEG/noise beta warning and privacy wiring (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793674542097
+      }
+    ],
+    "16. Phase 4 — Settings panel: presets and sliders (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793675112498
+      }
+    ],
+    "11. Phase 2 — Error handling for runtime, input, and platform failures (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676309663
+      }
+    ],
+    "17. Phase 4 — Optional LM Studio naming, off by default (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676313460
+      }
+    ],
+    "9. Phase 2 — Preview, layer list, warnings, and download (GATED on task 5)": [
+      {
+        "executionId": "24e903a7-8a2b-467c-a71b-4755e4c55cde",
+        "chatSessionId": "sess_02dde6da-ce4b-4159-929b-1adcf9fa81cf",
+        "timestamp": 1793676314193
+      }
+    ]
+  }
+}

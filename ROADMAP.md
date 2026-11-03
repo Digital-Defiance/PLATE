@@ -133,6 +133,17 @@ after each change; do NOT tune the composite weights to flatter PLATE — fix th
   32 → 33/57, `hidden_completion` 0.549 → 0.562, composite 0.852 → 0.857; pinned in
   `tests/test_free_edge_completion.py` + `tests/test_bakeoff.py`. Residual rrect near-misses (sharp
   reconstructed quad loses corner rounding, IoU 0.85–0.90) pinned as a measured limit.
+- [ ] **Browser JPEG decoder parity (web page / Pyodide).** The Phase 1 browser spike
+  (browser-web-page spec, STATUS.md spike block) proved PNG output is byte-identical in the browser
+  and on the CLI, but JPEG scenes drift: the browser's Pillow decodes JPEG with IJG libjpeg 9, while
+  the CPython wheels use libjpeg-turbo. Measured effect on the 24-scene corpus (seed 1): the decoded
+  pixels differ on 6.1–7.5% of pixels by up to 49–80 levels, moving the composite outside the 0.01
+  Bakeoff_Tolerance on 4 of 6 JPEG scenes (scene03/11/19/23); scene19 drifts by 0.0984. The
+  difference is purely decoder-driven — the unchanged engine run on the exact browser-decoded pixels
+  reproduces the browser SVG byte-for-byte (task-5 gate proof, STATUS.md). Owner decision
+  (2026-11-03): accept this as a documented decoder-only difference for the beta. Possible fixes:
+  ship a libjpeg-turbo-backed Pillow build for Pyodide, or file an upstream Pyodide request to switch
+  its Pillow JPEG codec to libjpeg-turbo so the browser matches the CLI byte for byte.
 - [ ] **Add external tools to the bake-off** (`--external DIR` with `IMAGE.TOOL.svg` exports):
   Illustrator Image Trace, Vectorizer.AI, Inkscape trace. Needs a Mac with those apps; record in
   `docs/BAKEOFF.md`.
@@ -143,6 +154,25 @@ after each change; do NOT tune the composite weights to flatter PLATE — fix th
 
 All of these are tracked by `tests/test_bakeoff.py` (which also asserts the ground-truth SVG scores
 perfect structure and a cutout-only tool loses completion credit — the method's own safeguards).
+
+## Browser web page (beta) — between v0.2 (robust-on-real-files) and v0.3 (beyond-flat-colour)
+
+A free, static GitHub Pages site that runs the **unchanged** engine in the browser via Pyodide
+(CPython→WASM) in a Web Worker: drop a PNG/JPG, pick a preset/levers, download a layered,
+Illustrator-friendly SVG. The image never leaves the device. The CLI stays the source of truth;
+batch work and LM Studio naming remain CLI jobs. This goal sits on the roadmap after the v0.2
+robust-on-real-files quality queue above and before the v0.3 beyond-flat-colour work below. Spec:
+`.kiro/specs/browser-web-page/`; spike measurements in `STATUS.md`.
+
+- [x] Phase 1 spike MET (owner-amended done-definition, `STATUS.md`): engine imports and runs in
+  Pyodide, `numpy`/`scipy`/`opencv-python`/`pillow`/`scikit-image` load, every 24-scene conversion
+  is well under 60 s, PNG output is byte-identical to the CLI, and every JPEG difference is proven
+  decoder-only (the engine run on the exact browser-decoded pixels reproduces the browser SVG).
+- [ ] Ship the browser shell from `/web` via the GitHub Pages workflow (beta label, power-user links
+  to the CLI and LM Studio naming). The deploy workflow exists; no deploy has been triggered yet.
+- [ ] Resolve the JPEG decoder difference — see **Browser JPEG decoder parity** in the P1 bake-off
+  list above (Pyodide's Pillow uses IJG libjpeg 9 vs the CPython wheels' libjpeg-turbo). Accepted as
+  a documented decoder-only difference for the beta.
 
 ## Coverage boundary and quality gates
 

@@ -28,7 +28,7 @@ Homepage = "https://github.com/Digital-Defiance/PLATE"
 render = ["cairosvg"]                   # SSIM metrics, reports, `plate bench` (needs libcairo)
 bakeoff = ["cairosvg", "potracer"]      # + pure-Python Potrace comparison tool for `plate bakeoff`
 sam = ["torch", "transformers"]         # optional SAM-family segmenter (not built yet)
-dev = ["pytest", "ruff", "cairosvg", "potracer"]
+dev = ["pytest", "hypothesis>=6", "ruff", "cairosvg", "potracer", "pyyaml>=6"]
 
 [project.scripts]
 plate = "plate.cli:main"

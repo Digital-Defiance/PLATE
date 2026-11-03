@@ -8,3 +8,5 @@ build/
 out/
 .plate-cache/
 .DS_Store
+# web/ frontend tooling (keep package-lock.json; ignore installed deps)
+node_modules/

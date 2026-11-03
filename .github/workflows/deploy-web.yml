@@ -1,0 +1,148 @@
+# Deploy_Action — rebuild the PLATE wheel and publish the static web shell to
+# GitHub Pages so the browser version cannot lag the CLI.
+#
+# Spec: .kiro/specs/browser-web-page (task 15.1). Requirements 11.1-11.5.
+#
+# What it does (Requirement 11.1): on a push to the default branch it builds the
+# PLATE wheel, bundles the static /web shell, assembles a publish directory with
+# the shell + bundled JS + the wheel all same-origin, and publishes it to Pages.
+#
+# How failure is handled (Requirement 11.2): build and deploy are two jobs. The
+# `deploy` job `needs: build`, so if the wheel build or the shell bundle fails the
+# artifact is never uploaded, `deploy` never runs, GitHub Pages keeps serving the
+# previous deploy, and the workflow run shows a red failure status. Nothing goes
+# live unless the whole build succeeded.
+#
+# Pinning (Requirement 11.3): the Pyodide version and the scientific-package
+# versions are pinned in the source the engine runs against — the Pyodide CDN pin
+# and REQUIRED_PACKAGES live in web/src/worker.ts (and the pyodide devDependency
+# in web/package.json), and the wheel pins the engine's own deps via pyproject.
+# This workflow deploys exactly those pinned sources: it floats no version, and a
+# CDN change cannot alter page content without a corresponding change to the
+# repo's pinned worker. Every action and tool below is pinned (specific tags /
+# exact tool versions), never a floating ref.
+#
+# Timeout (Requirement 11.4): the build job caps at 15 minutes and fails if the
+# build-and-publish work exceeds it.
+#
+# Source (Requirement 11.5): the shell is built and deployed from the /web folder
+# in this repository.
+
+name: Deploy web shell to GitHub Pages
+
+on:
+  # Rebuild + redeploy whenever code that affects the page changes on the
+  # default branch, so the browser shell tracks the engine (Requirement 11.1).
+  push:
+    branches: [main]
+    paths:
+      - "src/plate/**"
+      - "web/**"
+      - "pyproject.toml"
+      - ".github/workflows/deploy-web.yml"
+  # Allow an owner-triggered redeploy without a code change.
+  workflow_dispatch:
+
+# Least-privilege permissions for the standard Pages deploy pattern: write the
+# Pages deployment, mint the OIDC token deploy-pages needs, read the repo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight Pages deploy at a time; let a newer push supersede an older run
+# so the live site converges on the latest commit without clobbering a release.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# Pinned tool versions, consistent with the repo (Node 22 per web tooling; a
+# stable CPython the project supports, requires-python >=3.10; uv as in AGENTS).
+# The wheel is py3-none-any (pure Python), so the build Python only runs the
+# build backend; it does not constrain the deployed wheel.
+env:
+  NODE_VERSION: "22.22.2"
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.9.9"
+
+jobs:
+  build:
+    name: Build wheel and bundle shell
+    runs-on: ubuntu-latest
+    # Requirement 11.4: fail if build-and-publish exceeds 15 minutes.
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Build the pure-Python wheel with the repo's build tool. hatchling is the
+      # build backend (pyproject). The name is deterministic: plate-svg 0.1.0 ->
+      # plate_svg-0.1.0-py3-none-any.whl, which is exactly the relative URL the
+      # worker fetches (PLATE_WHEEL_URL in web/src/worker.ts).
+      - name: Build the PLATE wheel
+        run: uv build --wheel --out-dir dist-wheel
+
+      # Install the web toolchain from the lockfile (pinned esbuild + tsx).
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      # Bundle the shell entry points (client + worker) into web/dist via the
+      # pinned esbuild driver (npm run build -> tsx build.ts). Pyodide is NOT
+      # bundled; the worker loads it from the pinned CDN at runtime.
+      - name: Bundle the web shell
+        working-directory: web
+        run: npm run build
+
+      # Assemble the publish directory: the bundled shell (index.html + the
+      # client/worker JS in web/dist) plus the freshly built wheel, dropped
+      # beside the worker so the worker's same-origin relative wheel URL
+      # (./plate_svg-0.1.0-py3-none-any.whl) resolves on Pages.
+      - name: Assemble the publish directory
+        run: |
+          set -euo pipefail
+          wheel="$(ls dist-wheel/plate_svg-0.1.0-py3-none-any.whl)"
+          echo "Publishing wheel: ${wheel}"
+          cp "${wheel}" web/dist/plate_svg-0.1.0-py3-none-any.whl
+          echo "Publish directory contents:"
+          ls -l web/dist
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Only deploy if the build succeeded; a failed build never reaches here, so
+    # the live site is preserved (Requirement 11.2).
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the uploaded artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

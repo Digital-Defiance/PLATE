@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PLATE — raster to layered SVG, in your browser (beta)</title>
+    <meta
+      name="description"
+      content="Drop a PNG or JPG and get an Illustrator-friendly layered SVG. Runs the unchanged PLATE engine in your browser; the image never leaves your machine."
+    />
+    <!--
+      PLATE Browser_Shell — the static page served from GitHub Pages (task 6.1).
+
+      This is the DOM skeleton only: a drop zone, a status area (progress + the
+      first-load staged bar), source/SVG preview panes, a layer list and a
+      download control. The main thread owns the DOM and does NO CPU-heavy work:
+      all conversion runs in the Web Worker (web/src/worker.ts) behind the
+      PlateClient wrapper (web/src/client.ts). Intake (task 7.1), the staged
+      convert handler (task 8.1), preview rendering (task 9.x) and the settings
+      panel (task 16.x) wire into these elements by id without reshaping this
+      skeleton.
+
+      The module entry point is web/src/main.ts (added by later Phase 2 tasks);
+      the deploy workflow (task 15.1) bundles web/src/* alongside this page and
+      the PLATE wheel. During local development the page is served from a bundle;
+      there is intentionally no inline script here (keeps CSP simple and the main
+      thread free of conversion work).
+    -->
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-2: #1f242e;
+        --border: #2a303b;
+        --text: #e6e9ef;
+        --muted: #9aa4b2;
+        --accent: #6ea8fe;
+        --accent-strong: #3b82f6;
+        --danger: #f08a7a;
+        --ok: #7bd88f;
+        --radius: 10px;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      header.app-header {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      header.app-header h1 {
+        margin: 0;
+        font-size: 1.15rem;
+        letter-spacing: 0.01em;
+      }
+
+      .beta-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--bg);
+        background: var(--accent);
+        padding: 0.1rem 0.4rem;
+        border-radius: 999px;
+      }
+
+      header .tagline {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      /* Power-user links (Req 13.4/13.5): owner-gated links back to the CLI for
+         batch work and to LM Studio naming. Rendered by web/src/links.ts; the
+         container is hidden until links.ts enables it, and omitted entirely
+         (no children) when the owner has not opted in. */
+      .power-user-links {
+        display: flex;
+        align-items: baseline;
+        gap: 0.9rem;
+        font-size: 0.82rem;
+      }
+
+      .power-user-links[hidden] {
+        display: none;
+      }
+
+      .power-user-links .power-user-link {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .power-user-links .power-user-link:hover,
+      .power-user-links .power-user-link:focus-visible {
+        text-decoration: underline;
+      }
+
+      .power-user-links .power-user-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 1.25rem;
+        display: grid;
+        gap: 1.25rem;
+      }
+
+      /* Drop zone -------------------------------------------------------- */
+      .drop-zone {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+      }
+
+      .drop-zone:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .drop-zone[data-dragover="true"] {
+        border-color: var(--accent);
+        background: var(--panel-2);
+      }
+
+      .drop-zone .drop-primary {
+        font-size: 1.05rem;
+        font-weight: 600;
+      }
+
+      .drop-zone .drop-secondary {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.35rem;
+      }
+
+      .drop-zone input[type="file"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Status area ------------------------------------------------------ */
+      .status-area {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .status-area:empty {
+        display: none;
+      }
+
+      .progress {
+        display: none;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.85rem 1rem;
+      }
+
+      .progress[data-active="true"] {
+        display: block;
+      }
+
+      .progress-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 0.5rem;
+      }
+
+      .progress-track {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--panel-2);
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--accent-strong);
+        transition: width 0.2s ease;
+      }
+
+      /* Messages (warnings, errors, compatibility notices) --------------- */
+      .messages {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .messages:empty {
+        display: none;
+      }
+
+      .message {
+        border: 1px solid var(--border);
+        border-left-width: 4px;
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        background: var(--panel);
+        font-size: 0.9rem;
+      }
+
+      .message[data-kind="warning"] {
+        border-left-color: var(--accent);
+      }
+
+      .message[data-kind="error"] {
+        border-left-color: var(--danger);
+      }
+
+      .message[data-kind="info"] {
+        border-left-color: var(--muted);
+      }
+
+      /* Result: source | svg preview + layers ---------------------------- */
+      .result {
+        display: none;
+        gap: 1.25rem;
+      }
+
+      .result[data-ready="true"] {
+        display: grid;
+        grid-template-columns: 1fr 1fr 260px;
+      }
+
+      @media (max-width: 900px) {
+        .result[data-ready="true"] {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .pane {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .pane h2 {
+        margin: 0;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .preview-body {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        min-height: 220px;
+        /* checkerboard so transparent regions read correctly */
+        background-image:
+          linear-gradient(45deg, #202633 25%, transparent 25%),
+          linear-gradient(-45deg, #202633 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #202633 75%),
+          linear-gradient(-45deg, transparent 75%, #202633 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      }
+
+      /* images/svg render at native aspect ratio, never distorted */
+      .preview-body :where(img, svg) {
+        max-width: 100%;
+        max-height: 420px;
+        height: auto;
+        width: auto;
+      }
+
+      .layers {
+        padding: 0;
+      }
+
+      .layer-list {
+        list-style: none;
+        margin: 0;
+        padding: 0.4rem;
+        display: grid;
+        gap: 0.25rem;
+      }
+
+      .layer-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.55rem;
+        border-radius: 6px;
+        background: var(--panel-2);
+        font-size: 0.88rem;
+      }
+
+      .layer-kind {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin-left: auto;
+      }
+
+      .layer-empty {
+        padding: 0.8rem;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      /* Download control ------------------------------------------------- */
+      .download-row {
+        display: none;
+        justify-content: flex-end;
+      }
+
+      .download-row[data-ready="true"] {
+        display: flex;
+      }
+
+      .download-button {
+        appearance: none;
+        border: 1px solid var(--accent-strong);
+        background: var(--accent-strong);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        padding: 0.6rem 1.1rem;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .download-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .download-button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>PLATE</h1>
+      <span class="beta-badge" id="beta-badge">beta</span>
+      <span class="tagline">raster &rarr; layered SVG, converted on your device</span>
+      <!--
+        Power-user links container (Req 13.4/13.5). Owner-gated: web/src/links.ts
+        renders a CLI batch-work link and an LM Studio naming link here only when
+        the owner opts in, and omits both (leaves this empty + hidden) otherwise.
+        Defaults to omitted (13.5); starts hidden with no children.
+      -->
+      <nav
+        class="power-user-links"
+        id="power-user-links"
+        aria-label="Power-user links"
+        data-enabled="false"
+        hidden
+      ></nav>
+    </header>
+
+    <main>
+      <!-- Drop zone: click opens the file picker; drag-drop handled by intake. -->
+      <div
+        class="drop-zone"
+        id="drop-zone"
+        role="button"
+        tabindex="0"
+        aria-describedby="drop-hint"
+      >
+        <div class="drop-primary">Drop a PNG or JPG here</div>
+        <div class="drop-secondary" id="drop-hint">
+          or click to choose a file &mdash; nothing is uploaded, conversion runs in your browser
+        </div>
+        <input id="file-input" type="file" accept="image/png,image/jpeg" />
+      </div>
+
+      <!-- Status area: first-load staged progress bar + per-conversion progress. -->
+      <section class="status-area" aria-live="polite">
+        <div class="progress" id="progress" data-active="false" role="status">
+          <div class="progress-head">
+            <span id="progress-stage">Preparing&hellip;</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- Warnings / errors / compatibility notices render here as entries. -->
+        <div class="messages" id="messages" aria-live="polite"></div>
+      </section>
+
+      <!-- Settings panel host: web/src/settings.ts mounts the preset dropdown
+           and the lever sliders/toggles here (web/src/main.ts appends it). -->
+      <section class="settings-host" id="settings-host" aria-label="Conversion settings"></section>
+
+      <!-- Result: source | SVG preview + layer list, shown once a result arrives. -->
+      <section class="result" id="result" data-ready="false">
+        <div class="pane">
+          <h2>Source</h2>
+          <div class="preview-body" id="source-preview"></div>
+        </div>
+
+        <div class="pane">
+          <h2>SVG</h2>
+          <div class="preview-body" id="svg-preview"></div>
+        </div>
+
+        <div class="pane layers">
+          <h2>Layers</h2>
+          <ul class="layer-list" id="layer-list"></ul>
+        </div>
+      </section>
+
+      <div class="download-row" id="download-row" data-ready="false">
+        <button class="download-button" id="download-button" type="button" disabled>
+          Download SVG
+          <span class="sr-only">(saves as &lt;name&gt;.svg)</span>
+        </button>
+      </div>
+    </main>
+
+    <!--
+      Module entry point. Phase 2 tasks add web/src/main.ts, which constructs a
+      PlateClient, wires the drop zone / intake, progress, preview, layer list
+      and download control to the ids above, and keeps all heavy work in the
+      worker. The deploy build emits the bundled module as ./main.js next to
+      this page; the type="module" + worker { type: "module" } requirement is
+      satisfied by that bundling step (Pyodide 314 refuses classic workers).
+    -->
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

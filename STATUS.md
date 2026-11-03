@@ -1865,3 +1865,217 @@ out as a live `<circle>` that also carries `fill="url(#...)"`.
 - venv at `.venv` (Python 3.11 via `python3.11`); system python is 3.9 which is too old. `pip install -e ".[dev,render]"` done.
 - `cairo` is installed via Homebrew; the CLI handles the dyld path itself. If you call the library directly (not via `plate`), prefix with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`.
 - LM Studio reachable at `http://localhost:1234/v1`; use `--vlm-model qwen/qwen3.8-27b` (vision-capable). Load a vision model before expecting names.
+
+<!-- SPIKE:browser-web-page:begin -->
+
+## Browser web page — Phase 1 spike measurements
+
+Corpus: 24 scenes, seed 1. Bakeoff_Tolerance (composite band): 0.01. These are the raw spike measurements; the done-definition is asserted by task 5.
+
+### Run setup
+
+| setting | value |
+|---|---|
+| Run date (UTC) | 2026-11-03T00:51:53.020Z |
+| Host | Darwin 25.6.0 arm64, Apple M4 Max |
+| Browser | Chromium 149.0.7827.55 via Playwright 1.61.1, headless, fresh profile (cold cache: bring-up includes fetching Pyodide and the packages from the CDN) |
+| Node | v22.22.2 |
+| Pyodide | 314.0.7 pinned in web/src/worker.ts and web/package.json, loaded as an ES module in a module worker from https://cdn.jsdelivr.net/pyodide/v314.0.7/full/ |
+| PLATE wheel | plate_svg-0.1.0-py3-none-any.whl (sha256 95c69960f3ae8832…), built with `uv build --wheel` from 2815cc0 plus uncommitted working-tree changes; installed in Pyodide with micropip deps=False |
+| CLI reference venv (.venv) | Python 3.11.14; numpy 2.4.6, scipy 1.17.1, opencv-python-headless 5.0.0.93, pillow 13.0.0, scikit-image 0.26.0, cairosvg 2.9.1, plate-svg 0.0.1 (cv2.__version__ 5.0.0); plate imported from src/plate (editable install of this working tree) |
+| Python command prefix | DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib (cairocffi does not search Homebrew's lib dir; cairosvg needs it for driver.py prepare/score) |
+| Spike working dir | /tmp/plate-spike (manifest, corpus, browser SVGs, serve/ build outputs) |
+| Diagnostic rerun venv | /tmp/plate-pyodide-venv/bin/python (see the diagnostic section) |
+
+Browser runtime as reported by the warm worker: Pyodide 314.0.7, Python 3.14.2.
+
+| distribution (in Pyodide) | version |
+|---|---|
+| `numpy` | 2.4.6 |
+| `scipy` | 1.18.0 |
+| `opencv-python` | 4.11.0.86 |
+| `pillow` | 12.2.0 |
+| `scikit-image` | 0.26.0 |
+| `micropip` | 0.11.1 |
+| `plate-svg` | 0.1.0 |
+
+Reproduce (from the repository root):
+
+```bash
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python web/spike/driver.py prepare -o /tmp/plate-spike
+# diagnostic venv with Pyodide 314.0.7's library versions (outside the repo):
+~/.local/bin/uv venv --python 3.14.2 /tmp/plate-pyodide-venv
+~/.local/bin/uv pip install --python /tmp/plate-pyodide-venv/bin/python numpy==2.4.6 scipy==1.18.0 opencv-python-headless==4.11.0.86 scikit-image==0.26.0 pillow==12.2.0
+(cd web && npm ci && npx tsx spike/run.ts --dir /tmp/plate-spike --diag-python /tmp/plate-pyodide-venv/bin/python)
+# run.ts itself runs, in order:
+#   ~/.local/bin/uv build --wheel --out-dir /tmp/plate-spike/serve
+#   esbuild bundles web/src/worker.ts and web/spike/page.ts into the same dir
+#   DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python web/spike/driver.py score -o /tmp/plate-spike
+#   then, only when a scene is outside tolerance:
+#   ~/.local/bin/uv pip install --python /tmp/plate-pyodide-venv/bin/python --no-deps --reinstall <the built wheel>
+#   /tmp/plate-pyodide-venv/bin/python web/spike/diagnose.py convert -o /tmp/plate-spike
+#   diagnose.py decode inside Pyodide under Node (npm pyodide 314.0.7)
+#   DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python web/spike/diagnose.py compare -o /tmp/plate-spike
+```
+
+### Package load results (Requirement 2.1)
+
+A package passes when Pyodide loaded it and its top-level module imported.
+
+| package | load |
+|---|---|
+| `numpy` | pass |
+| `scipy` | pass |
+| `opencv-python` | pass |
+| `pillow` | pass |
+| `scikit-image` | pass |
+
+Runtime bring-up (one-time `init`, timed apart from the scenes): **6.03s**, ready.
+
+### Per-scene timings + SVG classification (Requirements 2.2, 2.3)
+
+`seconds` is the wall-clock time of one convert request on the warm worker (`plate.web.convert_bytes`: noise pre-check plus `pipeline.run`); `engine s` is the engine's own `stats.t_total` for the same call.
+
+| scene | seconds | engine s | opencv-python | svg vs CLI | composite diff |
+|---|---|---|---|---|---|
+| scene00 | 0.55 | 0.46 | pass | byte-identical | 0.0000 |
+| scene01 | 0.56 | 0.52 | pass | byte-identical | 0.0000 |
+| scene02 | 0.52 | 0.48 | pass | byte-identical | 0.0000 |
+| scene03_jpg | 0.52 | 0.48 | pass | outside-tolerance | 0.0202 |
+| scene04 | 0.27 | 0.24 | pass | byte-identical | 0.0000 |
+| scene05 | 0.36 | 0.33 | pass | byte-identical | 0.0000 |
+| scene06 | 0.49 | 0.46 | pass | byte-identical | 0.0000 |
+| scene07_jpg | 0.38 | 0.36 | pass | within-tolerance | 0.0000 |
+| scene08 | 0.39 | 0.36 | pass | byte-identical | 0.0000 |
+| scene09 | 0.30 | 0.27 | pass | byte-identical | 0.0000 |
+| scene10 | 0.31 | 0.28 | pass | byte-identical | 0.0000 |
+| scene11_jpg | 0.77 | 0.74 | pass | outside-tolerance | 0.0214 |
+| scene12 | 0.31 | 0.28 | pass | byte-identical | 0.0000 |
+| scene13 | 0.32 | 0.28 | pass | byte-identical | 0.0000 |
+| scene14 | 0.55 | 0.52 | pass | byte-identical | 0.0000 |
+| scene15_jpg | 0.38 | 0.35 | pass | within-tolerance | 0.0017 |
+| scene16 | 0.32 | 0.29 | pass | byte-identical | 0.0000 |
+| scene17 | 0.41 | 0.38 | pass | byte-identical | 0.0000 |
+| scene18 | 0.26 | 0.23 | pass | byte-identical | 0.0000 |
+| scene19_jpg | 0.70 | 0.67 | pass | outside-tolerance | 0.0984 |
+| scene20 | 0.37 | 0.34 | pass | byte-identical | 0.0000 |
+| scene21 | 0.32 | 0.29 | pass | byte-identical | 0.0000 |
+| scene22 | 0.41 | 0.38 | pass | byte-identical | 0.0000 |
+| scene23_jpg | 1.52 | 1.49 | pass | outside-tolerance | 0.0266 |
+
+Per-scene conversion time over 24 timed scene(s): min **0.26s**, median **0.39s**, max **1.52s**. Slowest scene: **scene23_jpg** at **1.52s**.
+
+Classification counts: byte-identical 18, within-tolerance 2, outside-tolerance 4, missing-browser-svg 0. Scenes that failed to convert: **0**. Largest composite diff: **scene19_jpg** (0.0984).
+
+<!-- SPIKE:browser-web-page:decision:begin -->
+
+### Phase 1 spike decision points (task 3.3)
+
+**Verdict: SPIKE NOT MET — HALT before any Phase 2 work.** The following decision point(s) tripped their threshold (Requirements 2.4, 2.5, 2.3). A human must decide before Phase 2+ proceeds.
+
+- **svg-equivalence** — 4 scene(s) did not match the CLI SVG within Bakeoff_Tolerance (outside-tolerance, unscored, or failed to convert).
+  - scenes: scene03_jpg, scene11_jpg, scene19_jpg, scene23_jpg
+
+<!-- SPIKE:browser-web-page:decision:end -->
+
+<!-- SPIKE:browser-web-page:diagnostic:begin -->
+
+### Diagnostic: outside-tolerance scenes rerun natively with Pyodide's library versions
+
+- Native rerun (`web/spike/diagnose.py convert`): Python 3.14.2 (macOS-26.6.2-arm64-arm-64bit-Mach-O); numpy 2.4.6, scipy 1.18.0, opencv-python-headless 4.11.0.86, pillow 12.2.0, scikit-image 0.26.0, plate-svg 0.1.0; plate from `/tmp/plate-pyodide-venv/lib/python3.14/site-packages/plate`, installed from the same wheel the browser ran.
+- CLI reference: Python 3.11.14 (macOS-26.6.2-arm64-arm-64bit); numpy 2.4.6, scipy 1.17.1, opencv-python-headless 5.0.0.93, pillow 13.0.0, scikit-image 0.26.0, plate-svg 0.0.1.
+- Decoder check (`diagnose.py decode`): run inside Pyodide (Python 3.14.2) under Node, which uses the same WebAssembly package builds as the browser.
+- JPEG codec behind Pillow: Pyodide IJG libjpeg (Pillow reports jpg 9.0); CLI venv libjpeg-turbo (Pillow reports jpg 6.2); rerun venv libjpeg-turbo (Pillow reports jpg 6.2).
+
+A gap comes from **library versions** when the native rerun reproduces the browser SVG, and from **Pyodide** when the rerun reproduces the CLI SVG instead. When the rerun matches neither byte for byte, the composites decide: the side the rerun stays within 0.01 of. `decoded pixels` compares the RGBA output of the engine's decoder (`imageio.open_rgba`) with the CLI venv's.
+
+| scene | rerun == browser | rerun == CLI | CLI composite | browser composite | rerun composite | decoded pixels, rerun | decoded pixels, Pyodide | gap comes from |
+|---|---|---|---|---|---|---|---|---|
+| scene03_jpg | no | yes | 0.7846 | 0.8049 | 0.7846 | same | differ: 7.4% of pixels, max abs diff 49 | **Pyodide** |
+| scene11_jpg | no | yes | 0.8131 | 0.8345 | 0.8131 | same | differ: 6.1% of pixels, max abs diff 62 | **Pyodide** |
+| scene19_jpg | no | yes | 0.8321 | 0.9305 | 0.8321 | same | differ: 7.5% of pixels, max abs diff 80 | **Pyodide** |
+| scene23_jpg | no | no | 0.6189 | 0.5923 | 0.6189 | same | differ: 6.7% of pixels, max abs diff 61 | **Pyodide** |
+
+Attribution: Pyodide 4.
+
+For every scene above, the native rerun decodes the input exactly as the CLI venv does, while the decoder output inside Pyodide differs, so the conversion already starts from different pixels in the browser. The JPEG codecs behind Pillow are listed above.
+
+<!-- SPIKE:browser-web-page:diagnostic:end -->
+
+<!-- SPIKE:browser-web-page:gate:begin -->
+
+### Phase 1 gate (task 5)
+
+**Owner decision (Jessica, 2026-11-03):** accept the JPEG decoder difference. PNG output must match
+the CLI byte for byte; JPEG differences caused only by the decoder are allowed and documented; the
+0.01 Bakeoff_Tolerance stays. This amends the original done-definition, which required every
+converted corpus image to be byte-identical or within tolerance of the CLI.
+
+**Amended rule.** A PNG must convert byte-identically in the browser and on the CLI. A JPEG may
+differ from the CLI only because the browser's JPEG decoder produces different pixels than the CLI's
+(the browser's Pillow uses IJG libjpeg 9; the CPython wheels use libjpeg-turbo — see the diagnostic
+above). The decoder-only attribution is proven by running the unchanged engine on the EXACT pixels
+Pyodide decoded and getting the browser SVG back, byte-identical or within Bakeoff_Tolerance.
+
+**Proof (requested first; it decides the gate).** For every JPEG scene, the unchanged engine was
+rerun natively in the diagnostic venv (Python 3.14.2 with Pyodide 314.0.7's library versions, the
+same wheel the browser installed) on the exact RGBA pixels Pyodide decoded, fed in by patching
+`plate.imageio.open_rgba` in `web/spike/diagnose.py` only — the engine is never edited, and the JPEG
+file stays on disk so `_is_jpeg` still sees a JPEG. The call goes through `plate.web.convert_bytes`
+(the browser's entry point), so the noise pre-check sees the same pixels too. The result is compared
+with the browser SVG in `browser/<scene>.svg`. The Pyodide-decoded pixels for all six JPEG scenes
+were produced by `diagnose.py decode` run inside Pyodide under Node (the pinned npm `pyodide`
+314.0.7, the same WebAssembly builds as the browser); the four previously-decoded scenes reproduced
+their earlier digests byte-for-byte, confirming the decode is deterministic.
+
+Reproduce (from the repository root), after a spike run has written `browser/<scene>.svg`,
+`manifest.json` and `classification.json` under `/tmp/plate-spike`:
+
+```bash
+# 1. Pyodide-decoded RGBA for all six JPEG scenes (inside Pyodide under Node):
+#    diagnose.py decode -o /spike --label pyodide-proof --scenes scene03_jpg … scene23_jpg
+#    (run.ts's pyodideDecode mounts the spike dir and web/spike into Pyodide the same way)
+# 2. Reinstall the freshly built browser wheel into the diagnostic venv:
+~/.local/bin/uv pip install --python /tmp/plate-pyodide-venv/bin/python --no-deps --reinstall /tmp/plate-spike/serve/plate_svg-0.1.0-py3-none-any.whl
+# 3. Rerun the engine on those exact pixels (diagnostic venv = Pyodide's library versions):
+/tmp/plate-pyodide-venv/bin/python web/spike/diagnose.py same-pixels -o /tmp/plate-spike --decode-label pyodide-proof
+# 4. Score the same-pixels SVGs against the browser SVGs (CLI venv; scoring needs cairosvg):
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python web/spike/diagnose.py same-pixels-report -o /tmp/plate-spike
+```
+
+Proof result per JPEG scene (`same-pixels` SVG vs the browser SVG; the spike's CLI classification is
+shown for context):
+
+| scene | spike classification vs CLI | same-pixels vs browser | composite diff | proof |
+|---|---|---|---|---|
+| scene03_jpg | outside-tolerance | byte-identical | 0.0000 | PASS |
+| scene07_jpg | within-tolerance | byte-identical | 0.0000 | PASS |
+| scene11_jpg | outside-tolerance | byte-identical | 0.0000 | PASS |
+| scene15_jpg | within-tolerance | byte-identical | 0.0000 | PASS |
+| scene19_jpg | outside-tolerance | byte-identical | 0.0000 | PASS |
+| scene23_jpg | outside-tolerance | byte-identical | 0.0000 | PASS |
+
+All 6 of 6 JPEG scenes reproduced the browser SVG **byte-identically** from the same decoded pixels,
+including the 4 the spike scored outside-tolerance against the CLI. Every JPEG difference from the
+CLI is therefore decoder-only: given the browser's pixels, the engine produces the browser's SVG.
+
+**All three done-definition conditions hold under the amended rule:**
+- **Packages:** every required package load result is pass (`numpy`, `scipy`, `opencv-python`,
+  `pillow`, `scikit-image`), per the package-load table above.
+- **Timing:** every per-scene conversion time is at or below 60 s (min 0.26 s, median 0.39 s, max
+  1.52 s for scene23_jpg), per the per-scene table above.
+- **Equivalence:** every PNG is byte-identical to the CLI (18/18), and every JPEG difference is
+  decoder-only, proven above (6/6 JPEG scenes reproduce the browser SVG from the browser's decoded
+  pixels).
+
+**Note on the recorded verdict.** `web/spike/decision.ts` still evaluates the original rule
+(byte-identical or within tolerance of the CLI for every scene), so the decision section above
+records NOT MET / HALT and rerunning `run.ts` will again print HALT for the outside-tolerance JPEG
+scenes. That original verdict is kept as a historical record; `decision.ts` is unchanged. The gate
+here is the amended, owner-accepted judgement.
+
+Spike done-definition: MET (amended by owner decision)
+
+<!-- SPIKE:browser-web-page:gate:end -->
+
+<!-- SPIKE:browser-web-page:end -->
