@@ -92,10 +92,13 @@ export class PlateClientError extends Error {
  * this module's own URL so it works wherever GitHub Pages serves the shell. The
  * deploy build emits the worker next to this module as `worker.js`.
  */
+declare const __PLATE_WORKER_URL__: string | undefined;
+
 function defaultWorkerFactory(): WorkerLike {
   // `import.meta.url` resolves against the served module, not the page, so the
   // worker URL is correct under any Pages sub-path.
-  const url = new URL("./worker.js", import.meta.url);
+  const workerFile = typeof __PLATE_WORKER_URL__ === "undefined" ? "./worker.js" : __PLATE_WORKER_URL__;
+  const url = new URL(workerFile, import.meta.url);
   // { type: "module" } is required — Pyodide 314 refuses classic workers.
   return new Worker(url, { type: "module" }) as unknown as WorkerLike;
 }

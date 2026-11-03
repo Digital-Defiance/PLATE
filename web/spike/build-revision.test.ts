@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { engineRevision } from "../build-revision.js";
+import { buildBrowserBundles, injectMainBundle } from "../build-bundles.js";
+import { fileURLToPath } from "node:url";
 import { plateWheelUrl } from "../src/worker.js";
 
 test("engine edits and packaging changes invalidate the wheel URL even at the same package version", async (t) => {
@@ -48,4 +50,36 @@ test("versioned wheel URLs preserve the deployment path and the valid wheel file
   assert.equal(url.searchParams.get("v"), "new-engine");
   assert.equal(plateWheelUrl("https://example.org/worker.js"),
     "https://example.org/plate_svg-0.1.0-py3-none-any.whl");
+});
+
+
+test("real UI and worker bundles get matching content URLs across engine, UI and worker updates", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "plate-bundles-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const src = path.join(root, "src"), out = path.join(root, "dist");
+  await fs.cp(fileURLToPath(new URL("../src", import.meta.url)), src, { recursive: true });
+  const first = await buildBrowserBundles(src, out, "engine-a");
+  assert.match(first.mainFile, /^main-[A-Z0-9]+\.js$/);
+  assert.match(first.workerFile, /^worker-[A-Z0-9]+\.js$/);
+  assert.ok((await fs.readFile(path.join(out, first.mainFile), "utf8")).includes(first.workerFile));
+  assert.equal(injectMainBundle('<script src="./main.js"></script>', first.mainFile),
+    `<script src="./${first.mainFile}"></script>`);
+  assert.deepEqual(await buildBrowserBundles(src, out, "engine-a"), first);
+
+  const engineUpdate = await buildBrowserBundles(src, out, "engine-b");
+  assert.notEqual(engineUpdate.workerFile, first.workerFile);
+  assert.notEqual(engineUpdate.mainFile, first.mainFile);
+  await fs.appendFile(path.join(src, "main.ts"), '\nconsole.info("UI cache regression");');
+  const uiUpdate = await buildBrowserBundles(src, out, "engine-b");
+  assert.equal(uiUpdate.workerFile, engineUpdate.workerFile);
+  assert.notEqual(uiUpdate.mainFile, engineUpdate.mainFile);
+  await fs.appendFile(path.join(src, "worker.ts"), '\nconsole.info("Worker cache regression");');
+  const workerUpdate = await buildBrowserBundles(src, out, "engine-b");
+  assert.notEqual(workerUpdate.workerFile, uiUpdate.workerFile);
+  assert.notEqual(workerUpdate.mainFile, uiUpdate.mainFile);
+  assert.ok((await fs.readFile(path.join(out, workerUpdate.mainFile), "utf8")).includes(workerUpdate.workerFile));
+});
+
+test("a missing shell entry fails the build instead of silently publishing stale script links", () => {
+  assert.throws(() => injectMainBundle("<html></html>", "main-NEW.js"), /Missing main.js/);
 });

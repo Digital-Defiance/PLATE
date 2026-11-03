@@ -1,0 +1,248 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. JPEG robustness: format-keyed denoise trigger + correct the docs (R1).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552165952
+      },
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552172495
+      }
+    ],
+    "2. Pin the JPEG clean-render floor as a documented limit (R1 state (b)).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552165993
+      }
+    ],
+    "3. Realistic gradient: smooth-single-ramp region detector (R4 state (a)).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166043
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753080
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568759544
+      }
+    ],
+    "4. Rect/polygon amodal completion by free-edge intersection (R2 state (a)).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166121
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753174
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793572557661
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793589320611
+      }
+    ],
+    "5. ROOT inner-seal interrupted circular ring via the circle arm (R6a state (a)).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166162
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753263
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793589323709
+      }
+    ],
+    "6. ROOT leaf-vein-11 thin-stroke split (R6b).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166204
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753314
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793596302524
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793597955142
+      }
+    ],
+    "7. Same-colour touching objects: investigate a concavity splitter, else pin (R3).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166244
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753354
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793597958346
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793601159442
+      }
+    ],
+    "8. Heavy sensor-noise / JPEG-artifact collapse: improve or pin (R5).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166285
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753406
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793601162597
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793604695416
+      }
+    ],
+    "9. Long-tail quality batch A — completion & segmentation sub-items (R7a, R7b, R7c).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166318
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753455
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793604698702
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793639397109
+      }
+    ],
+    "10. Long-tail quality batch B — alpha, scale, naming (R7d, R7e, R7f).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166352
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753489
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793639400171
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793644503081
+      }
+    ],
+    "11. Long-tail quality batch C — open diagnostic items (R7g).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166392
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753532
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793644506259
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793646371133
+      }
+    ],
+    "12. Engine-complete audit + declare done (R8).": [
+      {
+        "executionId": "fe15a018-2f3a-4b0e-bf66-4d7ef43f50e7",
+        "chatSessionId": "sess_33e68e34-3880-46c6-857d-438e2a96134f",
+        "timestamp": 1793552166451
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793568753588
+      }
+    ],
+    "14. Update bake-off to include verifying some pixel accurate renderings of SVG back to PNG for verification and doing comparison? How can we check for good quality objects, lack of artifacts, smooth lines and curves where appropriate, etc?": [
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793646377668
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793648258488
+      }
+    ],
+    "15. Engine-complete audit + declare done (R8).": [
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793648261753
+      },
+      {
+        "executionId": "9255bfca-300f-409a-9e22-d135b6653240",
+        "chatSessionId": "sess_79490e0c-72f1-4aa2-9b00-7d7c10021e0a",
+        "timestamp": 1793649846145
+      }
+    ]
+  }
+}

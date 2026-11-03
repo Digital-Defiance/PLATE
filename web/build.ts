@@ -19,7 +19,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { build } from "esbuild";
+import { buildBrowserBundles, injectMainBundle } from "./build-bundles.js";
 import { engineRevision } from "./build-revision.js";
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
@@ -53,21 +53,9 @@ async function main(): Promise<void> {
   await fs.mkdir(OUT_DIR, { recursive: true });
 
   const revision = await engineRevision(path.resolve(WEB_DIR, ".."));
-  await build({
-    define: { __PLATE_ENGINE_REVISION__: JSON.stringify(revision) },
-    entryPoints: ENTRY_POINTS,
-    outdir: OUT_DIR,
-    bundle: true,
-    format: "esm",
-    platform: "browser",
-    target: "es2022",
-    sourcemap: true,
-    minify: true,
-    logLevel: "warning",
-  });
-
-  // Copy the static shell page beside the bundled JS.
-  await fs.copyFile(path.join(WEB_DIR, "index.html"), path.join(OUT_DIR, "index.html"));
+  const bundles = await buildBrowserBundles(SRC_DIR, OUT_DIR, revision);
+  const html = await fs.readFile(path.join(WEB_DIR, "index.html"), "utf8");
+  await fs.writeFile(path.join(OUT_DIR, "index.html"), injectMainBundle(html, bundles.mainFile));
 
   // A same-origin sample makes the product usable before a visitor brings a file.
   await fs.mkdir(path.join(OUT_DIR, "examples"), { recursive: true });
@@ -81,7 +69,7 @@ async function main(): Promise<void> {
 
   console.log(
     `[build] wrote shell bundle to ${path.relative(WEB_DIR, OUT_DIR)}/ ` +
-      `(main.js, client.js, worker.js, index.html)`,
+      `(${bundles.mainFile}, ${bundles.clientFile}, ${bundles.workerFile}, index.html)`,
   );
 }
 
