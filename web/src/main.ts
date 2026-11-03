@@ -34,11 +34,12 @@ import {
   surfacePlatformCheck,
   LONG_RUN_THRESHOLD_MS,
 } from "./errors.js";
-import { validateFile, toConvertRequest } from "./intake.js";
-import type { FileLike, IntakeResult } from "./intake.js";
+import { LiveConversion } from "./live-conversion.js";
+import { validateFile } from "./intake.js";
+import type { FileLike } from "./intake.js";
 import { mountShellLinks } from "./links.js";
 import { Preview } from "./preview.js";
-import type { ConvertRequest, ConvertResult, PlateConfig, ProgressUpdate } from "./protocol.js";
+import type { ConvertResult, ProgressUpdate } from "./protocol.js";
 import { SettingsPanel } from "./settings.js";
 import { DownloadControl } from "./download.js";
 import type { DocumentLike as DownloadControlDoc } from "./download.js";
@@ -136,6 +137,7 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
 
   const dropZone = requireElement(doc, SHELL_IDS.dropZone);
   const fileInput = requireElement<HTMLInputElement>(doc, SHELL_IDS.fileInput);
+  const chooseImageButton = doc.getElementById("choose-image") as HTMLButtonElement | null;
   const progress = requireElement(doc, SHELL_IDS.progress);
   const progressStage = requireElement(doc, SHELL_IDS.progressStage);
   const progressPct = requireElement(doc, SHELL_IDS.progressPct);
@@ -143,6 +145,11 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
 
   let lastResult: ConvertResult | null = null;
   let converting = false;
+  let disposed = false;
+  let intakeRevision = 0;
+  let longRunTimer: ReturnType<typeof setTimeout> | undefined;
+  const resultPanel = doc.getElementById("result");
+  const previewStatus = doc.getElementById("preview-status");
 
   /* -- progress bar (driven by the worker's staged events) ----------------- */
   const setProgress = (stage: ProgressUpdate["stage"], pct: number): void => {
@@ -158,64 +165,64 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
   const unsubscribe = client.onProgress(onProgress);
 
   /* -- conversion flow ----------------------------------------------------- */
-  const runConversion = async (accepted: IntakeResult): Promise<void> => {
-    if (!accepted.ok) {
-      // Intake rejection: surface it as a recoverable input error; drop zone
-      // stays ready (the module is side-effect free).
-      renderClientError(
-        new PlateClientError(accepted.message, { recoverable: true }),
-        { document: doc, container: messages.container },
-      );
-      return;
-    }
-    if (converting) return; // one conversion at a time keeps the flow simple
-    converting = true;
-
-    // Fresh run: clear our own error surfaces + download, keep nothing stale.
-    clearAllErrorSurfaces({ document: doc, container: messages.container });
-    download.reset();
-
-    const config: PlateConfig = settings.toConfig();
-    const request: ConvertRequest = toConvertRequest(accepted, config);
-    // Keep a copy of the source bytes for the preview (convert transfers them).
-    const sourceBytes = accepted.imageBytes.slice();
-
-    // Long-run notice (Requirement 12.7): continue-waiting / cancel.
-    const longRunTimer = setTimeout(() => {
-      renderLongRunNotice(
-        { onCancel: () => client.dispose() },
-        { document: doc, container: messages.container },
-      );
-    }, LONG_RUN_THRESHOLD_MS);
-
-    try {
-      const result = await client.convert(request);
-      lastResult = result;
-      preview.render(result, { imageBytes: sourceBytes, filename: accepted.filename });
-      download.setResult(result, accepted.filename);
-      // Result warnings (incl. the beta JPEG warning) render in #messages.
-      messages.showResultWarnings(result);
-      setProgress("done", 100);
-    } catch (err) {
-      if (err instanceof PlateClientError) {
-        renderClientError(err, { document: doc, container: messages.container });
-      } else {
-        renderClientError(
-          new PlateClientError(err instanceof Error ? err.message : String(err)),
+  const live = new LiveConversion({
+    convert: (request) => client.convert(request),
+    getConfig: () => settings.toConfig(),
+    onInvalidate: () => {
+      lastResult = null;
+      download.reset();
+      resultPanel?.setAttribute("aria-busy", "true");
+      if (previewStatus) previewStatus.textContent = "Updating your SVG preview…";
+    },
+    onStart: () => {
+      converting = true;
+      clearAllErrorSurfaces({ document: doc, container: messages.container });
+      setProgress("segment", 0);
+      longRunTimer = setTimeout(() => {
+        renderLongRunNotice(
+          { onCancel: () => {
+            live.cancel();
+            client.dispose();
+            resultPanel?.setAttribute("aria-busy", "false");
+            if (previewStatus) previewStatus.textContent = "Conversion cancelled. Adjust a setting or choose another image to try again.";
+          } },
           { document: doc, container: messages.container },
         );
-      }
-    } finally {
+      }, LONG_RUN_THRESHOLD_MS);
+    },
+    onResult: (result, source) => {
+      lastResult = result;
+      preview.render(result, { imageBytes: source.imageBytes, filename: source.filename });
+      download.setResult(result, source.filename);
+      messages.showResultWarnings(result);
+      resultPanel?.setAttribute("aria-busy", "false");
+      if (previewStatus) previewStatus.textContent = "Preview ready. Download your layered SVG, or adjust the settings to update it.";
+    },
+    onError: (err) => {
+      const error = err instanceof PlateClientError ? err
+        : new PlateClientError(err instanceof Error ? err.message : String(err));
+      renderClientError(error, { document: doc, container: messages.container });
+      resultPanel?.setAttribute("aria-busy", "false");
+      if (previewStatus) previewStatus.textContent = "The preview could not be updated. Adjust a setting or choose another image to try again.";
+    },
+    onSettled: () => {
       clearTimeout(longRunTimer);
       converting = false;
       hideProgress();
-    }
-  };
+    },
+  });
+  const unsubscribeSettings = settings.onChange(() => live.settingsChanged());
 
   /* -- intake wiring (drag-drop + file picker) ----------------------------- */
-  const handleFile = async (file: FileLike): Promise<void> => {
+  const handleFile = async (file: FileLike, revision = ++intakeRevision): Promise<void> => {
     const result = await validateFile(file);
-    await runConversion(result);
+    if (disposed || revision !== intakeRevision) return;
+    if (result.ok) {
+      live.setImage(result);
+    } else {
+      renderClientError(new PlateClientError(result.message, { recoverable: true }),
+        { document: doc, container: messages.container });
+    }
   };
 
   const onDrop = (event: DragEvent): void => {
@@ -243,8 +250,28 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
     fileInput.value = "";
   };
 
+  const exampleButton = doc.getElementById("try-example") as HTMLButtonElement | null;
+  const onExample = async (): Promise<void> => {
+    const revision = ++intakeRevision;
+    if (exampleButton) exampleButton.disabled = true;
+    try {
+      const response = await fetch(new URL("./examples/badge.png", import.meta.url));
+      if (!response.ok) throw new Error("The example could not be loaded. Please choose your own image.");
+      const blob = await response.blob();
+      if (!disposed && revision === intakeRevision) await handleFile(new File([blob], "example-badge.png", { type: "image/png" }), revision);
+    } catch (err) {
+      if (!disposed && revision === intakeRevision) renderClientError(new PlateClientError(err instanceof Error ? err.message : String(err),
+        { recoverable: true }), { document: doc, container: messages.container });
+    } finally {
+      if (exampleButton && !disposed) exampleButton.disabled = false;
+    }
+  };
+  const onExampleClick = (): void => { void onExample(); };
+
   // A hard platform miss leaves intake disabled (the notice already shows why).
   if (platform.supported) {
+    chooseImageButton?.addEventListener("click", onClick);
+    exampleButton?.addEventListener("click", onExampleClick);
     dropZone.addEventListener("drop", onDrop as EventListener);
     dropZone.addEventListener("dragover", onDragOver as EventListener);
     dropZone.addEventListener("dragleave", onDragLeave as EventListener);
@@ -253,7 +280,10 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
     fileInput.addEventListener("change", onFileChange);
     // Warm the runtime up front so the first conversion is faster; a bring-up
     // failure surfaces as a non-recoverable runtime error.
-    client.init().catch((err: unknown) => {
+    client.init().then(() => {
+      if (!disposed && !converting) hideProgress();
+    }).catch((err: unknown) => {
+      if (disposed) return;
       const e = err instanceof PlateClientError
         ? err
         : new PlateClientError(err instanceof Error ? err.message : String(err));
@@ -267,6 +297,10 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
     preview,
     lastResult: () => lastResult,
     dispose: () => {
+      disposed = true;
+      live.dispose();
+      unsubscribeSettings();
+      clearTimeout(longRunTimer);
       unsubscribe();
       dropZone.removeEventListener("drop", onDrop as EventListener);
       dropZone.removeEventListener("dragover", onDragOver as EventListener);
@@ -274,6 +308,8 @@ export function mountApp(options: MountAppOptions = {}): MountedApp {
       dropZone.removeEventListener("click", onClick);
       dropZone.removeEventListener("keydown", onKeydown as EventListener);
       fileInput.removeEventListener("change", onFileChange);
+      exampleButton?.removeEventListener("click", onExampleClick);
+      chooseImageButton?.removeEventListener("click", onClick);
       preview.dispose();
       download.dispose();
       client.dispose();

@@ -205,9 +205,9 @@ for (const preset of PRESETS) {
     const state = freshState();
     state.preset = preset;
     const config = stateToConfig(state);
-    assert.deepEqual(config, { preset });
+    assert.deepEqual(config, preset === "logo-detail" ? { preset: "smooth", upscale: 2 } : { preset });
     // The glue applies the preset's levers; the panel must not re-send them.
-    assert.equal(Object.keys(config).length, 1);
+    assert.equal(Object.keys(config).length, preset === "logo-detail" ? 2 : 1);
   });
 }
 
@@ -531,4 +531,29 @@ test("the reset button wired in the DOM also returns the panel to {}", () => {
   assert.ok(resetButton, "the panel must render a reset button");
   resetButton!.dispatch("click");
   assert.deepEqual(panel.toConfig(), {});
+});
+
+
+test("Research Force recipe selects smooth plus 2× analysis and survives fine tuning", () => {
+  const { panel, root } = buildPanel();
+  panel.selectPreset("logo-detail");
+  assert.deepEqual(panel.toConfig(), { preset: "smooth", upscale: 2 });
+  const input = findById(root, "plate-maxColors");
+  input.value = "7"; input.dispatch("input");
+  assert.deepEqual(panel.toConfig(), { preset: "smooth", upscale: 2, maxColors: 7 });
+  panel.reset();
+  assert.deepEqual(panel.toConfig(), {});
+});
+
+test("preset switches display effective values instead of old slider positions", () => {
+  const { panel, root } = buildPanel();
+  panel.selectPreset("compact");
+  assert.equal(findById(root, "plate-simplify").value, "1.6");
+  panel.selectPreset("lineart");
+  assert.equal(findById(root, "plate-maxColors").value, "2");
+  assert.equal(findById(root, "plate-snapPrimitives").checked, false);
+  panel.selectPreset("smooth");
+  assert.equal(findById(root, "plate-simplify").value, "0.8");
+  assert.equal(findById(root, "plate-snapPrimitives").checked, true);
+  assert.deepEqual(panel.toConfig(), { preset: "smooth" });
 });

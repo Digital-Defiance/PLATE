@@ -85,7 +85,9 @@ export interface ConvertResult {
  * this curated subset is user-facing; everything else keeps engine defaults.
  */
 export interface PlateConfig {
-  preset?: "logo" | "illustration" | "lineart" | "compact";
+  preset?: "logo" | "illustration" | "lineart" | "compact" | "smooth" | "max";
+  /** Source-detail analysis scale, bounded to 1–2 by the browser glue. */
+  upscale?: number;
   maxColors?: number;
   simplify?: number;
   smooth?: number;

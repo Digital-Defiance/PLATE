@@ -1,10 +1,39 @@
-# PLATE handover — 2026-11-01 (bounded sharp corners; Task 2 pinned)
+# PLATE handover — 2026-11-03 (web welcome and live preview)
 
 Read `AGENTS.md`, then `STATUS.md`, then `ROADMAP.md`, then this file. This records
 the immediate state at handover. Be skeptical of prose; verify with `pytest` and by
 rendering.
 
-## Latest checkpoint — bounded sharp corners and clean-render residual pins
+## Latest checkpoint — website experience (publication approved)
+
+- Current branch `main`, base `934e1aa`. Jessica approved committing/pushing the website
+  welcome/presets/re-render checkpoint on 2026-11-03. Deployment runs through GitHub Pages;
+  see the latest STATUS for verification. Pre-existing tasks.meta.json changes are excluded.
+- Production: https://plate.digitaldefiance.org/. Local review:
+  `http://127.0.0.1:8765/` and `docs/WEB-EXPERIENCE.md`. Welcome explicitly explains PNG/JPG →
+  editable layered SVG and object/stroke recovery. No blocking modal. Primary picker, real
+  badge example, compact mobile steps and optional SVG help; technical controls are collapsed.
+- Settings keep the selected source and debounce 350ms, run serially, skip stale replies and
+  invalidate old downloads. Nine live-conversion tests cover transfer detachment, late results,
+  latest settings/image, cancellation, disposal and retry. Actual browser updates tested for
+  preset/slider/background/reset, plus actual SVG download and primary file-picker use.
+- New browser choices: Clean JPEG logo (`smooth`), Logo with small text (`smooth` + `upscale=2`),
+  Maximum detail (`max`). Existing presets/defaults retained. Glue bounds upscale to 1–2;
+  core engine unchanged. Preset slider display positions were corrected too.
+- Full tests **838 passed / 7 xfailed**, browser tests **270 passed**, typecheck/build pass;
+  baseline 832/7 and 256 browser tests. New Python cases: 6. Existing Ruff findings unchanged.
+- **Do not claim browser/native logo parity.** Research Force browser smooth+2× completes but
+  SSIM .975083 and topology 1 extra/3 missing vs native .977355 and 0/0. Root cause unconfirmed;
+  investigate decode/numerical differences. Preserve guards; no native Illustrator check of web
+  output yet. SVGs/metrics/screenshots: `out/web-review/`. No fresh robustness sweep was run
+  for this UI/glue-only work; the recorded engine audit remains historical evidence.
+- The older engine handoff below is superseded by STATUS's 2026-11-02 closure audit: tasks
+  13.5/13.6 and engine completion were subsequently resolved by other work. Do not reopen them
+  from stale wording below. Current work is product/infra plus measured runtime parity follow-up.
+- Owner declined PDF/AI work. No exporter, telemetry, outreach, signup or payment was added.
+  Next product/acquisition priorities are concrete in `docs/WEB-EXPERIENCE.md`.
+
+## Historical checkpoint — bounded sharp corners and clean-render residual pins
 
 - Continued from signed **`d5d0bf6`** on `codex/logo-quality`; nothing pushed.
 - Clean-mode tracing can refine an existing sharp outer corner from an unblurred contour,

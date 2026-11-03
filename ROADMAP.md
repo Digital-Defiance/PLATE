@@ -45,6 +45,31 @@ Owner steering: Jessica explicitly allows scope expansion as useful, provided
 every addition and remaining item is recorded here and in HANDOFF. At the current
 usage limit, finish a verified checkpoint before starting further expansion.
 
+
+## Website product follow-up — 2026-11-03
+
+- [x] Local first-use pass: clear PNG/JPG → layered SVG welcome, object/stroke explanation,
+  primary picker, real badge example, optional SVG help, mobile layout and collapsed fine tuning.
+- [x] Local live preview: retain selected image; re-convert on settings/preset/reset after 350ms,
+  serialize work, ignore stale results/errors, preserve transferred source bytes, disable stale
+  downloads. Expose smooth/max plus a smooth+2× small-text recipe. Full 838/7 xfail, web 270.
+- [x] Owner approved committing/pushing the reviewed website changes on 2026-11-03.
+  Existing GitHub Pages workflow handles deployment; see STATUS for the verification result.
+- [ ] Investigate measured browser/native Research Force discrepancy: smooth+2× browser
+  SSIM .975083/topology 1 extra/3 missing; native .977355/0/0. Cause not established. Do not
+  promote it as an identical-quality showcase; retain topology gates. Evidence `out/web-review/`.
+- [ ] Object/layer selection and highlighting, synchronized zoom/comparison, then recolor/hide
+  with undo so editability is tangible. Compact welcome after selection/for returning users.
+- [ ] Permission-cleared example gallery, Research Force case study once runtime discrepancy
+  addressed, genuinely useful SEO pages, factual dated competitor comparison and community
+  demos. No posting is authorized by this backlog alone.
+- [ ] Privacy-preserving activation/timing/error measurement, if chosen; no image/filename/SVG/
+  layer names/local endpoint URLs or persistent identifiers by default. None added now.
+
+Exact recipes, priorities, rationale and checked sources: `docs/WEB-EXPERIENCE.md`.
+This does not reopen the closed classical-engine scope below. PDF/AI exports were declined.
+
+
 ## Immediate handoff priority — conversion quality (2026-10-30)
 
 Jessica asked for the gaps to be made actionable for the next agent, beyond the

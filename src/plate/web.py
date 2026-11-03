@@ -65,6 +65,7 @@ LEVER_MAP: dict[str, str] = {
     "max_colors": "max_colors",
     "simplify": "simplify",
     "smooth": "smooth",
+    "upscale": "upscale",
     "workSize": "work_size",
     "work_size": "work_size",
     # boolean toggles
@@ -91,6 +92,7 @@ NUMERIC_RANGES: dict[str, tuple[float, float]] = {
     "max_colors": (1, 256),
     "simplify": (0.0, 10.0),
     "smooth": (0.0, 10.0),
+    "upscale": (1.0, 2.0),
     "work_size": (64, 8192),
 }
 

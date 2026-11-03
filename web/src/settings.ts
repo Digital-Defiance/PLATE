@@ -40,23 +40,40 @@
 import type { PlateConfig } from "./protocol.js";
 import { isNamingEnabled } from "./naming.js";
 
-/** The presets the panel offers, matching `PlateConfig["preset"]` exactly. */
-export type Preset = NonNullable<PlateConfig["preset"]>;
+/** Engine presets plus the browser small-text recipe (smooth + 2× analysis). */
+export type Preset = NonNullable<PlateConfig["preset"]> | "logo-detail";
 
 /** Ordered list of offered presets (drives the dropdown + validation). */
 export const PRESETS: readonly Preset[] = [
   "logo",
+  "smooth",
+  "logo-detail",
   "illustration",
   "lineart",
   "compact",
+  "max",
 ] as const;
 
 /** A human-readable label for each preset (the dropdown option text). */
 export const PRESET_LABELS: Record<Preset, string> = {
-  logo: "Logo",
+  logo: "Flat logo",
+  smooth: "Clean JPEG logo",
+  "logo-detail": "Logo with small text (2×, slower)",
+  max: "Maximum detail (slower)",
   illustration: "Illustration",
   lineart: "Line art",
   compact: "Compact",
+};
+
+/** Visible lever values for the engine presets; hidden levers stay owned by Python. */
+const PRESET_DISPLAY: Record<Preset, Partial<PlateConfig>> = {
+  logo: { maxColors: 8, simplify: 0.6 },
+  illustration: { maxColors: 24, simplify: 0.9 },
+  lineart: { maxColors: 2, simplify: 0.5, snapPrimitives: false },
+  compact: { maxColors: 12, simplify: 1.6, smooth: 1 },
+  smooth: {},
+  "logo-detail": {},
+  max: { workSize: 3072, simplify: 0.35, smooth: 0.7, maxColors: 32 },
 };
 
 /** The numeric lever keys the panel exposes (subset of `PlateConfig`). */
@@ -282,7 +299,12 @@ function clampNumeric(lever: NumericLever, value: number): number {
  */
 export function stateToConfig(state: SettingsState): PlateConfig {
   const config: PlateConfig = {};
-  if (state.preset !== undefined) config.preset = state.preset;
+  if (state.preset === "logo-detail") {
+    config.preset = "smooth";
+    config.upscale = 2;
+  } else if (state.preset !== undefined) {
+    config.preset = state.preset;
+  }
 
   for (const lever of NUMERIC_LEVERS) {
     if (state.touched.numeric[lever]) {
@@ -387,7 +409,7 @@ export class SettingsPanel {
     const built = this.build();
     this.element = built.root;
     this.controls = built.controls;
-    this.syncControlsFromState();
+    this.selectPreset(options.initialPreset);
   }
 
   /**
@@ -415,6 +437,17 @@ export class SettingsPanel {
   selectPreset(preset: Preset | undefined): void {
     this.state.preset = preset;
     this.state.touched = noneTouched();
+    this.state.numeric = defaultNumeric();
+    this.state.boolean = defaultBoolean();
+    const display = preset === undefined ? {} : PRESET_DISPLAY[preset];
+    for (const lever of NUMERIC_LEVERS) {
+      const value = display[lever];
+      if (typeof value === "number") this.state.numeric[lever] = value;
+    }
+    for (const lever of BOOLEAN_LEVERS) {
+      const value = display[lever];
+      if (typeof value === "boolean") this.state.boolean[lever] = value;
+    }
     this.controls.presetSelect.value = preset ?? "";
     this.syncControlsFromState();
     this.emitChange();
@@ -452,7 +485,7 @@ export class SettingsPanel {
 
     const noneOption = this.el("option") as HTMLOptionElement;
     noneOption.value = "";
-    noneOption.textContent = "Default (no preset)";
+    noneOption.textContent = "Balanced — start here";
     presetSelect.appendChild(noneOption);
     for (const preset of PRESETS) {
       const option = this.el("option") as HTMLOptionElement;
@@ -467,6 +500,17 @@ export class SettingsPanel {
     presetField.label.htmlFor = presetSelect.id;
     presetField.row.appendChild(presetSelect);
     root.appendChild(presetField.row);
+
+    const note = this.el("p");
+    note.className = "plate-settings__note";
+    note.textContent = "Changes update your preview automatically. For logos like Research Force, choose Logo with small text; 2× analysis uses more memory and takes longer.";
+    root.appendChild(note);
+    const tuning = this.el("details");
+    tuning.className = "plate-settings__tuning";
+    const tuningSummary = this.el("summary");
+    tuningSummary.textContent = "Fine-tune colors, curves and background";
+    tuning.appendChild(tuningSummary);
+    root.appendChild(tuning);
 
     // --- numeric sliders ---
     const numeric = {} as Record<NumericLever, HTMLInputElement>;
@@ -489,7 +533,7 @@ export class SettingsPanel {
       });
       field.label.htmlFor = input.id;
       field.row.appendChild(input);
-      root.appendChild(field.row);
+      tuning.appendChild(field.row);
       numeric[lever] = input;
     }
 
@@ -510,7 +554,7 @@ export class SettingsPanel {
       });
       field.label.htmlFor = input.id;
       field.row.appendChild(input);
-      root.appendChild(field.row);
+      tuning.appendChild(field.row);
       boolean[lever] = input;
     }
 

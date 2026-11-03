@@ -66,6 +66,11 @@ async function main(): Promise<void> {
   // Copy the static shell page beside the bundled JS.
   await fs.copyFile(path.join(WEB_DIR, "index.html"), path.join(OUT_DIR, "index.html"));
 
+  // A same-origin sample makes the product usable before a visitor brings a file.
+  await fs.mkdir(path.join(OUT_DIR, "examples"), { recursive: true });
+  await fs.copyFile(path.join(WEB_DIR, "..", "samples", "badge.png"),
+    path.join(OUT_DIR, "examples", "badge.png"));
+
   // Ship the Pages custom-domain file so every artifact deploy re-asserts the
   // domain (this workflow publishes only the artifact; without CNAME in it a
   // deploy would drop the custom domain and revert to the github.io URL).

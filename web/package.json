@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
-    "test:spike": "tsx --test spike/status-file.test.ts spike/measure.test.ts spike/client.test.ts spike/intake.test.ts spike/protocol.test.ts spike/warnings.test.ts spike/worker.test.ts spike/settings.test.ts spike/naming.test.ts spike/preview-download.test.ts spike/errors.test.ts spike/memory-bounded.test.ts spike/non-blocking.test.ts",
+    "test:spike": "tsx --test spike/status-file.test.ts spike/measure.test.ts spike/client.test.ts spike/live-conversion.test.ts spike/intake.test.ts spike/protocol.test.ts spike/warnings.test.ts spike/worker.test.ts spike/settings.test.ts spike/naming.test.ts spike/preview-download.test.ts spike/errors.test.ts spike/memory-bounded.test.ts spike/non-blocking.test.ts",
     "spike": "tsx spike/run.ts",
     "smoke": "tsx smoke/run.ts",
     "build": "tsx build.ts"

@@ -1,6 +1,56 @@
 # STATUS (update this at the end of every work session)
 
-Last updated: 2026-11-02 (Task 15 / R8 — engine-complete closure audit) · Version 0.1.0 · Tests: 699 passed, 7 expected feature gaps.
+Last updated: 2026-11-03 (browser welcome, presets and automatic preview updates) · Version 0.1.0 · Tests: 838 passed, 7 expected feature gaps.
+
+
+## Browser welcome, preset recipes and retained-image updates — 2026-11-03
+
+Owner asked for a clearer/more attractive live website, easier settings, Research Force-style
+presets and adoption strategy; then explicitly asked for settings changes to re-render. Prepared
+on `main` from `934e1aa`; Jessica explicitly approved committing and pushing this checkpoint
+on 2026-11-03. GitHub Pages deploys from the push; deployment verification is recorded separately.
+Existing Kiro execution metadata edits are excluded. No PDF/AI exporter (owner declined).
+
+- Replaced the unexplained first-use experience with an explicit PNG/JPG → editable layered SVG
+  heading, object/stroke/named-layer explanation, three steps, optional inline SVG help and a
+  primary image-picker button. No modal/account gate. Included a real same-origin badge example
+  that runs through intake/the worker. Styled the settings and tucked technical controls into
+  Fine-tune. Mobile checked at 390px, no horizontal overflow.
+- Settings now retain one source image and debounce changes for 350ms. One request at a time;
+  latest pending config/image wins, superseded results/errors cannot overwrite current output.
+  Preserve source bytes across worker transfers, invalidate old downloads immediately, and clear
+  timers/listeners on dispose. A newly selected image replaces pending work; stale intake reads
+  cannot replace a newer selection. Nine controller tests cover queue/transfer/race/cancel/retry.
+- Exposed existing `smooth` and `max` presets. Browser-only `logo-detail` recipe emits
+  `{preset: "smooth", upscale: 2}`; the Python web glue adds a bounded 1–2 `upscale` lever.
+  No core/default config or tracing algorithms changed. Preset display values now follow the
+  chosen recipe instead of retaining old slider positions. Runtime warm-up no longer leaves
+  Done / 100% before image selection. 2× is labeled slower/more memory.
+- **Real browser checks:** example conversion, switching to line art, slider changes,
+  background toggle, reset and Research Force at smooth+2× all completed without re-selecting
+  the image for settings changes. Named layers/preview/download appeared. The primary picker
+  was tested with the fixture, and an actual `research_force_logo.svg` downloaded successfully.
+- **Quality discrepancy remains:** actual browser Research Force SVG has SSIM **.975083**,
+  edge F1 **.996153**, topology **1 extra / 3 missing**, 43 shapes/594 serialized anchors;
+  native same-recipe rerun has SSIM **.977355**, edge F1 **.999358**, topology **0/0**,
+  39 shapes/600 serialized anchors. Config mapping is tested; root cause of cross-runtime
+  output differences is **not established**. Do not claim platform byte/topology parity or
+  use this as a flawless quality showcase. Compare decoding and numerical libraries next;
+  do not weaken gates. Native Illustrator acceptance of this web output was not checked.
+- **Validation:** before full Python **832 passed / 7 xfailed** (446.73s), after **838 passed /
+  7 xfailed** (483.68s), no skips/xpasses/exclusions. Browser tests **256 → 270 passed**;
+  TypeScript typecheck/build and `git diff --check` pass. Nine existing Ruff findings in the
+  touched Python files have the same rule counts before/after; no unrelated lint cleanup.
+  No pipeline changes: the prior 70/78 robustness/36 core engine audit is not re-certified
+  as a fresh sweep here. Six new Python cases pin scale bounds and the logo recipe.
+- Plan: `docs/WEB-EXPERIENCE.md` separates implemented work from acquisition/product proposals.
+  Priorities: shape/layer inspection and editing, browser/native JPEG discrepancy, compact
+  returning-user intro, permission-cleared real examples, factual comparison/use-case pages,
+  community demos and privacy-preserving activation measurement. No telemetry/outreach added.
+- Evidence: `out/web-review/` holds SVGs/quality JSON and welcome screenshots; detailed test
+  logs `/tmp/plate-web-rerender-{before,after}-{pytest,web-tests}.txt`. Local build served at
+  `http://127.0.0.1:8765/` for review. Deploy remains the existing GitHub Pages workflow.
+
 
 ## THE CLASSICAL ENGINE IS COMPLETE (Task 15 / R8) — 2026-11-02
 

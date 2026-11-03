@@ -203,3 +203,12 @@ def test_example_preset_plus_clamped_lever():
 def test_example_no_overrides_equals_defaults():
     assert build_config(None) == Config()
     assert build_config({}) == Config()
+
+
+@pytest.mark.parametrize("value,expected", [(0, 1), (1, 1), (1.5, 1.5), (2, 2), (8, 2)])
+def test_browser_detail_scale_is_bounded(value, expected):
+    assert build_config({"upscale": value}).upscale == expected
+
+
+def test_browser_research_force_recipe_matches_the_validated_cli_config():
+    assert build_config({"preset": "smooth", "upscale": 2}) == load("smooth", upscale=2)
