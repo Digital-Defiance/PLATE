@@ -66,6 +66,11 @@ async function main(): Promise<void> {
   // Copy the static shell page beside the bundled JS.
   await fs.copyFile(path.join(WEB_DIR, "index.html"), path.join(OUT_DIR, "index.html"));
 
+  // Ship the Pages custom-domain file so every artifact deploy re-asserts the
+  // domain (this workflow publishes only the artifact; without CNAME in it a
+  // deploy would drop the custom domain and revert to the github.io URL).
+  await fs.copyFile(path.join(WEB_DIR, "CNAME"), path.join(OUT_DIR, "CNAME"));
+
   console.log(
     `[build] wrote shell bundle to ${path.relative(WEB_DIR, OUT_DIR)}/ ` +
       `(main.js, client.js, worker.js, index.html)`,
